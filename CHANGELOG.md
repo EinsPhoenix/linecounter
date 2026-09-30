@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.9.0
+- Dependency scan: npm workspaces / monorepos, pnpm and yarn lockfiles, symlinked `node_modules`, licenses from the npm / PyPI registry when a package is not installed (`linecounter.licenses.fetchFromRegistry`)
+- Robust import detection (comments and docstrings ignored, extras like `pydantic[email]` in pyproject), the project's own package is no longer listed
+- Clickable dependency report: declarations jump to the line in package.json / requirements / pyproject, undeclared imports list the files that use them, charts filter the table
+- 3D train: every relation is a permanent Bézier track through the planets with crossings and tunnel portals, smooth switches between relations, the train always drives nose first
+- Turning around: the train hovers, spins 180° with all wagons and the camera, and lands on the track back
+- Manual junctions need W released and pressed again; optional Auto-choose takes the straightest track
+- Adjustable station stop (0–5 s, 0 = no stopping), faster and smoother driving, frame-rate independent camera
+- Cab camera follows the train's rotation; planets spaced out without overlaps
+- Fly mode: leave the rails and fly freely, E snaps back onto the nearest relation
+
 ## 1.8.0
 - Toggle "Show libraries as graph nodes": external npm / PyPI packages appear in the import graph (not counted in any statistic), vulnerable ones as skulls
 - 3D "Dependency Express" (three.js): files as planets, libraries as metal cubes, vulnerable packages as skulls, relations as lines

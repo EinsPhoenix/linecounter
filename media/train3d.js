@@ -12,10 +12,16 @@
 
   // ---------------------------------------------------------------- layout
   /** Simple 3D force layout (fine for a few hundred nodes). */
-  function layout3d(nodes, links, layered) {
+  /**
+   * Force layout in 3D. `radii` (optional) are the visual radii of the bodies – they get extra room so planets,
+   * rings and tunnel portals never overlap.
+   */
+  function layout3d(nodes, links, layered, radii) {
     const n = nodes.length;
+    const R = radii || nodes.map(() => 6);
+    const spread = 160 + Math.cbrt(n) * 90;
     const P = nodes.map((nd, i) => ({
-      x: (Math.random() - 0.5) * 200, y: layered ? -(nd.layer || 0) * 45 : (Math.random() - 0.5) * 200, z: (Math.random() - 0.5) * 200, vx: 0, vy: 0, vz: 0, i,
+      x: (Math.random() - 0.5) * spread, y: layered ? -(nd.layer || 0) * 70 : (Math.random() - 0.5) * spread, z: (Math.random() - 0.5) * spread, vx: 0, vy: 0, vz: 0, i,
     }));
     const L = links.map(l => [l.s, l.t]);
     for (let it = 0; it < 260; it++) {
@@ -26,8 +32,8 @@
           const pb = P[b];
           let dx = pa.x - pb.x, dy = pa.y - pb.y, dz = pa.z - pb.z;
           let d2 = dx * dx + dy * dy + dz * dz + 0.01;
-          if (d2 > 90000) continue;
-          const f = (1600 / d2) * alpha;
+          if (d2 > 250000) continue;
+          const f = (4200 / d2) * alpha;
           const d = Math.sqrt(d2);
           dx /= d; dy /= d; dz /= d;
           pa.vx += dx * f; pa.vy += dy * f; pa.vz += dz * f;
@@ -38,16 +44,37 @@
         const a = P[s], b = P[t];
         const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
         const d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
-        const f = (d - 55) * 0.02 * alpha;
+        const f = (d - (85 + R[s] + R[t])) * 0.02 * alpha;
         a.vx += dx / d * f; a.vy += dy / d * f; a.vz += dz / d * f;
         b.vx -= dx / d * f; b.vy -= dy / d * f; b.vz -= dz / d * f;
       }
       for (const p of P) {
-        p.vx -= p.x * 0.004 * alpha; p.vz -= p.z * 0.004 * alpha;
-        if (layered) p.vy += (-(nodes[p.i].layer || 0) * 45 - p.y) * 0.08; else p.vy -= p.y * 0.004 * alpha;
+        p.vx -= p.x * 0.003 * alpha; p.vz -= p.z * 0.003 * alpha;
+        if (layered) p.vy += (-(nodes[p.i].layer || 0) * 70 - p.y) * 0.08; else p.vy -= p.y * 0.003 * alpha;
         p.x += p.vx; p.y += p.vy; p.z += p.vz;
         p.vx *= 0.6; p.vy *= 0.6; p.vz *= 0.6;
       }
+    }
+    // hard collision pass: bodies (incl. rings and portals) keep a clear gap
+    for (let it = 0; it < 80; it++) {
+      let moved = false;
+      for (let a = 0; a < n; a++) {
+        for (let b = a + 1; b < n; b++) {
+          const pa = P[a], pb = P[b];
+          let dx = pb.x - pa.x, dy = pb.y - pa.y, dz = pb.z - pa.z;
+          const d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 0.01;
+          const min = (R[a] + R[b]) * 2 + 30;
+          if (d >= min) continue;
+          const push = (min - d) / 2 + 0.01;
+          if (d < 0.02) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; dz = Math.random() - 0.5; }
+          const len = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
+          dx /= len; dy /= len; dz /= len;
+          pa.x -= dx * push; pa.y -= dy * push; pa.z -= dz * push;
+          pb.x += dx * push; pb.y += dy * push; pb.z += dz * push;
+          moved = true;
+        }
+      }
+      if (!moved) break;
     }
     // centre
     const c = P.reduce((m, p) => ({ x: m.x + p.x / n, y: m.y + p.y / n, z: m.z + p.z / n }), { x: 0, y: 0, z: 0 });
@@ -211,6 +238,9 @@
   }
 
   // ---------------------------------------------------------------- main
+  function storeGet(k) { try { return window.localStorage.getItem(k); } catch { return null; } }
+  function storeSet(k, v) { try { window.localStorage.setItem(k, v); } catch { /* storage unavailable */ } }
+
   function open(ui, D, opts = {}) {
     if (!window.THREE) { alert('3D view not available (three.js failed to load).'); return; }
     const G = D.importGraph;
@@ -230,11 +260,13 @@
       <div class="t3-labels"></div>
       <div class="t3-top">
         <div class="t3-title">Dependency Express</div>
-        <span class="t3-seg"><button data-mode="chain">Chain</button><button data-mode="free">Free roam</button></span>
+        <span class="t3-seg"><button data-mode="chain">Chain</button><button data-mode="free">Free roam</button><button data-mode="fly" title="Leave the rails (X) – E snaps back onto the nearest relation">Fly</button></span>
         <select class="t3-route">${routes.map((r, i) => `<option value="${i}">${esc(r.label)}</option>`).join('')}</select>
         <span class="t3-seg"><button data-drive="auto">Auto</button><button data-drive="manual">Manual</button></span>
         <span class="t3-seg"><button data-cam="chase" class="on">Chase</button><button data-cam="cab">Cab</button><button data-cam="orbit">Free cam</button></span>
+        <button data-t3="autochoose" title="Manual free roam: take the straightest relation at junctions instead of stopping">Auto-choose: off</button>
         <label class="t3-speed">Speed <input type="range" min="0.2" max="4" step="0.1" value="1"></label>
+        <label class="t3-speed t3-stoptime" title="How long the auto pilot stops at each planet – 0 rolls straight through">Stop <input type="range" min="0" max="5" step="0.5" value="1"><span>1 s</span></label>
         <button data-t3="pause">Pause</button>
         <button data-t3="close" class="t3-close">Exit (Esc)</button>
       </div>
@@ -246,14 +278,14 @@
     document.body.classList.add('has-train');
 
     const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+    renderer.setPixelRatio(Math.min(1.5, window.devicePixelRatio || 1));
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     root.prepend(renderer.domElement);
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x07070a);
-    scene.fog = new THREE.FogExp2(0x07070a, 0.0011);
+    scene.fog = new THREE.FogExp2(0x07070a, 0.0006);
     const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 6000);
     scene.add(new THREE.AmbientLight(0xffffff, 0.35));
     const sun = new THREE.PointLight(0xffd2a0, 2.2, 0, 0);
@@ -269,8 +301,9 @@
     }
 
     // ---- planets, libraries, skulls ----
-    const pos = layout3d(G.nodes, G.links, false);
     const maxIn = Math.max(1, ...G.nodes.map(n => n.in));
+    const radiusOf = n => (n.library && n.vulns ? 5 : n.library ? 2.4 + Math.sqrt(n.in / maxIn) * 3 : 2.5 + Math.sqrt(n.in / maxIn) * 9);
+    const pos = layout3d(G.nodes, G.links, false, G.nodes.map(radiusOf));
     const vulnerableFiles = new Set();
     for (const l of G.links) if (G.nodes[l.t].library && G.nodes[l.t].vulns) vulnerableFiles.add(l.s);
     const skullTex = skullTexture();
@@ -282,7 +315,7 @@
       group.position.copy(pos[i]);
       let r;
       if (n.library && n.vulns) {
-        r = 5;
+        r = radiusOf(n);
         const sk = new THREE.Sprite(new THREE.SpriteMaterial({ map: skullTex, transparent: true, depthWrite: false }));
         sk.scale.setScalar(16);
         group.add(sk);
@@ -290,13 +323,13 @@
         const hit = new THREE.Mesh(new THREE.SphereGeometry(5, 8, 8), new THREE.MeshBasicMaterial({ visible: false }));
         hit.userData.i = i; group.add(hit); pickables.push(hit);
       } else if (n.library) {
-        r = 2.4 + Math.sqrt(n.in / maxIn) * 3;
+        r = radiusOf(n);
         const cube = new THREE.Mesh(new THREE.BoxGeometry(r * 1.4, r * 1.4, r * 1.4), new THREE.MeshStandardMaterial({ color: 0x8d8d8d, metalness: 0.85, roughness: 0.3 }));
         cube.rotation.set(Math.random(), Math.random(), 0);
         cube.userData.i = i; cube.userData.spin = 0.2 + Math.random() * 0.5;
         group.add(cube); pickables.push(cube);
       } else {
-        r = 2.5 + Math.sqrt(n.in / maxIn) * 9;
+        r = radiusOf(n);
         const color = ui.resolveColor(ui.colorOf(n.lang));
         const planet = new THREE.Mesh(planetGeo, new THREE.MeshStandardMaterial({ map: planetTexture(color), roughness: 0.85, metalness: 0.05 }));
         planet.scale.setScalar(r);
@@ -322,97 +355,145 @@
       scene.add(group);
       bodies.push({ group, r, n });
     });
-    const station = i => pos[i].clone().add(new THREE.Vector3(0, bodies[i].r + 5, 0));
-    /** track between two nodes: lifted arc from station to station */
-    const segCurve = (a, b) => {
-      const pa = station(a), pb = station(b);
-      const mid = pa.clone().add(pb).multiplyScalar(0.5).add(new THREE.Vector3(0, pa.distanceTo(pb) * 0.12, 0));
-      return new THREE.CatmullRomCurve3([pa, mid, pb], false, 'centripetal');
-    };
-
-    // ---- relations (curved lines) ----
-    const linePos = [], lineCol = [];
-    const cGray = new THREE.Color(0x6f6f6f), cRed = new THREE.Color(0xff4d4f), cSkull = new THREE.Color(0xa33a3a);
-    for (const l of G.links) {
-      const a = pos[l.s], b = pos[l.t];
-      const mid = a.clone().add(b).multiplyScalar(0.5).add(new THREE.Vector3(0, a.distanceTo(b) * 0.15, 0));
-      const pts = new THREE.QuadraticBezierCurve3(a, mid, b).getPoints(10);
-      const c = l.cyc ? cRed : (G.nodes[l.t].library && G.nodes[l.t].vulns ? cSkull : cGray);
-      for (let k = 0; k < pts.length - 1; k++) {
-        linePos.push(pts[k].x, pts[k].y, pts[k].z, pts[k + 1].x, pts[k + 1].y, pts[k + 1].z);
-        lineCol.push(c.r, c.g, c.b, c.r, c.g, c.b);
+    // ---- the rail network: every relation is a track through the planets' centres ----
+    const station = i => pos[i].clone();
+    const exitDepth = i => bodies[i].r + 1.5; // distance from a planet's centre to its tunnel portal
+    const curveCache = new Map();
+    /** track from a to b (the same geometry in both directions) */
+    function segCurve(a, b) {
+      const key = a + '>' + b;
+      if (!curveCache.has(key)) {
+        const lo = Math.min(a, b), hi = Math.max(a, b);
+        const pa = pos[lo], pb = pos[hi];
+        // cubic Bézier with a gentle arch: smooth everywhere, no hard corners
+        const lift = new THREE.Vector3(0, pa.distanceTo(pb) * 0.1, 0);
+        const c1 = pa.clone().lerp(pb, 1 / 3).add(lift), c2 = pa.clone().lerp(pb, 2 / 3).add(lift);
+        curveCache.set(lo + '>' + hi, new THREE.CubicBezierCurve3(pa.clone(), c1, c2, pb.clone()));
+        curveCache.set(hi + '>' + lo, new THREE.CubicBezierCurve3(pb.clone(), c2.clone(), c1.clone(), pa.clone()));
       }
+      return curveCache.get(key);
     }
-    const lg = new THREE.BufferGeometry();
-    lg.setAttribute('position', new THREE.Float32BufferAttribute(linePos, 3));
-    lg.setAttribute('color', new THREE.Float32BufferAttribute(lineCol, 3));
-    scene.add(new THREE.LineSegments(lg, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0.35 })));
+    const pairs = new Map(); // "lo-hi" -> { a, b, cyc, vuln }
+    for (const l of G.links) {
+      const lo = Math.min(l.s, l.t), hi = Math.max(l.s, l.t);
+      const key = lo + '-' + hi;
+      const p = pairs.get(key) || { a: lo, b: hi, cyc: false, vuln: false };
+      p.cyc = p.cyc || !!l.cyc;
+      p.vuln = p.vuln || !!(G.nodes[l.t].library && G.nodes[l.t].vulns);
+      pairs.set(key, p);
+    }
 
-    // ---- rails ----
-    const railGroup = new THREE.Group();
-    scene.add(railGroup);
-    const railMats = {
-      orange: new THREE.MeshStandardMaterial({ color: 0xf7ae62, emissive: 0x5a2a08, metalness: 0.8, roughness: 0.3 }),
-      red: new THREE.MeshStandardMaterial({ color: 0xff4d4f, emissive: 0x661010, metalness: 0.8, roughness: 0.3 }),
-      sleeper: new THREE.MeshStandardMaterial({ color: 0x3a2a20, roughness: 0.9 }),
-      platform: new THREE.MeshStandardMaterial({ color: 0x2a2a2a, emissive: 0x3a1a06 }),
-    };
-    const railKeys = new Map(); // "a-b" -> group
-    function buildRail(curve, closed, mat) {
-      const g = new THREE.Group();
+    function mergeGeometries(geos) {
+      let vCount = 0, iCount = 0;
+      for (const g of geos) { vCount += g.attributes.position.count; iCount += g.index.count; }
+      const P = new Float32Array(vCount * 3), N = new Float32Array(vCount * 3), I = new Uint32Array(iCount);
+      let vo = 0, io = 0;
+      for (const g of geos) {
+        P.set(g.attributes.position.array, vo * 3);
+        N.set(g.attributes.normal.array, vo * 3);
+        const gi = g.index.array;
+        for (let k = 0; k < gi.length; k++) I[io + k] = gi[k] + vo;
+        vo += g.attributes.position.count; io += gi.length;
+        g.dispose();
+      }
+      const out = new THREE.BufferGeometry();
+      out.setAttribute('position', new THREE.BufferAttribute(P, 3));
+      out.setAttribute('normal', new THREE.BufferAttribute(N, 3));
+      out.setIndex(new THREE.BufferAttribute(I, 1));
+      return out;
+    }
+    /** two rail tubes below a curve (+ sleeper matrices outside the planets) */
+    function railTubes(curve, a, b, sleepers, radius = 0.14) {
       const len = curve.getLength();
-      const segs = Math.max(24, Math.round(len / 1.5));
-      const frames = curve.computeFrenetFrames(segs, closed);
+      const segs = Math.max(8, Math.round(len / 2.5));
+      const tubes = [];
+      const upV = new THREE.Vector3(0, 1, 0);
       for (const side of [-1, 1]) {
         const pts = [];
         for (let s = 0; s <= segs; s++) {
-          const p = curve.getPointAt(s / segs);
-          const t = curve.getTangentAt(s / segs);
-          let sideVec = new THREE.Vector3().crossVectors(t, new THREE.Vector3(0, 1, 0));
-          if (sideVec.lengthSq() < 1e-4) sideVec = frames.binormals[s].clone();
-          sideVec.normalize();
-          pts.push(p.add(sideVec.multiplyScalar(side * 0.95)).add(new THREE.Vector3(0, -1.25, 0)));
+          const u = s / segs;
+          const p = curve.getPointAt(u), t = curve.getTangentAt(u);
+          let sv = new THREE.Vector3().crossVectors(t, upV);
+          if (sv.lengthSq() < 1e-4) sv.set(1, 0, 0);
+          sv.normalize();
+          pts.push(p.add(sv.multiplyScalar(side * 0.95)).add(new THREE.Vector3(0, -1.25, 0)));
         }
-        g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, closed), segs, 0.14, 6, closed), mat));
+        tubes.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), segs, radius, 5, false));
       }
-      const count = Math.max(2, Math.round(len / 2.2));
-      const sleeper = new THREE.InstancedMesh(new THREE.BoxGeometry(2.8, 0.18, 0.5), railMats.sleeper, count);
-      const m = new THREE.Matrix4(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0);
-      for (let s = 0; s < count; s++) {
-        const u = s / count;
-        const p = curve.getPointAt(u), t = curve.getTangentAt(u);
-        q.setFromRotationMatrix(new THREE.Matrix4().lookAt(p, p.clone().add(t), up));
-        m.compose(p.clone().add(new THREE.Vector3(0, -1.4, 0)), q, new THREE.Vector3(1, 1, 1));
-        sleeper.setMatrixAt(s, m);
+      if (sleepers) {
+        const q = new THREE.Quaternion(), m = new THREE.Matrix4();
+        const from = exitDepth(a), to = len - exitDepth(b);
+        for (let d = from; d < to; d += 2.6) {
+          const u = d / len;
+          const p = curve.getPointAt(u), t = curve.getTangentAt(u);
+          q.setFromRotationMatrix(new THREE.Matrix4().lookAt(p, p.clone().add(t), upV));
+          m.compose(p.clone().add(new THREE.Vector3(0, -1.4, 0)), q, new THREE.Vector3(1, 1, 1));
+          sleepers.push(m.clone());
+        }
       }
-      g.add(sleeper);
-      return g;
+      return tubes;
     }
-    function clearRails() {
-      railGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); });
-      railGroup.clear();
-      railKeys.clear();
-    }
-    /** free roam: rails appear on every relation you travel (kept for the last 14 segments) */
-    function ensureSegRail(a, b, curve) {
-      const key = a < b ? `${a}-${b}` : `${b}-${a}`;
-      if (railKeys.has(key)) { const g = railKeys.get(key); railKeys.delete(key); railKeys.set(key, g); return; }
-      const g = buildRail(curve, false, G.links.some(l => l.cyc && ((l.s === a && l.t === b) || (l.s === b && l.t === a))) ? railMats.red : railMats.orange);
-      railGroup.add(g);
-      railKeys.set(key, g);
-      while (railKeys.size > 14) {
-        const [k, old] = railKeys.entries().next().value;
-        railKeys.delete(k); railGroup.remove(old); old.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+    const railMats = {
+      steel: new THREE.MeshStandardMaterial({ color: 0xb0aaa4, emissive: 0x1c1410, metalness: 0.9, roughness: 0.35 }),
+      red: new THREE.MeshStandardMaterial({ color: 0xff4d4f, emissive: 0x661010, metalness: 0.8, roughness: 0.3 }),
+      vuln: new THREE.MeshStandardMaterial({ color: 0x9a2a2a, emissive: 0x3a0808, metalness: 0.7, roughness: 0.4 }),
+      sleeper: new THREE.MeshStandardMaterial({ color: 0x3a2a20, roughness: 0.9 }),
+      portal: new THREE.MeshStandardMaterial({ color: 0xf7ae62, emissive: 0xe0621b, emissiveIntensity: 0.8, metalness: 0.5, roughness: 0.4 }),
+      portalRed: new THREE.MeshStandardMaterial({ color: 0xff4d4f, emissive: 0xff2020, emissiveIntensity: 0.8 }),
+      route: new THREE.MeshBasicMaterial({ color: 0xffa24d, transparent: true, opacity: 0.9 }),
+      routeRed: new THREE.MeshBasicMaterial({ color: 0xff4d4f, transparent: true, opacity: 0.9 }),
+    };
+    {
+      const byMat = { steel: [], red: [], vuln: [] };
+      const sleeperM = [];
+      const portals = { portal: [], portalRed: [] };
+      const q = new THREE.Quaternion(), zAxis = new THREE.Vector3(0, 0, 1);
+      for (const p of pairs.values()) {
+        const curve = segCurve(p.a, p.b);
+        byMat[p.cyc ? 'red' : p.vuln ? 'vuln' : 'steel'].push(...railTubes(curve, p.a, p.b, sleeperM));
+        // tunnel portals where the track enters a planet (they also mark the junctions)
+        const len = curve.getLength();
+        for (const [node, u] of [[p.a, exitDepth(p.a) / len], [p.b, 1 - exitDepth(p.b) / len]]) {
+          if (u <= 0 || u >= 1 || !bodies[node]) continue;
+          const pt = curve.getPointAt(u), t = curve.getTangentAt(u);
+          q.setFromUnitVectors(zAxis, t);
+          portals[p.cyc ? 'portalRed' : 'portal'].push(new THREE.Matrix4().compose(pt.clone().add(new THREE.Vector3(0, -0.4, 0)), q, new THREE.Vector3(1, 1, 1)));
+        }
+      }
+      for (const [k, geos] of Object.entries(byMat)) if (geos.length) scene.add(new THREE.Mesh(mergeGeometries(geos), railMats[k]));
+      if (sleeperM.length) {
+        const im = new THREE.InstancedMesh(new THREE.BoxGeometry(2.8, 0.18, 0.5), railMats.sleeper, sleeperM.length);
+        sleeperM.forEach((m, i) => im.setMatrixAt(i, m));
+        scene.add(im);
+      }
+      for (const [k, list] of Object.entries(portals)) {
+        if (!list.length) continue;
+        const im = new THREE.InstancedMesh(new THREE.TorusGeometry(2.4, 0.3, 8, 24), railMats[k], list.length);
+        list.forEach((m, i) => im.setMatrixAt(i, m));
+        scene.add(im);
       }
     }
-    function platform(i) {
-      const p = station(i);
-      const plat = new THREE.Mesh(new THREE.CylinderGeometry(4.5, 4.5, 0.4, 24), railMats.platform);
-      plat.position.copy(p).add(new THREE.Vector3(0, -1.9, 0));
-      railGroup.add(plat);
+    // chain mode: the route glows between the rails
+    const routeGroup = new THREE.Group();
+    scene.add(routeGroup);
+    function highlightRoute(r) {
+      routeGroup.traverse(o => { if (o.geometry) o.geometry.dispose(); });
+      routeGroup.clear();
+      if (!r) return;
+      const geos = [];
+      const P = r.path;
+      for (let k = 0; k < P.length - 1 + (r.loop ? 1 : 0); k++) {
+        const curve = segCurve(P[k], P[(k + 1) % P.length]);
+        const len = curve.getLength();
+        const pts = [];
+        const n = Math.max(8, Math.round(len / 3));
+        for (let s = 0; s <= n; s++) pts.push(curve.getPointAt(s / n).add(new THREE.Vector3(0, -1.3, 0)));
+        geos.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), n, 0.32, 5, false));
+      }
+      if (geos.length) routeGroup.add(new THREE.Mesh(mergeGeometries(geos), r.cycle ? railMats.routeRed : railMats.route));
     }
 
-    // ---- junction indicators (free roam choices) ----
+    // ---- junction indicators (choices at a portal) ----
     const choiceGroup = new THREE.Group();
     scene.add(choiceGroup);
     function showChoices(node, options, sel) {
@@ -421,7 +502,10 @@
       if (!options) return;
       options.forEach((o, k) => {
         const c = segCurve(node, o);
-        const pts = c.getPoints(24).slice(0, 13);
+        const len = c.getLength();
+        const u0 = Math.min(0.9, exitDepth(node) / len), u1 = Math.min(1, u0 + 24 / len);
+        const pts = [];
+        for (let s = 0; s <= 14; s++) pts.push(c.getPointAt(u0 + (u1 - u0) * s / 14).add(new THREE.Vector3(0, 0.6, 0)));
         const tube = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 16, k === sel ? 0.55 : 0.25, 6),
           new THREE.MeshBasicMaterial({ color: k === sel ? 0xffb46b : 0x777777, transparent: true, opacity: k === sel ? 0.95 : 0.45 }));
         choiceGroup.add(tube);
@@ -453,12 +537,21 @@
       route: null, k: 0, dir: 1, // chain mode: index of seg.a in route.path, travel direction
       visits: new Map(),
       trail: [],          // recent loco positions for the wagons
+      gate: 0,            // distance of the portal before seg.b – decisions happen there
+      link: null,         // { curve, len, d, onEnd } – Bézier switch through a planet (or back onto the rails)
+      turn: null,         // turning animation
+      fly: null,          // { yaw, pitch, v } – off the rails
+      autoChoose: storeGet('lc.train.autoChoose') === '1',
+      stopSec: Math.max(0, Math.min(5, Number(storeGet('lc.train.stopSec') ?? 1) || 0)),
+      needRelease: false, // manual: W must be released before it confirms a junction
+      camLook: new THREE.Vector3(),
     };
     const keys = new Set();
 
     const top = /** @type {HTMLElement} */ (root.querySelector('.t3-top'));
     const sel = /** @type {HTMLSelectElement} */ (root.querySelector('.t3-route'));
     const speed = /** @type {HTMLInputElement} */ (root.querySelector('.t3-speed input'));
+    const stopIn = /** @type {HTMLInputElement} */ (root.querySelector('.t3-stoptime input'));
     const labelsEl = /** @type {HTMLElement} */ (root.querySelector('.t3-labels'));
     const nowEl = /** @type {HTMLElement} */ (root.querySelector('.t3-now'));
     const nextEl = /** @type {HTMLElement} */ (root.querySelector('.t3-next'));
@@ -469,132 +562,265 @@
     const helpEl = /** @type {HTMLElement} */ (root.querySelector('.t3-help'));
     const name = i => { const n = G.nodes[i]; return n.library ? `${n.path}${n.version ? '@' + n.version : ''}` : n.path.split('/').slice(-2).join('/'); };
 
-    function setSeg(a, b, keepDist) {
+    function setSeg(a, b, d) {
       const curve = segCurve(a, b);
       S.seg = { a, b, curve, len: curve.getLength() };
-      S.d = keepDist != null ? keepDist : 0;
+      S.d = Math.min(d || 0, S.seg.len);
+      S.gate = Math.max(S.d, S.seg.len - exitDepth(b)); // the tunnel portal before the next planet
+      S.link = null;
       S.waiting = null;
       showChoices(null);
-      if (S.mode === 'free') ensureSegRail(a, b, curve);
+    }
+    const trainLength = () => T.wagons.length * 7;
+    /** points along a curve behind distance d (extrapolated before its start) – the wagons stand on them */
+    function trailAlong(curve, len, d) {
+      const out = [];
+      const start = d - trainLength() - 6;
+      if (start < 0) {
+        const p0 = curve.getPointAt(0), t0 = curve.getTangentAt(0);
+        for (let x = start; x < 0; x += 1) out.push(p0.clone().add(t0.clone().multiplyScalar(x)));
+      }
+      for (let x = Math.max(0, start); x <= d; x += 1) out.push(curve.getPointAt(Math.min(1, x / len)));
+      return out;
+    }
+    function seedTrail() { S.trail = S.seg ? trailAlong(S.seg.curve, S.seg.len, S.d) : []; }
+    const optionsAt = (node, prev) => [...nb[node].keys()].filter(o => o !== prev);
+    const stopTime = () => (S.drive === 'auto' ? S.stopSec : 0);
+
+    /** smooth Bézier from p0 (heading t0) to p3 (heading t3) */
+    function bezierLink(p0, t0, p3, t3) {
+      const k = Math.max(1.5, p0.distanceTo(p3) * 0.42);
+      return new THREE.CubicBezierCurve3(p0.clone(), p0.clone().add(t0.clone().multiplyScalar(k)), p3.clone().sub(t3.clone().multiplyScalar(k)), p3.clone());
+    }
+    function startLink(curve, onEnd, auto) { S.link = { curve, len: Math.max(0.01, curve.getLength()), d: 0, onEnd, auto: !!auto }; }
+    /** the switch inside planet b: from the portal of (a,b) to the portal of (b,c) without a kink */
+    function linkThrough(c) {
+      const { b, curve, len } = S.seg;
+      const u0 = Math.min(1, S.d / len);
+      const c2 = segCurve(b, c), l2 = c2.getLength();
+      const d2 = Math.min(l2 * 0.45, exitDepth(b));
+      const bez = bezierLink(curve.getPointAt(u0), curve.getTangentAt(u0), c2.getPointAt(d2 / l2), c2.getTangentAt(d2 / l2));
+      startLink(bez, over => {
+        if (S.mode === 'chain') S.k = wrap(S.k + S.dir, S.route.path.length);
+        setSeg(b, c, d2 + over);
+      });
+    }
+    /** continue from the current portal to relation c (back the same way means turning around) */
+    function go(c) {
+      if (c === S.seg.a) { startTurn(); return; }
+      linkThrough(c);
+    }
+    /** index of the relation that continues most straight */
+    function straightest(node, options) {
+      const dirIn = S.seg ? S.seg.curve.getTangentAt(Math.min(1, S.d / S.seg.len)) : new THREE.Vector3(0, 0, -1);
+      let sel = 0, best = -Infinity;
+      options.forEach((o, k) => {
+        const c = segCurve(node, o);
+        const dot = c.getTangentAt(Math.min(1, exitDepth(node) / c.getLength())).dot(dirIn);
+        if (dot > best) { best = dot; sel = k; }
+      });
+      return sel;
     }
 
     // ---- chain mode ----
     function startChain(r) {
-      S.mode = 'chain'; S.route = r; S.k = 0; S.dir = 1; S.finished = false; S.dwell = 0.8; S.v = 0;
-      clearRails();
-      const pts = r.path;
-      for (let k = 0; k < pts.length - 1 + (r.loop ? 1 : 0); k++) {
-        const a = pts[k], b = pts[(k + 1) % pts.length];
-        railGroup.add(buildRail(segCurve(a, b), false, r.cycle ? railMats.red : railMats.orange));
-      }
-      pts.forEach(platform);
-      setSeg(pts[0], pts[1] ?? pts[0]);
-      S.trail = [];
+      S.mode = 'chain'; S.route = r; S.k = 0; S.dir = 1; S.finished = false; S.v = 0; S.turn = null; S.fly = null;
+      S.dwell = Math.min(0.8, S.stopSec);
+      highlightRoute(r);
+      const P = r.path;
+      setSeg(P[0], P[1] ?? P[0], exitDepth(P[0]));
+      seedTrail();
       renderStops();
       syncButtons();
     }
-    function chainNext() {
+    const wrap = (k, n) => (S.route.loop ? (k + n) % n : k);
+    /** node after the current segment's target on the route, or null at the end of the line */
+    function chainTarget() {
       const P = S.route.path;
-      let k = S.k + S.dir; // index of the node we just reached
-      if (S.route.loop) k = (k + P.length) % P.length;
-      let n2 = k + S.dir;
-      if (S.route.loop) n2 = (n2 + P.length) % P.length;
-      if (n2 < 0 || n2 >= P.length) {
-        // end of the line
-        if (S.drive === 'auto') { S.dir = -S.dir; n2 = k + S.dir; S.dwell = 1.4; }
-        else { S.finished = true; S.k = k; return; }
-      }
-      S.k = k;
-      S.dwell = Math.max(S.dwell, 0.9 / Math.sqrt(S.speed));
-      setSeg(P[k], P[n2]);
+      const k2 = wrap(S.k + 2 * S.dir, P.length);
+      return k2 < 0 || k2 >= P.length ? null : P[k2];
     }
 
     // ---- free roam ----
     function startFree(node) {
-      S.mode = 'free'; S.route = null; S.finished = false; S.v = 0; S.trail = [];
+      S.mode = 'free'; S.route = null; S.finished = false; S.v = 0; S.turn = null; S.fly = null; S.link = null;
       S.visits = new Map([[node, 1]]);
-      clearRails();
+      highlightRoute(null);
       stopsEl.innerHTML = '';
       const options = [...nb[node].keys()];
-      if (!options.length) { S.seg = null; S.waiting = { node, options: [], sel: 0, prev: null }; syncButtons(); return; }
       S.seg = null;
-      junction(node, null);
+      S.waiting = { node, options, sel: 0, prev: null, start: true };
+      S.needRelease = keys.has('w');
+      if (options.length && S.drive === 'auto') { const o = options[Math.floor(Math.random() * options.length)]; setSeg(node, o, exitDepth(node)); seedTrail(); }
+      else if (options.length) showChoices(node, options, 0);
       syncButtons();
     }
-    /** arrived at `node` coming from `prev` */
-    function junction(node, prev) {
-      S.visits.set(node, (S.visits.get(node) || 0) + 1);
-      const all = [...nb[node].keys()];
-      let options = all.filter(o => o !== prev);
-      if (!options.length) {
-        // dead end: turn around (auto) or wait for S (manual)
-        if (S.drive === 'auto' && prev != null) { S.dwell = 1.2; turnAround(node, prev); return; }
-        S.waiting = { node, options: prev != null ? [] : all, sel: 0, prev, dead: prev != null };
-        S.v = 0;
+
+    /** reached the portal of the next planet: decide how to continue */
+    function decide() {
+      const { a, b } = S.seg;
+      if (S.mode === 'chain') {
+        const n2 = chainTarget();
+        if (n2 == null) {
+          if (S.drive === 'auto') { S.dwell = stopTime(); startTurn(); } else { S.finished = true; S.v = 0; }
+          return;
+        }
+        S.dwell = stopTime(); // station stop (0 = roll straight through)
+        go(n2);
         return;
       }
-      if (options.length === 1 && prev != null) { setSeg(node, options[0]); return; } // straight on
+      S.visits.set(b, (S.visits.get(b) || 0) + 1);
+      const options = optionsAt(b, a);
+      if (!options.length) {
+        // dead end: auto turns around, manual waits for S
+        if (S.drive === 'auto') { S.dwell = stopTime(); startTurn(); }
+        else { S.waiting = { node: b, options: [], sel: 0, prev: a, dead: true }; S.v = 0; }
+        return;
+      }
+      if (options.length === 1) { go(options[0]); return; } // straight on, no choice needed
       if (S.drive === 'auto') {
-        // prefer relations we visited least, random among them
         const least = Math.min(...options.map(o => S.visits.get(o) || 0));
         const cand = options.filter(o => (S.visits.get(o) || 0) === least);
-        setSeg(node, cand[Math.floor(Math.random() * cand.length)]);
-        S.dwell = 0.5;
+        S.dwell = stopTime();
+        go(cand[Math.floor(Math.random() * cand.length)]);
         return;
       }
-      // manual: stop and let the user pick with A / D; preselect the straightest continuation
-      let selIdx = 0;
-      if (S.seg) {
-        const dirIn = S.seg.curve.getTangentAt(1);
-        let best = -Infinity;
-        options.forEach((o, k) => { const dOut = segCurve(node, o).getTangentAt(0); const dot = dOut.dot(dirIn); if (dot > best) { best = dot; selIdx = k; } });
-      }
-      S.waiting = { node, options, sel: selIdx, prev };
+      const sel = straightest(b, options);
+      if (S.autoChoose) { go(options[sel]); return; }
+      // manual: stop at the portal; W has to be released and pressed again to continue
+      S.waiting = { node: b, options, sel, prev: a };
       S.v = 0;
-      showChoices(node, options, selIdx);
+      S.needRelease = true;
+      showChoices(b, options, sel);
     }
-    function turnAround(node, prev) {
-      // the train turns on the spot; wagons are laid out on the way back
-      setSeg(node, prev);
-      S.trail = [];
-      S.turned = 1;
+    /** manual: W at a junction confirms the selected relation */
+    function confirmChoice() {
+      const w = S.waiting;
+      if (!w || !w.options.length) return;
+      const o = w.options[w.sel];
+      if (w.start) { setSeg(w.node, o, exitDepth(w.node)); seedTrail(); return; }
+      S.waiting = null;
+      showChoices(null);
+      go(o);
+    }
+
+    // ---- turning around: hover, spin 180° with all wagons, land on the track back ----
+    const tmpObj = new THREE.Object3D();
+    function poseQuat(p, dir) { orient(tmpObj, p, dir); return tmpObj.quaternion.clone(); }
+    function startTurn() {
+      if (!S.seg || S.turn || S.link) return;
+      const { a, b, len } = S.seg;
+      const c2 = segCurve(b, a);
+      const d2 = Math.max(Math.min(len - exitDepth(a), len - S.d + trainLength()), Math.min(exitDepth(b), len - exitDepth(a)));
+      const trail2 = trailAlong(c2, len, d2);
+      const cars = [T.loco, ...T.wagons];
+      const to = cars.map((o, k) => {
+        const pose = k === 0 ? { p: c2.getPointAt(d2 / len), dir: c2.getTangentAt(d2 / len) } : wagonPose(trail2, k * 7) || { p: c2.getPointAt(d2 / len), dir: c2.getTangentAt(d2 / len) };
+        return { p: pose.p, q: poseQuat(pose.p, pose.dir) };
+      });
+      const from = cars.map(o => ({ p: o.position.clone(), q: o.quaternion.clone() }));
+      const pivot = from.reduce((m, c) => m.add(c.p), new THREE.Vector3()).multiplyScalar(1 / from.length);
+      S.turn = { t: 0, dur: 1.9, cars, from, to, pivot, after: () => {
+        if (S.mode === 'chain') { S.k = wrap(S.k + S.dir, S.route.path.length); S.dir = -S.dir; }
+        setSeg(b, a, d2);
+        S.trail = trail2;
+      } };
+      S.v = 0;
+      S.waiting = null;
+      S.finished = false;
+      showChoices(null);
+    }
+    function stepTurn(dt) {
+      const tr = S.turn;
+      tr.t = Math.min(1, tr.t + dt / tr.dur);
+      const sm = x => x * x * (3 - 2 * x);
+      const t = tr.t;
+      const lift = 6 * (t < 0.25 ? sm(t / 0.25) : t > 0.8 ? sm((1 - t) / 0.2) : 1); // up – spin – down
+      const e = sm(Math.max(0, Math.min(1, (t - 0.22) / 0.58)));
+      const qRot = new THREE.Quaternion().setFromAxisAngle(up, Math.PI * e);
+      tr.cars.forEach((o, k) => {
+        const f = tr.from[k], g = tr.to[k];
+        const p = f.p.clone().sub(tr.pivot).applyAxisAngle(up, Math.PI * e).add(tr.pivot).lerp(g.p, e);
+        o.position.copy(p).add(new THREE.Vector3(0, lift, 0));
+        o.quaternion.copy(qRot.clone().multiply(f.q)).slerp(g.q, e);
+        o.visible = true;
+      });
+      if (tr.t >= 1) { const after = tr.after; S.turn = null; after(); }
     }
     function reverse() {
-      if (S.drive === 'auto') return;
-      if (S.mode === 'chain') {
-        if (!S.seg) return;
-        const P = S.route.path;
-        const onSeg = S.d > 0.01 && S.d < S.seg.len - 0.01;
-        S.dir = -S.dir;
-        S.finished = false;
-        if (onSeg) {
-          const d = S.seg.len - S.d;
-          const a = S.seg.b, b = S.seg.a;
-          S.k = P.indexOf(a) >= 0 ? P.indexOf(a) : S.k;
-          setSeg(a, b, d);
-        } else {
-          // at a station: go back the way we came
-          const here = S.d >= S.seg.len - 0.01 ? S.seg.b : S.seg.a;
-          const k = P.indexOf(here);
-          let n2 = k + S.dir;
-          if (S.route.loop) n2 = (n2 + P.length) % P.length;
-          if (n2 < 0 || n2 >= P.length) { S.dir = -S.dir; return; }
-          S.k = k;
-          setSeg(here, P[n2]);
+      if (S.fly) return;
+      if (S.drive === 'auto' || S.turn || S.link || !S.seg) return;
+      startTurn();
+    }
+
+    // ---- fly: leave the rails and move freely; E snaps back onto the nearest relation ----
+    const trackSamples = [];
+    for (const p of pairs.values()) {
+      const c = segCurve(p.a, p.b), len = c.getLength();
+      for (let d = exitDepth(p.a); d <= len - exitDepth(p.b); d += 4) trackSamples.push({ a: p.a, b: p.b, d, len, p: c.getPointAt(d / len) });
+    }
+    function startFly() {
+      const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(T.loco.quaternion);
+      S.fly = { yaw: Math.atan2(-fwd.x, -fwd.z), pitch: Math.asin(Math.max(-1, Math.min(1, fwd.y))) * 0.5, v: Math.max(S.v, 0) };
+      S.mode = 'fly'; S.seg = null; S.link = null; S.waiting = null; S.turn = null; S.route = null; S.finished = false;
+      highlightRoute(null); showChoices(null); stopsEl.innerHTML = '';
+      syncButtons();
+    }
+    function snapToTrack() {
+      if (!trackSamples.length) return;
+      const lp = T.loco.position, fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(T.loco.quaternion);
+      let best = null, bd = Infinity;
+      for (const s of trackSamples) { const d = s.p.distanceToSquared(lp); if (d < bd) { bd = d; best = s; } }
+      let { a, b, d, len } = best;
+      if (segCurve(a, b).getTangentAt(d / len).dot(fwd) < 0) { [a, b] = [b, a]; d = len - d; }
+      const c = segCurve(a, b);
+      const dT = Math.min(len - exitDepth(b) - 1, d + Math.min(30, 8 + Math.sqrt(bd) * 0.4));
+      const target = Math.max(exitDepth(a), dT);
+      const bez = bezierLink(lp, fwd, c.getPointAt(target / len), c.getTangentAt(target / len));
+      const v = Math.max(S.fly ? S.fly.v : 0, S.speed * 12);
+      S.fly = null;
+      S.mode = 'free'; S.visits = new Map([[a, 1]]); S.finished = false;
+      S.seg = null; S.waiting = null;
+      S.v = v;
+      startLink(bez, over => { setSeg(a, b, target + over); }, true);
+      syncButtons();
+    }
+    function stepFly(dt, maxV) {
+      const f = S.fly;
+      const steer = (keys.has('a') ? 1 : 0) - (keys.has('d') ? 1 : 0);
+      const climb = (keys.has('r') ? 1 : 0) - (keys.has('f') ? 1 : 0);
+      f.yaw += steer * 1.3 * dt;
+      f.pitch = Math.max(-1.3, Math.min(1.3, f.pitch + climb * 1.0 * dt));
+      if (S.drive === 'auto') f.v += (maxV - f.v) * Math.min(1, dt * 1.5);
+      else if (keys.has('w')) f.v = Math.min(maxV * 1.6, f.v + maxV * 1.3 * dt);
+      else if (keys.has('s')) f.v = Math.max(0, f.v - maxV * 2 * dt);
+      else f.v = Math.max(0, f.v - maxV * 0.35 * dt);
+      S.v = f.v;
+      const fwd = new THREE.Vector3(-Math.sin(f.yaw) * Math.cos(f.pitch), Math.sin(f.pitch), -Math.cos(f.yaw) * Math.cos(f.pitch));
+      const lp = T.loco.position.clone().add(fwd.clone().multiplyScalar(f.v * dt));
+      return { lp, fwd };
+    }
+
+    /** moves the train `dist` along track and switches, stopping at decisions */
+    function advance(dist) {
+      for (let guard = 0; dist > 1e-6 && guard < 8; guard++) {
+        if (S.dwell > 0 || S.turn || S.waiting || S.finished) return;
+        if (S.link) {
+          const rem = S.link.len - S.link.d;
+          if (dist < rem) { S.link.d += dist; return; }
+          const l = S.link;
+          S.link = null;
+          l.onEnd(0);
+          dist -= rem;
+          continue;
         }
-        S.trail = [];
-        return;
+        if (!S.seg) return;
+        const rem = S.gate - S.d;
+        if (dist < rem) { S.d += dist; return; }
+        S.d = S.gate;
+        dist -= Math.max(0, rem);
+        decide();
       }
-      // free roam
-      if (S.waiting) {
-        const w = S.waiting;
-        const back = w.prev != null ? w.prev : w.options[0];
-        if (back == null) return;
-        setSeg(w.node, back);
-      } else if (S.seg) {
-        setSeg(S.seg.b, S.seg.a, S.seg.len - S.d);
-      }
-      S.trail = [];
     }
 
     function renderStops() {
@@ -607,9 +833,17 @@
       top.querySelectorAll('[data-drive]').forEach(b => b.classList.toggle('on', /** @type {HTMLElement} */ (b).dataset.drive === S.drive));
       top.querySelectorAll('[data-cam]').forEach(b => b.classList.toggle('on', /** @type {HTMLElement} */ (b).dataset.cam === S.cam));
       sel.style.display = S.mode === 'chain' ? '' : 'none';
-      helpEl.innerHTML = S.drive === 'manual'
-        ? `<b>W</b> drive · <b>S</b> turn around${S.mode === 'free' ? ' · <b>A</b>/<b>D</b> choose the relation at a junction' : ''} · <b>C</b> camera · drag to look · click a planet for details`
-        : `Auto pilot${S.mode === 'free' ? ' – picks a random relation at every junction' : ''} · <b>Space</b> pause · <b>↑</b>/<b>↓</b> speed · <b>C</b> camera · drag to look · click a planet`;
+      const ac = top.querySelector('[data-t3="autochoose"]');
+      ac.textContent = 'Auto-choose: ' + (S.autoChoose ? 'on' : 'off');
+      ac.classList.toggle('on', S.autoChoose);
+      ac.style.display = S.mode === 'free' && S.drive === 'manual' ? '' : 'none';
+      stopIn.value = String(S.stopSec);
+      stopIn.nextElementSibling.textContent = S.stopSec + ' s';
+      helpEl.innerHTML = S.mode === 'fly'
+        ? `${S.drive === 'manual' ? '<b>W</b> thrust · <b>S</b> brake' : 'Cruise control'} · <b>A</b>/<b>D</b> steer · <b>R</b>/<b>F</b> climb / dive · <b>E</b> snap onto the nearest relation · <b>C</b> camera`
+        : S.drive === 'manual'
+          ? `<b>W</b> drive · <b>S</b> turn around${S.mode === 'free' ? ` · <b>A</b>/<b>D</b> choose the relation at a junction${S.autoChoose ? ' (auto-choose on)' : ' – release and press <b>W</b> again to go'}` : ''} · <b>X</b> fly · <b>C</b> camera · drag to look`
+          : `Auto pilot${S.mode === 'free' ? ' – picks a random relation at every junction' : ''} · <b>Space</b> pause · <b>↑</b>/<b>↓</b> speed · <b>X</b> fly · <b>C</b> camera · drag to look`;
     }
     function setCam(c) {
       S.cam = c;
@@ -621,22 +855,42 @@
       const b = /** @type {HTMLElement} */ (ev.target).closest('button');
       if (!b) return;
       if (b.dataset.cam) setCam(b.dataset.cam);
-      if (b.dataset.drive) { S.drive = b.dataset.drive; if (S.drive === 'auto' && S.waiting && S.mode === 'free') { const w = S.waiting; S.waiting = null; showChoices(null); junction(w.node, w.prev); } syncButtons(); }
+      if (b.dataset.drive) {
+        S.drive = b.dataset.drive;
+        if (S.drive === 'auto' && S.waiting) {
+          const w = S.waiting;
+          if (w.dead) startTurn();
+          else if (w.options.length) { w.sel = Math.floor(Math.random() * w.options.length); confirmChoice(); }
+        }
+        if (S.drive === 'auto' && S.finished) { S.finished = false; startTurn(); }
+        syncButtons();
+      }
       if (b.dataset.mode === 'chain' && routes.length) startChain(routes[Number(sel.value) || 0]);
-      if (b.dataset.mode === 'free') startFree(S.seg ? (S.d > S.seg.len / 2 ? S.seg.b : S.seg.a) : startNode);
+      if (b.dataset.mode === 'free') {
+        if (S.fly) snapToTrack();
+        else startFree(S.seg ? (S.d > S.seg.len / 2 ? S.seg.b : S.seg.a) : startNode);
+      }
+      if (b.dataset.mode === 'fly' && !S.fly && !S.turn) startFly();
+      if (b.dataset.t3 === 'autochoose') { S.autoChoose = !S.autoChoose; storeSet('lc.train.autoChoose', S.autoChoose ? '1' : '0'); syncButtons(); }
       if (b.dataset.t3 === 'pause') { S.paused = !S.paused; b.textContent = S.paused ? 'Resume' : 'Pause'; }
       if (b.dataset.t3 === 'close') close();
       b.blur();
     });
     sel.addEventListener('change', () => { startChain(routes[Number(sel.value)]); sel.blur(); });
     speed.addEventListener('input', () => { S.speed = Number(speed.value); });
+    stopIn.addEventListener('input', () => {
+      S.stopSec = Number(stopIn.value);
+      if (S.stopSec === 0) S.dwell = 0;
+      storeSet('lc.train.stopSec', String(S.stopSec));
+      syncButtons();
+    });
     stopsEl.addEventListener('click', ev => {
       const s = /** @type {HTMLElement} */ (ev.target).closest('[data-stop]');
       if (!s || S.mode !== 'chain') return;
       const k = Math.min(Number(s.dataset.stop), S.route.path.length - 2);
-      S.k = k; S.dir = 1; S.finished = false;
-      setSeg(S.route.path[k], S.route.path[k + 1]);
-      S.trail = [];
+      S.k = k; S.dir = 1; S.finished = false; S.turn = null;
+      setSeg(S.route.path[k], S.route.path[k + 1], exitDepth(S.route.path[k]));
+      seedTrail();
     });
 
     // mouse look / orbit / picking
@@ -693,13 +947,15 @@
       if (ev.key === 'Escape') { close(); ev.stopPropagation(); return; }
       if (/^(input|select)$/i.test(/** @type {HTMLElement} */ (ev.target).tagName) && ev.key !== 'Escape') return;
       if (ev.type === 'keyup') { keys.delete(k); return; }
-      if (keys.has(k) && ['s', 'a', 'd', 'c'].includes(k)) return; // no key repeat for toggles
+      if (keys.has(k) && ['s', 'a', 'd', 'c', 'x', 'e'].includes(k)) return; // no key repeat for toggles
       keys.add(k);
       if (k === ' ') { S.paused = !S.paused; ev.preventDefault(); }
       else if (ev.key === 'ArrowUp') { S.speed = Math.min(4, S.speed + 0.2); speed.value = String(S.speed); }
       else if (ev.key === 'ArrowDown') { S.speed = Math.max(0.2, S.speed - 0.2); speed.value = String(S.speed); }
       else if (k === 'c') setCam(S.cam === 'chase' ? 'cab' : S.cam === 'cab' ? 'orbit' : 'chase');
       else if (k === 's') reverse();
+      else if (k === 'x') { if (S.fly) snapToTrack(); else if (!S.turn) startFly(); }
+      else if (k === 'e' && S.fly) snapToTrack();
       else if ((k === 'a' || k === 'd') && S.waiting && S.waiting.options.length > 1) {
         const w = S.waiting;
         w.sel = (w.sel + (k === 'd' ? 1 : -1) + w.options.length) % w.options.length;
@@ -759,10 +1015,10 @@
     }
 
     // ---- wagons follow the loco's trail ----
-    function wagonPose(distBack) {
+    function wagonPose(trail, distBack) {
       let acc = 0;
-      for (let k = S.trail.length - 1; k > 0; k--) {
-        const p1 = S.trail[k], p0 = S.trail[k - 1];
+      for (let k = trail.length - 1; k > 0; k--) {
+        const p1 = trail[k], p0 = trail[k - 1];
         const seg = p1.distanceTo(p0);
         if (acc + seg >= distBack) {
           const t = (distBack - acc) / seg;
@@ -779,57 +1035,75 @@
     const up = new THREE.Vector3(0, 1, 0);
     function orient(obj, p, dir) {
       obj.position.copy(p);
-      obj.lookAt(p.clone().sub(dir)); // model front is -z
-      obj.rotateY(Math.PI);
+      obj.lookAt(p.clone().sub(dir)); // lookAt turns +z to the target, the model's front is -z -> front faces dir
     }
     function frame() {
       if (session !== me) return;
       me.raf = requestAnimationFrame(frame);
       const dt = Math.min(0.05, clock.getDelta());
-      const maxV = S.speed * 18;
+      const maxV = S.speed * 26;
       // ---- movement ----
-      if (S.seg && !S.paused && !S.finished && !S.waiting) {
+      let lp, fwd;
+      if (S.turn) {
+        stepTurn(dt);
+      } else if (S.fly) {
+        if (!S.paused) ({ lp, fwd } = stepFly(dt, maxV));
+        else { lp = T.loco.position.clone(); fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(T.loco.quaternion); }
+      } else if ((S.seg || S.link) && !S.paused && !S.finished && !S.waiting) {
         if (S.dwell > 0) { S.dwell -= dt; S.v = 0; }
-        else if (S.drive === 'auto') {
-          const toEnd = S.seg.len - S.d;
-          const stationSlow = S.mode === 'chain' ? Math.max(0.3, Math.min(1, toEnd / 20)) : 1;
-          S.v = maxV * stationSlow;
+        else if (S.drive === 'auto' || (S.link && S.link.auto)) {
+          // with station stops the train brakes into the portal, with 0 s it rolls straight through
+          const toGate = S.link || !S.seg ? Infinity : S.gate - S.d;
+          const slow = S.stopSec > 0 ? Math.max(0.25, Math.min(1, toGate / 22)) : 1;
+          S.v += (maxV * slow - S.v) * Math.min(1, dt * 3);
         } else {
           if (keys.has('w')) S.v = Math.min(maxV, S.v + maxV * 1.2 * dt);
           else S.v = Math.max(0, S.v - maxV * 1.5 * dt);
         }
-        S.d += S.v * dt;
-        if (S.d >= S.seg.len) {
-          const over = S.d - S.seg.len;
-          const { a, b } = S.seg;
-          if (S.mode === 'chain') chainNext();
-          else junction(b, a);
-          if (S.seg && !S.waiting && S.seg.a === b) S.d = Math.min(over, S.seg.len);
-          else if (S.waiting) S.d = S.seg ? S.seg.len : 0;
-        }
-      } else if (S.waiting && S.drive === 'manual' && keys.has('w') && S.waiting.options.length) {
-        const w = S.waiting;
-        setSeg(w.node, w.options[w.sel]);
+        advance(S.v * dt);
+      }
+      if (S.waiting && S.drive === 'manual') {
+        if (!keys.has('w')) S.needRelease = false;
+        else if (!S.needRelease && S.waiting.options.length) confirmChoice();
       }
       // ---- place train ----
-      let lp, fwd;
-      if (S.seg) {
-        const u = Math.min(1, Math.max(0, S.d / S.seg.len));
-        lp = S.seg.curve.getPointAt(u);
-        fwd = S.seg.curve.getTangentAt(u);
+      if (S.turn) {
+        lp = T.loco.position.clone();
+        fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(T.loco.quaternion);
       } else {
-        const node = S.waiting ? S.waiting.node : startNode;
-        lp = station(node);
-        fwd = new THREE.Vector3(0, 0, -1);
+        if (S.fly) {
+          if (!lp) { lp = T.loco.position.clone(); fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(T.loco.quaternion); }
+        } else if (S.link) {
+          const u = Math.min(1, S.link.d / S.link.len);
+          lp = S.link.curve.getPointAt(u);
+          fwd = S.link.curve.getTangentAt(u);
+        } else if (S.seg) {
+          const u = Math.min(1, Math.max(0, S.d / S.seg.len));
+          lp = S.seg.curve.getPointAt(u);
+          fwd = S.seg.curve.getTangentAt(u);
+        } else {
+          // standing at the start planet: the loco waits at the portal of the selected track
+          const w = S.waiting;
+          const o = w && w.options.length ? w.options[w.sel] : null;
+          if (o != null) {
+            const c = segCurve(w.node, o);
+            const u = Math.min(0.95, exitDepth(w.node) / c.getLength());
+            lp = c.getPointAt(u); fwd = c.getTangentAt(u);
+          } else { lp = station(w ? w.node : startNode).add(new THREE.Vector3(0, bodies[w ? w.node : startNode].r + 3, 0)); fwd = new THREE.Vector3(0, 0, -1); }
+          if (!S.trail.length || S.trail[S.trail.length - 1].distanceTo(lp) > 0.5) {
+            S.trail = [];
+            for (let x = -trainLength() - 6; x <= 0; x += 1) S.trail.push(lp.clone().add(fwd.clone().multiplyScalar(x)));
+          }
+        }
+        orient(T.loco, lp, fwd);
+        const last = S.trail[S.trail.length - 1];
+        if (!last || last.distanceTo(lp) > 0.4) { S.trail.push(lp.clone()); if (S.trail.length > 400) S.trail.shift(); }
+        T.wagons.forEach((w, k) => {
+          const pose = wagonPose(S.trail, (k + 1) * 7);
+          w.visible = !!pose;
+          if (pose) orient(w, pose.p, pose.dir);
+        });
       }
-      orient(T.loco, lp, fwd);
-      const last = S.trail[S.trail.length - 1];
-      if (!last || last.distanceTo(lp) > 0.4) { S.trail.push(lp.clone()); if (S.trail.length > 400) S.trail.shift(); }
-      T.wagons.forEach((w, k) => {
-        const pose = wagonPose((k + 1) * 7);
-        w.visible = !!pose;
-        if (pose) orient(w, pose.p, pose.dir);
-      });
       // smoke
       if (!S.paused && S.v > 0.5 && Math.random() < 0.6) {
         const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false, opacity: 0.5 }));
@@ -859,23 +1133,27 @@
         }
       }
       // ---- camera ----
+      const locoFwd = new THREE.Vector3(0, 0, -1).applyQuaternion(T.loco.quaternion);
+      const ease = k => 1 - Math.exp(-dt * k); // frame-rate independent smoothing
       if (S.cam === 'cab') {
-        const eye = lp.clone().add(up.clone().multiplyScalar(2.2)).add(fwd.clone().multiplyScalar(1.5));
-        camera.position.lerp(eye, 0.5);
-        camera.lookAt(eye.clone().add(fwd.clone().applyAxisAngle(up, S.yaw * 0.6).multiplyScalar(20)).add(new THREE.Vector3(0, -S.pitch * 6 + 1, 0)));
+        // first person: sits in the loco and turns with it (not with the world)
+        camera.position.copy(T.loco.localToWorld(new THREE.Vector3(0, 3.6, 1.6)));
+        camera.quaternion.copy(T.loco.quaternion).multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-0.08 - (S.pitch - 0.36) * 0.6, S.yaw * 0.6, 0, 'YXZ')));
       } else if (S.cam === 'chase') {
         // follow from behind using the mostly horizontal travel direction (steep tracks would put the camera below the train)
-        const flat = new THREE.Vector3(fwd.x, fwd.y * 0.25, fwd.z);
+        const flat = new THREE.Vector3(locoFwd.x, locoFwd.y * 0.25, locoFwd.z);
         if (flat.lengthSq() < 0.05) flat.set(0, 0, -1);
         flat.normalize();
         const back = flat.multiplyScalar(-1).applyAxisAngle(up, S.yaw);
-        const eye = lp.clone().add(back.multiplyScalar(S.dist * Math.cos(S.pitch))).add(new THREE.Vector3(0, S.dist * Math.sin(S.pitch) + 3, 0));
-        camera.position.lerp(eye, 0.08);
-        camera.lookAt(lp.clone().add(fwd.clone().multiplyScalar(8)));
+        const base = T.loco.position;
+        const eye = base.clone().add(back.multiplyScalar(S.dist * Math.cos(S.pitch))).add(new THREE.Vector3(0, S.dist * Math.sin(S.pitch) + 3, 0));
+        camera.position.lerp(eye, ease(S.turn ? 3 : 6));
+        S.camLook.lerp(base.clone().add(locoFwd.clone().multiplyScalar(8)), ease(10));
+        camera.lookAt(S.camLook);
       } else {
-        const tgt = S.orbitTarget.lerp(lp, 0.02);
+        const tgt = S.orbitTarget.lerp(T.loco.position, ease(1.5));
         const eye = tgt.clone().add(new THREE.Vector3(Math.cos(S.pitch) * Math.sin(S.yaw), Math.sin(S.pitch), Math.cos(S.pitch) * Math.cos(S.yaw)).multiplyScalar(S.orbitDist));
-        camera.position.lerp(eye, 0.1);
+        camera.position.lerp(eye, ease(6));
         camera.lookAt(tgt);
       }
       // ---- HUD ----
@@ -889,15 +1167,20 @@
         progEl.style.width = (Math.max(0, Math.min(1, frac)) * 100).toFixed(1) + '%';
         stopsEl.querySelectorAll('.t3-stop').forEach((el, k) => { el.classList.toggle('here', P[k] === S.seg.a); el.classList.toggle('next', P[k] === S.seg.b); });
         choiceEl.innerHTML = '';
+      } else if (S.mode === 'fly') {
+        progEl.style.width = '0%';
+        nowEl.innerHTML = '<span class="t3-muted">Off the rails</span> – free flight';
+        nextEl.innerHTML = `${Math.round(S.v)} u/s · press <b>E</b> to snap onto the nearest relation`;
+        choiceEl.innerHTML = '';
       } else {
         progEl.style.width = S.seg ? ((S.d / S.seg.len) * 100).toFixed(1) + '%' : '0%';
         if (S.waiting) {
           const w = S.waiting;
           nowEl.innerHTML = `<span class="t3-muted">${w.dead ? 'Dead end at' : 'Junction at'}</span> ${esc(name(w.node))}`;
-          if (w.dead) { nextEl.innerHTML = 'No further relations. Press <b>S</b> to turn around.'; choiceEl.innerHTML = ''; }
+          if (w.dead) { nextEl.innerHTML = S.drive === 'manual' ? 'Dead end – press <b>S</b> to turn around.' : 'Dead end – turning around…'; choiceEl.innerHTML = ''; }
           else if (!w.options.length) { nextEl.innerHTML = 'This file has no relations. Pick another planet (click it).'; choiceEl.innerHTML = ''; }
           else {
-            nextEl.innerHTML = S.drive === 'manual' ? 'Choose a relation with <b>A</b> / <b>D</b>, drive with <b>W</b>' : '';
+            nextEl.innerHTML = S.drive === 'manual' ? `Choose a relation with <b>A</b> / <b>D</b>, ${S.needRelease ? 'release and press <b>W</b> again' : 'drive with <b>W</b>'}` : '';
             choiceEl.innerHTML = w.options.map((o, k) => `<div class="t3-opt ${k === w.sel ? 'sel' : ''}"><span class="t3-rel">${esc(nb[w.node].get(o))}</span> ${esc(name(o))}${G.nodes[o].library && G.nodes[o].vulns ? ' <span class="t3-red">💀</span>' : ''}${o === w.prev ? ' <span class="t3-muted">(back)</span>' : ''}</div>`).join('');
           }
         } else if (S.seg) {
