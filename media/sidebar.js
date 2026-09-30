@@ -185,7 +185,7 @@
         ${twisty}<span class="icon ${icon}"></span><span class="name">${n._match ? highlight(n.n) : esc(n.n)}</span>
         ${n.u && !ex ? '<span class="badge">not scanned</span>' : ''}
         ${reason ? `<span class="badge">${esc(reason)}</span>` : ''}
-        ${n.isRoot ? '' : `<span class="eye" data-open="${i}" title="${n.d ? '' : 'Open file'}">${n.d ? '' : '↗'}</span>`}
+        ${n.isRoot || n.d ? '' : `<span class="eye" data-open="${i}" title="Open file"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="pointer-events:none"><path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/></svg></span>`}
       </div>`;
     }).join('');
 
@@ -193,7 +193,7 @@
       <div class="top">
         <div class="search">
           <input id="q" type="text" placeholder="Search files & folders (supports * and ?)" value="${esc(query)}" spellcheck="false">
-          ${query ? '<button class="icon-btn" id="clear" title="Clear search">✕</button>' : ''}
+          ${query ? '<button class="icon-btn" id="clear" title="Clear search"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' : ''}
         </div>
         ${query ? `<div class="search-actions">
           <span class="muted">${matches} match${matches === 1 ? '' : 'es'}</span>
@@ -227,7 +227,7 @@
         ${total > MAX_ROWS ? `<div class="more muted">…and ${(total - MAX_ROWS).toLocaleString()} more – refine your search</div>` : ''}
       </div>
       <div class="bottom">
-        <button id="stats" class="primary" ${incFiles.length ? '' : 'disabled'}>📊 Create Statistics</button>
+        <button id="stats" class="primary" ${incFiles.length ? '' : 'disabled'}><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg> Create Statistics</button>
       </div>`;
 
     const tree = document.getElementById('tree');

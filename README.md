@@ -15,20 +15,25 @@ Alternativ in VS Code: *Extensions → „…“ → Install from VSIX…*
 ## Sidebar („Line Counter“ in der Activity Bar)
 
 - **Baum aller Dateien und Ordner** (rekursiv, Multi-Root-Workspaces werden unterstützt)
-- **Klick auf eine Datei oder einen Ordner schließt ihn aus** (durchgestrichen). Ein erneuter Klick nimmt ihn wieder auf. Mit dem Pfeil klappst du Ordner auf und zu, `↗` öffnet die Datei.
+- **Klick auf eine Datei oder einen Ordner schließt ihn aus** (durchgestrichen). Ein erneuter Klick nimmt ihn wieder auf. Mit dem Pfeil klappst du Ordner auf und zu, das Pfeil-Symbol rechts öffnet die Datei.
 - **Suchleiste**: filtert den Baum live. Wildcards (`*.test.js`, `?`) und Pfade (`src/utils`) funktionieren. Mit *Exclude all* oder *Include all* schließt du alle Treffer auf einmal aus oder wieder ein.
 - **Vordefinierte Filter** (per Checkbox): `node_modules`, Python-venv/Caches (auch venvs mit anderem Namen, erkannt über `pyvenv.cfg`), `.git`, Build-Output (`dist`, `build`, `out`, `target`, …), IDE-Ordner, `vendor`, Lock-Files, minifizierte Dateien, Binärdateien/Medien und optional alles aus `.gitignore`.
   Ausgeschlossene Preset-Ordner werden nicht gescannt. Das hält große Workspaces schnell. Klickst du einen solchen Ordner an, wird er nachgeladen und eingeschlossen.
 - **Dateitypen**: alle erkannten Endungen mit Anzahl als Chips. Ein Klick blendet einen Typ aus oder ein, dazu gibt es *All*, *None* und *Invert*.
 - Die Auswahl wird pro Workspace gespeichert.
-- **📊 Create Statistics** startet die Auswertung.
+- **Create Statistics** startet die Auswertung.
 
 ## Statistik-Seite (öffnet maximiert oder im Vollbild)
 
+Die Seite nutzt ein festes Farbschema aus dunklem Orange und Grau. Icons sind SVGs, Emojis kommen nicht vor. **Jedes Diagramm** hat oben rechts einen Vollbild-Button, mit `Esc` geht es zurück.
+
 - **Übersicht**: Zeilen gesamt, Code, Kommentare, Leerzeilen, Dateien, Ordner, Größe, Sprachen, Ø Zeilen/Datei, Median, Ø Zeilenlänge, geschätzte Funktionen, Imports, TODO/FIXME/HACK
 - **Sprachen**: Donut-Charts (Zeilen, Dateien, Code/Kommentar/Leer), gestapelte Balken pro Sprache, Sprachtabelle
-- **Dateien und Ordner**: Treemap aller Dateien (Klick öffnet die Datei), größte Dateien nach Zeilen und Bytes, Top-Ordner, Dateiendungen, Verteilung der Dateilängen, letzte Änderung
+- **Dateien und Ordner**: Treemap aller Dateien, größte Dateien nach Zeilen und Bytes, Top-Ordner, Dateiendungen, Verteilung der Dateilängen, letzte Änderung
+  - **Treemap-Kachel:** Ein **Linksklick kopiert den Pfad** in die Zwischenablage, ein Doppelklick öffnet die Datei.
+  - **Rechtsklick** (auch in Rangliste, Balken und Rant-Listen): Datei öffnen, Pfad bzw. relativen Pfad kopieren, im Dateimanager anzeigen oder **Datei löschen**. Beim Löschen kommt eine Sicherheitsabfrage, danach landet die Datei im Papierkorb oder wird endgültig gelöscht.
 - **Hall of Fame**: längste Datei, schwerste Datei, längste Zeile (öffnet direkt an der Zeile), kleinste Datei, tiefste Verschachtelung, längster Dateiname, meiste TODOs, am besten kommentiert, neueste und älteste Datei
+- **Code Rant**: lästert über Dateien, die länger als die eingestellte Zeilengrenze sind (Standard **500**), und über Dateien mit mehr als **10 %** Leerzeilen. Ist das ganze Projekt zu luftig, gibt es auch dafür einen Kommentar. Betroffene Werte sind zusätzlich in der Rangliste orange markiert. Beide Grenzen lassen sich einstellen, und der Rant kann abgeschaltet werden.
 - **Git** (Repos werden automatisch erkannt, auch verschachtelte): Commits, Contributors, erster und letzter Commit, Projektalter, +/− Zeilen, Branches und Tags, Commits pro Monat, Heatmap nach Wochentag × Uhrzeit, Top-Contributors, Hotspots (am häufigsten geänderte Dateien)
 - **Git-Fun-Facts**: Nachteulen-Commits, Wochenend-Commits, längste Commit-Serie, busiest day, Bus-Factor, Fix-Quote, faule Commit-Messages, kürzeste und längste Message, größter Commit, Lieblingswörter
 - **Fun Facts**: gedruckte Seiten und Stapelhöhe, Länge des Codes in einer Zeile (× Eiffelturm), Tippzeit, „× Harry Potter“, Kaffeeverbrauch, COCOMO-Aufwand und -Kosten, WTF/kLOC, Doku-Note, Tabs vs. Spaces, Debug-Prints, Semikolons, Trailing Whitespace, Vorkommen von 42, Emojis, Tweets, Disketten
@@ -41,6 +46,9 @@ Alternativ in VS Code: *Extensions → „…“ → Install from VSIX…*
 | Setting | Default | Beschreibung |
 |---|---|---|
 | `linecounter.statisticsLayout` | `maximized` | `maximized` blendet Sidebars und Panel aus, `fullscreen` schaltet zusätzlich das Fenster in den Vollbildmodus, `normal` öffnet die Seite als normalen Tab |
+| `linecounter.rant.enabled` | `true` | Abschnitt „Code Rant“ anzeigen |
+| `linecounter.rant.maxFileLines` | `500` | Rant über Dateien, die länger als diese Zeilenzahl sind |
+| `linecounter.rant.maxBlankPercent` | `10` | Rant, wenn mehr als dieser Prozentsatz der Zeilen leer ist (Dateien ab 10 Zeilen und das gesamte Projekt) |
 | `linecounter.maxFileSizeKB` | `2048` | Größere Dateien zählen nur mit ihrer Größe |
 | `linecounter.maxEntries` | `200000` | Maximale Anzahl gescannter Einträge |
 | `linecounter.maxCommits` | `20000` | Maximale Anzahl gelesener Commits pro Repo |
