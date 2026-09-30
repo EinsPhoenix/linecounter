@@ -306,6 +306,15 @@
         for (const n of nodes) { n.x = (Math.random() - 0.5) * 30; n.y = (Math.random() - 0.5) * 30; }
       }
       links = newLinks.map(l => ({ ...l }));
+      if (keepPositions) {
+        // new nodes appear next to a node they are linked to
+        for (const l of links) {
+          const a = nodes[typeof l.source === 'object' ? l.source.index : l.source], b = nodes[typeof l.target === 'object' ? l.target.index : l.target];
+          if (!a || !b) continue;
+          if (a.x != null && b.x == null) { b.x = a.x + (Math.random() - 0.5) * 20; b.y = a.y + (Math.random() - 0.5) * 20; }
+          else if (b.x != null && a.x == null) { a.x = b.x + (Math.random() - 0.5) * 20; a.y = b.y + (Math.random() - 0.5) * 20; }
+        }
+      }
       adj = new Map();
       const pairKeys = new Set();
       for (const l of links) {
@@ -438,6 +447,11 @@
           ctx.arcTo(n.x + s / 2, n.y + s / 2, n.x - s / 2, n.y + s / 2, rr);
           ctx.arcTo(n.x - s / 2, n.y + s / 2, n.x - s / 2, n.y - s / 2, rr);
           ctx.arcTo(n.x - s / 2, n.y - s / 2, n.x + s / 2, n.y - s / 2, rr);
+          ctx.closePath(); ctx.fill();
+        } else if (shape === 'diamond') {
+          ctx.beginPath();
+          const s = r * 1.35;
+          ctx.moveTo(n.x, n.y - s); ctx.lineTo(n.x + s, n.y); ctx.lineTo(n.x, n.y + s); ctx.lineTo(n.x - s, n.y);
           ctx.closePath(); ctx.fill();
         } else { ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, Math.PI * 2); ctx.fill(); }
         const ringC = hc || (opts.ringColor && opts.ringColor(n));
@@ -610,5 +624,36 @@
     };
   }
 
-  window.LCGraphs = { Treemap, ForceGraph, resolveColor, drawSkull };
+  /**
+   * Import graph + functions: every function becomes a node linked to its file ("defines"),
+   * calls link the calling function (or file) to the called function. Returns { nodes, links } in the import graph format.
+   */
+  function withFunctions(G, FG) {
+    if (!FG || !FG.fns.length) return G;
+    const idx = new Map(G.nodes.map((n, i) => [n.abs, i]));
+    const nodes = G.nodes.slice();
+    const links = G.links.slice();
+    const base = nodes.length;
+    const fnIndex = [];
+    FG.fns.forEach((f, k) => {
+      const file = idx.get(f.file);
+      if (file == null) { fnIndex[k] = -1; return; }
+      const parent = G.nodes[file];
+      fnIndex[k] = nodes.length;
+      nodes.push({ abs: f.file + '#' + f.name + ':' + f.line, file: f.file, line: f.line, path: f.name + '()', filePath: f.path, name: f.name, fn: true,
+        lang: parent.lang, cx: f.cx, lines: f.lines, in: 0, out: 0, layer: (parent.layer || 0) + 1, cycle: -1 });
+      links.push({ s: file, t: fnIndex[k], fn: true, def: true });
+    });
+    for (const c of FG.calls) {
+      const t = fnIndex[c.t];
+      const s = c.s >= 0 ? fnIndex[c.s] : idx.get(c.file);
+      if (t == null || t < 0 || s == null || s < 0 || s === t) continue;
+      links.push({ s, t, fn: true, call: true, n: c.n });
+    }
+    for (let i = base; i < nodes.length; i++) { nodes[i] = { ...nodes[i] }; }
+    for (const l of links) { if (l.call) { if (nodes[l.s].fn) nodes[l.s].out++; nodes[l.t].in++; } }
+    return { ...G, nodes, links, functions: nodes.length - base };
+  }
+
+  window.LCGraphs = { Treemap, ForceGraph, resolveColor, drawSkull, withFunctions };
 })();

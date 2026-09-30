@@ -238,6 +238,12 @@
       const p = toIdx(c.cycle).slice(0, -1);
       if (p.length > 1) routes.push({ label: `Circular line #${i + 1} (${c.size} files)`, path: p, loop: true, cycle: true });
     });
+    // functions: the longest call chain
+    if (G.functions) {
+      let best = [];
+      G.nodes.forEach((n, i) => { if (n.fn && n.out && !n.in) { const p = longestFrom({ nodes: G.nodes, links: G.links.filter(l => l.call) }, i); if (p.length > best.length) best = p; } });
+      if (best.length > 2) routes.unshift({ label: `Longest call chain: ${G.nodes[best[0]].path} (${best.length} functions)`, path: best, loop: false });
+    }
     // grand tour: most imported files
     const hubs = G.nodes.map((n, i) => ({ n, i })).filter(x => !x.n.library).sort((a, b) => b.n.in - a.n.in).slice(0, 8).map(x => x.i);
     if (hubs.length > 2) routes.push({ label: `Grand tour of the ${hubs.length} most imported files`, path: hubs, loop: true });
@@ -264,8 +270,9 @@
 
   function open(ui, D, opts = {}) {
     if (!window.THREE) { alert('3D view not available (three.js failed to load).'); return; }
-    const G = D.importGraph;
-    if (!G || !G.nodes.length) return;
+    const G0 = D.importGraph;
+    if (!G0 || !G0.nodes.length) return;
+    const G = opts.functions && window.LCGraphs && D.functionGraph ? LCGraphs.withFunctions(G0, D.functionGraph) : G0;
     close();
     const { esc } = ui;
     const routes = routesFor(G, opts.selectedAbs);
@@ -285,6 +292,7 @@
         <select class="t3-route">${routes.map((r, i) => `<option value="${i}">${esc(r.label)}</option>`).join('')}</select>
         <span class="t3-seg"><button data-drive="auto">Auto</button><button data-drive="manual">Manual</button></span>
         <span class="t3-seg"><button data-cam="chase" class="on">Chase</button><button data-cam="cab">Cab</button><button data-cam="orbit">Free cam</button></span>
+        ${D.functionGraph && D.functionGraph.fns.length ? `<button data-t3="functions" class="${opts.functions ? 'on' : ''}" title="Show functions as stations: file → function and calls between functions">ƒ Functions</button>` : ''}
         <button data-t3="autochoose" title="Manual free roam: take the straightest relation at junctions instead of stopping">Auto-choose: off</button>
         <label class="t3-speed">Speed <input type="range" min="0.2" max="4" step="0.1" value="1"></label>
         <label class="t3-speed t3-stoptime" title="How long the auto pilot stops at each planet – 0 rolls straight through">Stop <input type="range" min="0" max="5" step="0.5" value="1"><span>1 s</span></label>
@@ -343,6 +351,14 @@
         group.add(new THREE.PointLight(0xff3030, 60, 60, 1.5));
         const hit = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 8), new THREE.MeshBasicMaterial({ visible: false }));
         hit.userData.i = i; group.add(hit); pickables.push(hit);
+      } else if (n.fn) {
+        // functions: small glowing crystals near their file
+        r = radiusOf(n);
+        const color = ui.resolveColor(ui.colorOf(n.lang));
+        const hot = n.cx > (D.health ? D.health.thresholds.maxComplexity : 15);
+        const gem = new THREE.Mesh(new THREE.OctahedronGeometry(r, 0), new THREE.MeshStandardMaterial({ color: hot ? 0xe0621b : color, emissive: hot ? 0x5a1a04 : 0x1a1a1a, metalness: 0.6, roughness: 0.25, flatShading: true }));
+        gem.userData.i = i; gem.userData.spin = 0.6 + Math.random() * 0.6;
+        group.add(gem); pickables.push(gem);
       } else if (n.library) {
         r = radiusOf(n);
         const cube = new THREE.Mesh(new THREE.BoxGeometry(r * 1.4, r * 1.4, r * 1.4), new THREE.MeshStandardMaterial({ color: 0x8d8d8d, metalness: 0.85, roughness: 0.3 }));
@@ -650,7 +666,7 @@
     const stopsEl = /** @type {HTMLElement} */ (root.querySelector('.t3-stops'));
     const infoEl = /** @type {HTMLElement} */ (root.querySelector('.t3-info'));
     const helpEl = /** @type {HTMLElement} */ (root.querySelector('.t3-help'));
-    const name = i => { const n = G.nodes[i]; return n.library ? `${n.path}${n.version ? '@' + n.version : ''}` : n.path.split('/').slice(-2).join('/'); };
+    const name = i => { const n = G.nodes[i]; return n.fn ? `${n.path} · ${n.filePath.split('/').pop()}` : n.library ? `${n.path}${n.version ? '@' + n.version : ''}` : n.path.split('/').slice(-2).join('/'); };
 
     function setSeg(a, b, d) {
       const curve = segCurve(a, b);
@@ -962,6 +978,14 @@
         else startFree(S.seg ? (S.d > S.seg.len / 2 ? S.seg.b : S.seg.a) : startNode);
       }
       if (b.dataset.mode === 'fly' && !S.fly && !S.turn) startFly();
+      if (b.dataset.t3 === 'functions') {
+        const here = S.seg ? S.seg.a : S.waiting ? S.waiting.node : startNode;
+        const hn = G.nodes[here];
+        const abs = hn && hn.fn ? hn.file : hn && hn.abs;
+        const next = { ...opts, functions: !opts.functions, selectedAbs: abs, mode: S.mode === 'chain' ? 'chain' : 'free', drive: S.drive };
+        setTimeout(() => open(ui, D, next), 0);
+        return;
+      }
       if (b.dataset.t3 === 'autochoose') { S.autoChoose = !S.autoChoose; storeSet('lc.train.autoChoose', S.autoChoose ? '1' : '0'); syncButtons(); }
       if (b.dataset.t3 === 'pause') { S.paused = !S.paused; b.textContent = S.paused ? 'Resume' : 'Pause'; }
       if (b.dataset.t3 === 'close') close();
@@ -1012,15 +1036,15 @@
       const i = hit.object.userData.i;
       const n = G.nodes[i];
       infoEl.innerHTML = `<div class="t3-info-title">${esc(n.path)}${n.library && n.version ? '@' + esc(n.version) : ''}</div>
-        ${n.library ? `<div>${esc(n.ecosystem)} library${n.license ? ` · ${esc(n.license)}` : ''}</div>${n.vulns ? `<div class="t3-red">💀 ${n.vulns} known vulnerabilit${n.vulns === 1 ? 'y' : 'ies'} (${esc(n.severity || 'unknown')})</div>` : ''}`
+        ${n.fn ? `<div>function in ${esc(n.filePath)}:${n.line}</div><div>complexity ${n.cx} · ${n.lines} lines · calls ${n.out} · called by ${n.in}</div>` : n.library ? `<div>${esc(n.ecosystem)} library${n.license ? ` · ${esc(n.license)}` : ''}</div>${n.vulns ? `<div class="t3-red">💀 ${n.vulns} known vulnerabilit${n.vulns === 1 ? 'y' : 'ies'} (${esc(n.severity || 'unknown')})</div>` : ''}`
         : `<div>imports ${n.out} · imported by ${n.in}${n.dependents != null ? ` · ${n.dependents} depend on it` : ''}</div>${n.cycle >= 0 ? '<div class="t3-red">part of a circular import</div>' : ''}${vulnerableFiles.has(i) ? '<div class="t3-red">💀 imports a vulnerable package</div>' : ''}`}
-        <div class="t3-info-actions">${!n.library ? `<button data-open="${esc(n.abs)}">Open file</button>` : ''}<button data-roam="${i}">Free roam from here</button><button data-ride="${i}">Ride its longest chain</button></div>`;
+        <div class="t3-info-actions">${n.fn ? `<button data-open="${esc(n.file)}" data-line="${n.line}">Open function</button>` : !n.library ? `<button data-open="${esc(n.abs)}">Open file</button>` : ''}<button data-roam="${i}">Free roam from here</button><button data-ride="${i}">Ride its longest chain</button></div>`;
       infoEl.classList.add('show');
     }
     infoEl.addEventListener('click', ev => {
       const b = /** @type {HTMLElement} */ (ev.target).closest('button');
       if (!b) return;
-      if (b.dataset.open) ui.post({ type: 'open', abs: b.dataset.open });
+      if (b.dataset.open) ui.post({ type: 'open', abs: b.dataset.open, line: b.dataset.line ? Number(b.dataset.line) : undefined });
       if (b.dataset.roam) { startFree(Number(b.dataset.roam)); infoEl.classList.remove('show'); }
       if (b.dataset.ride) {
         const path = longestFrom(G, Number(b.dataset.ride));

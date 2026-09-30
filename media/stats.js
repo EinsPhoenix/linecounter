@@ -320,29 +320,29 @@
     const G = D.importGraph;
     if (!el || !window.LCGraphs || !G || !G.nodes.length) return;
     const maxIn = Math.max(1, ...G.nodes.map(n => n.in));
-    const nodes = G.nodes.map(n => ({ id: n.abs, f: n }));
-    const links = G.links.map(l => ({ source: l.s, target: l.t, cyc: l.cyc }));
+    const { nodes, links } = importGraphData();
+    const fnTip = f => `<b>${esc(f.name)}()</b> <span style="opacity:.7">function</span><br>${esc(f.filePath)}:${f.line}<br>complexity ${fmt(f.cx)} · ${fmt(f.lines)} lines<br>calls ${fmt(f.out)} · called by ${fmt(f.in)}<br><i>Double-click: open at the function</i>`;
     const g = graphs.importgraph = LCGraphs.ForceGraph(el, {
       nodes, links, arrows: true,
       motion: motionFor('importgraph'),
       layout: 'force',
       layer: n => n.f.layer,
-      radius: n => Math.max(n.f.library && n.f.vulns ? 7 : 0, 3.5 + Math.sqrt(n.f.in / maxIn) * 13),
-      color: n => (n.f.library ? (n.f.vulns ? RED : '#8d8d8d') : colorOf(n.f.lang)),
-      shape: n => (n.f.library ? (n.f.vulns ? 'skull' : 'square') : 'circle'),
+      radius: n => (n.f.fn ? 2.4 + Math.min(5, n.f.cx * 0.18) : Math.max(n.f.library && n.f.vulns ? 7 : 0, 3.5 + Math.sqrt(n.f.in / maxIn) * 13)),
+      color: n => (n.f.library ? (n.f.vulns ? RED : '#8d8d8d') : n.f.fn && n.f.cx > (D.health ? D.health.thresholds.maxComplexity : 15) ? '#e0621b' : colorOf(n.f.lang)),
+      shape: n => (n.f.fn ? 'diamond' : n.f.library ? (n.f.vulns ? 'skull' : 'square') : 'circle'),
       ringColor: n => (n.f.cycle >= 0 ? RED : null),
-      label: n => (n.f.library ? n.f.path + (n.f.version ? '@' + n.f.version : '') : n.f.path.split('/').pop()),
-      showLabel: (n, k) => n.f.in >= Math.max(3, maxIn * 0.25) || n.f.cycle >= 0 || (n.f.library && n.f.vulns) || k > 1.7,
-      linkColor: l => (l.cyc ? RED : '#7c7c7c'),
-      linkWidth: l => (l.cyc ? 2.2 : 0.9),
+      label: n => (n.f.fn ? n.f.path : n.f.library ? n.f.path + (n.f.version ? '@' + n.f.version : '') : n.f.path.split('/').pop()),
+      showLabel: (n, k) => (n.f.fn ? k > 2.2 || n.f.in >= 3 : n.f.in >= Math.max(3, maxIn * 0.25) || n.f.cycle >= 0 || (n.f.library && n.f.vulns) || k > 1.7),
+      linkColor: l => (l.cyc ? RED : l.call ? AMBER : l.def ? '#5a5a5a' : '#7c7c7c'),
+      linkWidth: l => (l.cyc ? 2.2 : l.call ? 1.1 : l.def ? 0.6 : 0.9),
       linkAlpha: 0.5,
-      distance: () => 45,
-      charge: () => -90,
-      onHover: (n, ev) => (n ? showTip(n.f.library ? libraryTip(n.f) : `<b>${esc(n.f.path)}</b><br>imports ${fmt(n.f.out)}${n.f.dependencies != null ? ` (${fmt(n.f.dependencies)} transitively)` : ''} · imported by ${fmt(n.f.in)}${n.f.dependents != null ? ` (${fmt(n.f.dependents)} transitively)` : ''}${n.f.cycle >= 0 ? '<br><b style="color:' + RED + '">part of a circular import</b>' : ''}<br><i>Click: show dependencies · Double-click: open · Right-click: more</i>`, ev) : hideTip()),
+      distance: l => (l.def ? 16 : l.call ? 30 : 45),
+      charge: n => (n.f && n.f.fn ? -25 : -90),
+      onHover: (n, ev) => (n ? showTip(n.f.fn ? fnTip(n.f) : n.f.library ? libraryTip(n.f) : `<b>${esc(n.f.path)}</b><br>imports ${fmt(n.f.out)}${n.f.dependencies != null ? ` (${fmt(n.f.dependencies)} transitively)` : ''} · imported by ${fmt(n.f.in)}${n.f.dependents != null ? ` (${fmt(n.f.dependents)} transitively)` : ''}${n.f.cycle >= 0 ? '<br><b style="color:' + RED + '">part of a circular import</b>' : ''}<br><i>Click: show dependencies · Double-click: open · Right-click: more</i>`, ev) : hideTip()),
       onClick: n => selectImportNode(n.index),
-      onDblClick: n => (n.f.library ? n.f.dir && vscode.postMessage({ type: 'reveal', abs: n.f.dir, inEditor: true }) : vscode.postMessage({ type: 'open', abs: n.f.abs })),
+      onDblClick: n => (n.f.fn ? vscode.postMessage({ type: 'open', abs: n.f.file, line: n.f.line }) : n.f.library ? n.f.dir && vscode.postMessage({ type: 'reveal', abs: n.f.dir, inEditor: true }) : vscode.postMessage({ type: 'open', abs: n.f.abs })),
       onBackground: () => clearImportHighlight(),
-      onContext: (n, ev) => { if (!n.f.library) openMenu(n.f.abs, ev.clientX, ev.clientY); },
+      onContext: (n, ev) => { if (!n.f.library) openMenu(n.f.fn ? n.f.file : n.f.abs, ev.clientX, ev.clientY); },
     });
     const input = /** @type {HTMLInputElement} */ (document.getElementById('impFind'));
     if (input) {
@@ -353,6 +353,13 @@
         if (n) selectImportNode(n.index, true); else setImpStatus(`No file matching “${esc(input.value)}” in the graph.`);
       });
     }
+  }
+
+  /** nodes / links for the import graph, with functions when switched on */
+  let impFns = false;
+  function importGraphData() {
+    const src = impFns && window.LCGraphs ? LCGraphs.withFunctions(D.importGraph, D.functionGraph) : D.importGraph;
+    return { nodes: src.nodes.map(n => ({ id: n.abs, f: n })), links: src.links.map(l => ({ source: l.s, target: l.t, cyc: l.cyc, call: l.call, def: l.def })) };
   }
 
   const libraryTip = f => `<b>${esc(f.path)}</b>${f.version ? '@' + esc(f.version) : ''} <span style="opacity:.7">${esc(f.ecosystem)} library</span>
@@ -432,7 +439,7 @@
     const n = g.nodes[index].f;
     const total = (shown, all) => (all != null && all > shown ? ` (${fmt(all)} in the whole project)` : '');
     setImpStatus(`<b>${esc(n.path)}</b> – depends on <b style="color:${AMBER}">${fmt(deps)}</b> file${deps === 1 ? '' : 's'}${total(deps, n.dependencies)}, <b style="color:${RED}">${fmt(users)}</b> file${users === 1 ? '' : 's'} depend on it${total(users, n.dependents)}${n.cycle >= 0 ? ` · <b style="color:${RED}">in a circular import</b>` : ''}
-      <button class="link" data-open-abs="${esc(n.abs)}">open</button>`);
+      <button class="link" data-open-abs="${esc(n.fn ? n.file : n.abs)}" ${n.fn ? `data-open-line="${n.line}"` : ''}>open</button>`);
   }
 
   const motionFor = id => {
@@ -463,6 +470,7 @@
         <input id="impFind" type="text" list="impFiles" placeholder="Find a file in the graph…" spellcheck="false">
         <datalist id="impFiles">${G.nodes.map(n => `<option value="${esc(n.path)}">`).join('')}</datalist>
         <button class="btn" id="impClear" disabled>${icon('close')} Clear highlight</button>
+        ${D.functionGraph && D.functionGraph.fns.length ? `<button class="btn ${impFns ? 'primary' : ''}" data-imp-fns title="Show functions as nodes: file → function, and calls between functions (${fmt(D.functionGraph.fns.length)} of ${fmt(D.functionGraph.total)} functions)">ƒ Functions</button>` : ''}
         <button class="btn primary" data-train="chain" title="Ride a train along a dependency chain through a 3D universe of your files">${icon('play')} 3D Train</button>
         <button class="btn" data-train="free" title="Free roam: drive along any relation (W, A/D, S) starting at the selected file">${icon('play')} 3D Free roam</button>
       </div>
@@ -1259,11 +1267,20 @@
       return;
     }
     const trainBtn = t.closest('[data-train]');
-    if (trainBtn && window.LCTrain) { LCTrain.open(UI(), D, { selectedAbs: impSelected, mode: /** @type {HTMLElement} */ (trainBtn).dataset.train }); return; }
+    if (trainBtn && window.LCTrain) { LCTrain.open(UI(), D, { selectedAbs: impSelected, mode: /** @type {HTMLElement} */ (trainBtn).dataset.train, functions: impFns }); return; }
     const impLayout = t.closest('[data-imp-layout]');
     if (impLayout && graphs.importgraph) {
       graphs.importgraph.setLayout(/** @type {HTMLElement} */ (impLayout).dataset.impLayout);
       impLayout.parentElement.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('on', b === impLayout));
+      return;
+    }
+    const impFnBtn = t.closest('[data-imp-fns]');
+    if (impFnBtn && graphs.importgraph) {
+      impFns = !impFns;
+      impFnBtn.classList.toggle('primary', impFns);
+      clearImportHighlight();
+      const d = importGraphData();
+      graphs.importgraph.setData(d.nodes, d.links, true);
       return;
     }
     const impMotion = t.closest('[data-imp-motion]');
@@ -1298,7 +1315,7 @@
     }
     if (t.id === 'impClear' || t.closest('#impClear')) { clearImportHighlight(); const f = /** @type {HTMLInputElement} */ (document.getElementById('impFind')); if (f) f.value = ''; return; }
     const openAbs = t.closest('[data-open-abs]');
-    if (openAbs) { vscode.postMessage({ type: 'open', abs: /** @type {HTMLElement} */ (openAbs).dataset.openAbs }); return; }
+    if (openAbs) { const o = /** @type {HTMLElement} */ (openAbs); vscode.postMessage({ type: 'open', abs: o.dataset.openAbs, line: o.dataset.openLine ? Number(o.dataset.openLine) : undefined }); return; }
     const copyText = t.closest('[data-copy-text]');
     if (copyText) {
       const text = /** @type {HTMLElement} */ (copyText).dataset.copyText;
