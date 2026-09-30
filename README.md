@@ -41,7 +41,13 @@ Die Seite nutzt ein festes Farbschema aus dunklem Orange und Grau mit SVG-Icons.
   - **Treemap-Kachel:** Ein **Linksklick kopiert den Pfad** in die Zwischenablage, ein Doppelklick öffnet die Datei.
   - **Rechtsklick** (auch in Rangliste, Balken und Rant-Listen): Datei öffnen, Pfad bzw. relativen Pfad kopieren, im Dateimanager anzeigen oder **Datei löschen**. Beim Löschen kommt eine Sicherheitsabfrage, danach landet die Datei im Papierkorb oder wird endgültig gelöscht.
 - **Hall of Fame**: 18 Kategorien mit Podest (🥇🥈🥉), darunter längste und schwerste Datei, längste Zeile (öffnet direkt an der Stelle), kleinste Datei, tiefste Verschachtelung, längster Name, TODO-Sammler, am besten dokumentiert, „Silent treatment“ (viel Code, kein Kommentar), Function Factory, Debug-Print-Champion, luftigste und dichteste Datei, breitester Code, Whitespace-Hoarder, Emoji-Artist, neueste Datei und Fossil. Die Hero-Karte 🏆 zeigt die meistdekorierte Datei.
-- **Code Rant**: lästert über Dateien über der Zeilengrenze (Standard **500**) und über Dateien mit mehr als **10 %** Leerzeilen.
+- **Dependencies, licenses & vulnerabilities** (npm und Python)
+  - **Manifeste:** `package.json`, `requirements*.txt`, `pyproject.toml` (PEP 621 und Poetry), `Pipfile`, `setup.py`, `setup.cfg`
+  - **Installierte Pakete:** npm aus `package-lock.json` oder `node_modules`, Python aus der virtuellen Umgebung (`.venv`, `venv` oder jeder Ordner mit `pyvenv.cfg`) über `METADATA`, Classifier und Lizenzdateien. Ohne venv kommen die Versionen aus `Pipfile.lock`, `poetry.lock` oder `uv.lock`.
+  - **Lizenz-Report:** jedes Paket (direkt und transitiv) mit normalisierter SPDX-Lizenz, Kategorie (permissive, weak/strong/network copyleft, restricted, unknown) und Status *problematic*, *review* oder *ok*. Filter und Export als CSV sind dabei. Welche Lizenzen problematisch sind, legst du in den Einstellungen fest.
+  - **Vulnerability-Report** über [OSV.dev](https://osv.dev): Schweregrad (auch aus CVSS v3 berechnet), Advisory-Link, CVE, Zusammenfassung und korrigierte Version. Gesendet werden nur Paketname und Version, abschaltbar über `linecounter.vulnerabilities.enabled`.
+  - **Unused & undeclared:** deklarierte Pakete, die nie importiert werden, und Imports von Paketen, die nicht deklariert sind. Heuristiken gibt es für CLI-Tools, Plugins, `@types`, Konfigurationsdateien, npm-Skripte und abweichende Python-Importnamen (`PyYAML` → `yaml`, `Pillow` → `PIL`, …).
+ lästert über Dateien über der Zeilengrenze (Standard **500**) und über Dateien mit mehr als **10 %** Leerzeilen.
   - **Rant-o-Meter** (0–100) mit Stimmung von 😇 Zen bis 🌋 Volcanic
   - **Kennzahlen:** Zeilen über dem Limit, überflüssige Leerzeilen, schlimmster Übeltäter 👑
   - **Eskalationsstufen** zum Filtern: 🙄 Mild, 😤 Spicy, 🤬 Furious, 💀 Nuclear für zu lange Dateien und 🫧 Breezy, 🌬️ Drafty, 🏜️ Desert, 🕳️ Void für zu viele Leerzeilen
@@ -93,6 +99,14 @@ Alle Einstellungen lassen sich auch pro Projekt in **`.linecounter/settings.json
 | `linecounter.excludePatterns` | `[]` | Zusätzliche Glob-Muster zum Ausschließen |
 | `linecounter.defaultFilters` | alle | Vordefinierte Filter, die in einem neuen Workspace aktiv sind |
 | `linecounter.graphs.motion` | `auto` | `auto` (Word Web wackelt, die anderen Graphen sind ruhig), `wiggle`, `calm` oder `still` |
+| `linecounter.dependencies.enabled` | `true` | Abhängigkeits-, Lizenz- und Schwachstellen-Report |
+| `linecounter.licenses.problematic` | `GPL*`, `AGPL*`, `SSPL*`, `CC-BY-NC*`, `BUSL*`, `Proprietary` | Lizenzen, die als problematisch markiert werden (SPDX mit `*`) |
+| `linecounter.licenses.review` | `LGPL*`, `MPL*`, `EPL*`, `CDDL*`, `EUPL*`, `CC-BY-SA*`, `Unknown`, `Custom` | Lizenzen, die ein Review brauchen |
+| `linecounter.licenses.allowed` | `[]` | Optionale Allowlist; alles andere gilt dann als problematisch |
+| `linecounter.licenses.ignorePackages` | `[]` | Akzeptierte Ausnahmen |
+| `linecounter.licenses.includeTransitive` | `true` | Transitive Pakete in den Lizenz-Report aufnehmen |
+| `linecounter.vulnerabilities.enabled` | `true` | Schwachstellen über OSV.dev prüfen |
+| `linecounter.vulnerabilities.includeTransitive` | `true` | Auch transitive Pakete prüfen |
 | `linecounter.maxFileSizeKB` | `2048` | Größere Dateien zählen nur mit ihrer Größe |
 | `linecounter.maxEntries` | `200000` | Maximale Anzahl gescannter Einträge |
 | `linecounter.maxCommits` | `20000` | Maximale Anzahl gelesener Commits pro Repo |
@@ -115,6 +129,7 @@ src/config.js          .linecounter/settings.json + presets.json (Overrides, Pre
 src/sidebarProvider.js Sidebar-Webview, Scan, Presets
 src/statistics.js      Ablauf „Create Statistics“ (Analyse, Git, Aggregation)
 src/util.js            Datei öffnen, Glob → RegExp
+src/deps/              Abhängigkeits-Scanner: manifests, installed, licenses, vulns (OSV + CVSS), usage
 src/scanner.js     Rekursiver Scan und vordefinierte Filter
 src/analyzer.js    Zeilen-Klassifizierung (Code/Kommentar/Leer) und Kennzahlen pro Datei
 src/languages.js   Spracherkennung und Kommentarsyntax
