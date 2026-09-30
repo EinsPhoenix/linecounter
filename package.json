@@ -2,7 +2,7 @@
   "name": "linecounter",
   "displayName": "Line Counter & Code Statistics",
   "description": "Browse your workspace as a filterable tree, exclude files and folders with a click and generate full-screen code statistics with charts, git insights, fun facts and a file ranking.",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "publisher": "einsphoenix",
   "icon": "media/icon.png",
   "repository": {
@@ -247,6 +247,80 @@
           ],
           "default": "auto",
           "description": "How much the graphs move."
+        },
+        "linecounter.dependencies.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Scan package.json / requirements.txt / pyproject.toml / Pipfile / setup.py for the dependency, license and vulnerability report."
+        },
+        "linecounter.licenses.problematic": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "GPL*",
+            "AGPL*",
+            "SSPL*",
+            "CC-BY-NC*",
+            "BUSL*",
+            "Proprietary"
+          ],
+          "markdownDescription": "Licenses that are flagged as **problematic** (SPDX ids, `*` wildcards). Example: `GPL*` matches GPL-2.0 and GPL-3.0, but not LGPL."
+        },
+        "linecounter.licenses.review": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "LGPL*",
+            "MPL*",
+            "EPL*",
+            "CDDL*",
+            "EUPL*",
+            "CC-BY-SA*",
+            "Unknown",
+            "Custom"
+          ],
+          "markdownDescription": "Licenses that **need a review** (weak copyleft, unknown or custom licenses)."
+        },
+        "linecounter.licenses.allowed": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Optional allowlist. If set, every license that does not match is flagged as problematic (e.g. `[\"MIT\", \"BSD*\", \"Apache-2.0\", \"ISC\"]`)."
+        },
+        "linecounter.licenses.ignorePackages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "description": "Packages that are accepted exceptions: they stay in the report but are not flagged or checked for vulnerabilities."
+        },
+        "linecounter.licenses.includeTransitive": {
+          "type": "boolean",
+          "default": true,
+          "description": "Include installed transitive packages (from package-lock.json / node_modules / the virtual environment) in the license report."
+        },
+        "linecounter.vulnerabilities.enabled": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Check npm and PyPI packages for known vulnerabilities via [OSV.dev](https://osv.dev). Only package names and versions are sent."
+        },
+        "linecounter.vulnerabilities.includeTransitive": {
+          "type": "boolean",
+          "default": true,
+          "description": "Also check transitive (installed but not declared) packages for vulnerabilities."
+        },
+        "linecounter.vulnerabilities.timeoutSeconds": {
+          "type": "number",
+          "default": 20,
+          "minimum": 3,
+          "description": "Timeout for requests to OSV.dev."
         }
       }
     },
@@ -263,7 +337,7 @@
   },
   "scripts": {
     "package": "vsce package --skip-license --out linecounter.vsix",
-    "test": "node test/smoke.js && node test/graphs.test.js",
+    "test": "node test/smoke.js && node test/graphs.test.js && node test/deps.test.js",
     "release": "node scripts/release.js"
   },
   "devDependencies": {

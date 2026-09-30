@@ -5,6 +5,7 @@ const path = require('path');
 const { analyzeFiles } = require('./analyzer');
 const { aggregate } = require('./stats');
 const git = require('./git');
+const { scanDependencies } = require('./deps');
 
 /**
  * Runs the whole analysis for the selected files and returns the data model for the statistics page.
@@ -37,8 +38,19 @@ async function computeStatistics(config, roots, selection) {
     progress.report({ increment: 80 - reported, message: 'Reading git history…' });
     const repos = await gitRepos(config, roots, results, maxCommits);
 
+    let dependencies = null;
+    if (config.get('dependencies.enabled', true)) {
+      progress.report({ message: 'Scanning dependencies, licenses and vulnerabilities…' });
+      try {
+        dependencies = await scanDependencies(results, dependencyOptions(config, msg => progress.report({ message: msg })));
+      } catch (e) {
+        dependencies = { error: e.message, manifests: [], packages: [], usage: [], vulns: { enabled: false, items: [] } };
+      }
+    }
+
     progress.report({ increment: 20, message: 'Building charts…' });
     return aggregate(results, {
+      dependencies,
       workspace: vscode.workspace.name || roots.map(r => r.name).join(', '),
       repos,
       graphMotion: config.get('graphs.motion', 'auto'),
@@ -49,6 +61,24 @@ async function computeStatistics(config, roots, selection) {
       },
     });
   });
+}
+
+function dependencyOptions(config, onProgress) {
+  return {
+    policy: {
+      problematic: config.get('licenses.problematic', []),
+      review: config.get('licenses.review', []),
+      allowed: config.get('licenses.allowed', []),
+    },
+    ignorePackages: config.get('licenses.ignorePackages', []),
+    includeTransitiveLicenses: config.get('licenses.includeTransitive', true),
+    vulnerabilities: {
+      enabled: config.get('vulnerabilities.enabled', true),
+      includeTransitive: config.get('vulnerabilities.includeTransitive', true),
+      timeoutMs: config.get('vulnerabilities.timeoutSeconds', 20) * 1000,
+    },
+    onProgress,
+  };
 }
 
 /** Git repositories found while scanning plus the repos containing each workspace folder. */
