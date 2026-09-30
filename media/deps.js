@@ -52,7 +52,7 @@
         ${card('Licenses', hbars(topLic.map(([l, c]) => ({ label: l, value: c, color: CAT[(P.find(p => p.license === l) || {}).category || 'unknown'].color, tip: `<b>${esc(l)}</b><br>${fmt(c)} packages` }))))}
         ${card('Unused & undeclared', usageHtml(ui, R))}
       </div>
-      ${card(`${icon('alert')} Vulnerabilities <span class="muted">via OSV.dev</span>`, `<div id="dep-vulns">${vulnsHtml(ui, R)}</div>`, { sub: R.vulns.enabled && !R.vulns.error ? `${fmt(R.vulns.checked)} packages checked` : '' })}
+      ${card(`${icon('alert')} Vulnerabilities <span class="muted">via OSV.dev</span>`, `<div id="dep-vulns">${vulnsHtml(ui, R)}</div>`, { sub: R.vulns.enabled && !R.vulns.error ? `${fmt(R.vulns.checked)} packages checked`: '', tools: R.vulns.enabled ? `<button class="btn" data-dep-pdf="vulns">${icon('pages')} Vulnerability PDF</button>` : '' })}
       ${card('License report', `<div class="table-tools dep-tools">
           <select id="depStatus">
             <option value="flagged" ${state.status === 'flagged' ? 'selected' : ''}>Problematic + review</option>
@@ -66,6 +66,7 @@
           <input id="depQ" type="text" placeholder="Filter packages or licenses…" spellcheck="false">
           <span class="muted" id="depCount"></span>
           <button class="btn" data-act="licenses-csv">${icon('download')} License CSV</button>
+          <button class="btn" data-dep-pdf="licenses">${icon('pages')} License PDF</button>
         </div><div class="table-scroll"><table class="grid" id="depTable"></table></div><div class="table-more" id="depMore"></div>`)}`;
   }
 
@@ -137,6 +138,13 @@
     if (sev) { state.sev = /** @type {HTMLElement} */ (sev).dataset.depSev; document.getElementById('dep-vulns').innerHTML = vulnsHtml(ui, D.dependencies); return true; }
     if (t.closest('[data-dep-allvulns]')) { state.showAllVulns = true; document.getElementById('dep-vulns').innerHTML = vulnsHtml(ui, D.dependencies); return true; }
     if (t.closest('[data-dep-more]')) { state.limit = Infinity; renderTable(ui, D); return true; }
+    const pdfBtn = t.closest('[data-dep-pdf]');
+    if (pdfBtn && window.LCExport) {
+      const kind = /** @type {HTMLElement} */ (pdfBtn).dataset.depPdf;
+      const data = kind === 'licenses' ? LCExport.licensePdf(D) : LCExport.vulnPdf(D);
+      ui.post({ type: 'savePdf', data, name: kind === 'licenses' ? 'license-report.pdf' : 'vulnerability-report.pdf' });
+      return true;
+    }
     const url = t.closest('[data-url]');
     if (url) { ui.post({ type: 'openUrl', url: /** @type {HTMLElement} */ (url).dataset.url }); return true; }
     const dir = t.closest('[data-dep-dir]');

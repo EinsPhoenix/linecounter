@@ -409,3 +409,36 @@ body.has-fs { overflow: hidden; }
 .dep-status.review { background: #f7ae62; color: #1b1b1b; }
 .dep-status.ok { background: #2e2e2e; color: #bdbdbd; }
 .dep-status.ign { background: transparent; border: 1px dashed #666; color: #999; }
+
+/* export dialog */
+.modal-backdrop { position: fixed; inset: 0; z-index: 400; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; }
+.modal { background: #242424; border: 1px solid #3a3a3a; border-top: 3px solid var(--accent); border-radius: 10px; padding: 18px 22px; width: min(720px, 92vw); box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+.modal h3 { margin: 0 0 12px; font-size: 16px; display: flex; gap: 8px; align-items: center; }
+.modal-cols { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px; }
+.modal-label { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 8px 0 5px; }
+.modal-secs { display: flex; flex-direction: column; gap: 3px; max-height: 300px; overflow: auto; }
+.modal .check { display: flex; gap: 7px; align-items: center; cursor: pointer; padding: 2px 0; }
+.modal .check input { accent-color: var(--accent); }
+.modal-progress { min-height: 20px; margin-top: 10px; color: var(--link); font-size: 12px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { background: var(--accent-strong); }
+.btn:disabled { opacity: .5; cursor: default; }
+button.link { background: none; border: none; color: var(--link); cursor: pointer; font: inherit; font-size: 11px; padding: 0 4px; text-transform: none; }
+
+/* while exporting: no sticky/scroll areas, no tool buttons */
+body.pdf-mode .toc { position: static; }
+body.pdf-mode .table-scroll, body.pdf-mode .imp-side, body.pdf-mode .chips { max-height: none !important; overflow: visible !important; }
+body.pdf-mode .card-fs, body.pdf-mode .graph-tools, body.pdf-mode .table-more, body.pdf-mode .imp-toolbar, body.pdf-mode #tooltip { display: none !important; }
+body.pdf-mode table.grid th { position: static; }
+
+/* light, printer-friendly theme for the PDF */
+body.print-light {
+  --bg: #ffffff; --fg: #1d1d1d; --muted: #666; --card: #f6f5f3; --card-2: #eeece9; --border: #dedad5;
+  --track: rgba(0,0,0,.06); --grid: rgba(0,0,0,.1); --link: #b8480f; --accent-soft: rgba(217,97,26,.12);
+  --q0: #f0eeeb; --c-blank: #9a9a9a;
+}
+body.print-light .tm span { color: #111 !important; }
+body.print-light .imp-cycle .imp-path { color: #b3261e; }
+body.print-light .rant-text b, body.print-light .fame-roast { color: #a8410f; }
+body.print-light .cm-quote { background: #f1efec; border-color: #ddd; color: #7a3a10; }

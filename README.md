@@ -72,6 +72,8 @@ Die Seite nutzt ein festes Farbschema aus dunklem Orange und Grau mit SVG-Icons.
   - Alle Graphen lassen sich zoomen, verschieben und per Drag bewegen. Hover hebt die Nachbarn hervor. Die Buttons oben rechts pausieren die Animation, schalten das Wackeln ein und aus, schütteln den Graphen durch und setzen den Zoom zurück. Die Einblend-Animation startet, sobald ein Graph ins Bild scrollt.
 - **Ranglisten-Tabelle** aller Dateien: sortierbar nach jeder Spalte, Filter nach Pfad und Sprache. Ein Klick öffnet die Datei.
 - **Project structure** (ganz am Ende): Ordner und Dateien als lebender Force-Graph. Ein Klick auf einen Ordner klappt ihn zu oder auf, ein Klick auf eine Datei öffnet sie. Große Projekte starten teilweise zugeklappt, damit der Graph flüssig bleibt.
+- **PDF-Export:** Du wählst die Abschnitte, Papierformat (A4 oder Letter), dunkles oder helles druckfreundliches Design und ein Deckblatt mit Kennzahlen. Dazu gibt es eigene PDFs für den **Lizenz-Report** und den **Schwachstellen-Report** (durchsuchbare Tabellen mit Handlungsempfehlungen).
+- **HTML-Report:** eine einzelne, interaktive HTML-Datei, die in jedem Browser ohne VS Code funktioniert
 - Export als **CSV** oder **JSON**, *Refresh*, *Maximize*, *Full screen*
 
 ## Einstellungen
