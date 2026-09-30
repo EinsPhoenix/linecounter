@@ -100,7 +100,7 @@ async function analyzeFile(absPath, relPath, root, maxBytes) {
     todo: 0, fixme: 0, hack: 0, wtf: 0,
     semicolons: 0, braces: 0, parens: 0, debugPrints: 0, emojis: 0, fortyTwo: 0,
     funcs: 0, imports: 0, depth: relPath.split('/').length - 1,
-    identifiers: null,
+    identifiers: null, deps: null,
   };
   if (stat.size > maxBytes) { result.skipped = true; return result; }
   let buf;
@@ -138,6 +138,8 @@ async function analyzeFile(absPath, relPath, root, maxBytes) {
   result.funcs = countMatches(text, /\b(function|def|func|fn|fun|sub)\s+\w+|=>\s*[{(]?/g);
   result.imports = countMatches(text, /^\s*(import|from\s+\S+\s+import|#include|using\s+[\w.]+;|require\(|use\s+[\w:]+)/gm);
 
+  result.deps = extractDeps(text, lang.name);
+
   // Identifier frequencies (only for code-ish files, capped for speed)
   if (lang.name !== 'Other' && !['JSON', 'CSV', 'Text', 'Markdown', 'XML'].includes(lang.name) && text.length < 500000) {
     const ids = {};
@@ -151,6 +153,34 @@ async function analyzeFile(absPath, relPath, root, maxBytes) {
     result.identifiers = ids;
   }
   return result;
+}
+
+const DEP_PATTERNS = {
+  js: [/(?:import|export)\s[^'"`;]*?from\s*['"]([^'"]+)['"]/g, /import\s*['"]([^'"]+)['"]/g, /(?:require|import)\s*\(\s*['"]([^'"]+)['"]\s*\)/g],
+  css: [/@(?:import|use|forward)\s+(?:url\()?\s*['"]([^'"]+)['"]/g],
+  c: [/#\s*include\s*"([^"]+)"/g],
+  py: [/^[ \t]*from[ \t]+(\.*[\w.]*)[ \t]+import/gm, /^[ \t]*import[ \t]+([\w.]+)/gm],
+  html: [/(?:src|href)\s*=\s*["']([^"':#?]+\.(?:m?js|ts|css))["']/g],
+};
+const DEP_KIND = {
+  JavaScript: 'js', JSX: 'js', TypeScript: 'js', TSX: 'js', Vue: 'js', Svelte: 'js', Astro: 'js',
+  CSS: 'css', SCSS: 'css', Less: 'css', C: 'c', 'C++': 'c', 'Objective-C': 'c', Python: 'py', HTML: 'html',
+};
+
+/** Import / include / require specifiers of a file (resolved to files later). */
+function extractDeps(text, langName) {
+  const kind = DEP_KIND[langName];
+  if (!kind || text.length > 1000000) return null;
+  const out = new Set();
+  const kinds = kind === 'html' ? ['html', 'js'] : [kind];
+  for (const k of kinds) {
+    for (const re of DEP_PATTERNS[k]) {
+      re.lastIndex = 0;
+      let m;
+      while ((m = re.exec(text)) && out.size < 300) out.add(m[1]);
+    }
+  }
+  return out.size ? [...out] : null;
 }
 
 /** Runs analyzeFile over many files with bounded concurrency. */

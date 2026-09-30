@@ -26,7 +26,43 @@ async function ignoredPaths(dir) {
 const SEP = '\x1f';
 const REC = '\x1e';
 
-async function repoStats(root, maxCommits) {
+const DEFAULT_COMMIT_WORDS = ['wip', 'asdf', 'tmp', 'temp', 'stuff', 'misc', 'oops', 'typo', 'final', 'please', 'hack',
+  'whatever', 'idk', 'wtf', 'lol', 'yolo', 'again', 'why', 'test', 'changes', 'update', 'fixed stuff', 'small fix', 'minor'];
+
+/** Collects commit messages worth ranting about. */
+function commitRant(commits, opts) {
+  const minLen = opts.minLength || 10;
+  const maxLen = opts.maxLength || 72;
+  const words = (opts.words && opts.words.length ? opts.words : DEFAULT_COMMIT_WORDS).map(w => String(w).toLowerCase()).filter(Boolean);
+  const ex = c => ({ hash: c.hash.slice(0, 8), subject: c.subject, author: c.author, time: c.time });
+  const own = commits.filter(c => !c.merge && !/^(merge|revert "revert)/i.test(c.subject) && !/\[bot\]|dependabot|renovate/i.test(c.author));
+  const short = own.filter(c => c.subject.trim().length < minLen && !/^v?\d+(\.\d+)+(-[\w.]+)?$/.test(c.subject.trim()));
+  const long = own.filter(c => c.subject.length > maxLen).sort((a, b) => b.subject.length - a.subject.length);
+  const wordHits = [];
+  for (const w of words) {
+    const re = new RegExp('(^|[^a-z0-9])' + w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '($|[^a-z0-9])', 'i');
+    const hits = own.filter(c => re.test(c.subject));
+    if (hits.length) wordHits.push({ word: w, count: hits.length, examples: hits.slice(0, 5).map(ex) });
+  }
+  wordHits.sort((a, b) => b.count - a.count);
+  const shouting = own.filter(c => c.subject.length >= 6 && /[A-Z]{4}/.test(c.subject) && c.subject === c.subject.toUpperCase());
+  const exclaim = own.filter(c => /!!|\?\?|\?!/.test(c.subject));
+  const counts = new Map();
+  for (const c of own) { const k = c.subject.trim().toLowerCase(); counts.set(k, (counts.get(k) || 0) + 1); }
+  const repeats = [...counts.entries()].filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([subject, count]) => ({ subject, count }));
+  const reverts = commits.filter(c => /^revert/i.test(c.subject)).length;
+  const fridayLate = own.filter(c => { const d = new Date(c.time); return d.getDay() === 5 && d.getHours() >= 17; });
+  const lowercase = own.filter(c => /^[a-z]/.test(c.subject)).length;
+  const endsWithDot = own.filter(c => /[^.]\.$/.test(c.subject)).length;
+  const pack = arr => ({ count: arr.length, examples: arr.slice(0, 8).map(ex) });
+  return {
+    minLength: minLen, maxLength: maxLen, total: own.length,
+    short: pack(short), long: pack(long), words: wordHits.slice(0, 12), shouting: pack(shouting), exclaim: pack(exclaim),
+    repeats, reverts, fridayLate: pack(fridayLate), lowercase, endsWithDot,
+  };
+}
+
+async function repoStats(root, maxCommits, rantOpts = {}) {
   const [branch, remote, branches, tags, logOut, nameOut] = await Promise.all([
     git(root, ['rev-parse', '--abbrev-ref', 'HEAD']),
     git(root, ['remote', 'get-url', 'origin']),
@@ -165,6 +201,7 @@ async function repoStats(root, maxCommits) {
     topWords, night, weekend, fixes, lazy, busFactor: bus,
     avgMsgLen: nonMerge.length ? Math.round(nonMerge.reduce((s, c) => s + c.subject.length, 0) / nonMerge.length) : 0,
     shortest: pick(shortest), longest: pick(longest), biggest: pick(biggest),
+    commitRant: commitRant(commits, rantOpts),
   };
 }
 

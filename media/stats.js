@@ -87,6 +87,11 @@
     fossil: 'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zM12 7v5l-3 3',
     repo: 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10',
     megaphone: 'M3 10v4h4l7 5V5L7 10zM17 9a4 4 0 0 1 0 6M19.5 6.5a8 8 0 0 1 0 11',
+    pause: 'M8 5v14M16 5v14',
+    play: 'M7 4l13 8-13 8z',
+    wave: 'M2 12c2-4 4-4 6 0s4 4 6 0 4-4 6 0 2 2 2 2',
+    shake: 'M12 12m-2 0a2 2 0 1 0 4 0 2 2 0 1 0-4 0M5 5l3 3M19 5l-3 3M5 19l3-3M19 19l-3-3M12 2v3M12 19v3',
+    target: 'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zM12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM12 1v4M12 19v4M1 12h4M19 12h4',
   };
   const icon = (name, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[name] || ICONS.dot}"/></svg>`;
 
@@ -119,7 +124,7 @@
   function card(title, body, opts = {}) {
     return `<section class="card ${opts.cls || ''}" ${opts.id ? `id="${opts.id}"` : ''}>
       <header><h3>${title}</h3><span class="head-right">${opts.sub ? `<span class="sub">${opts.sub}</span>` : ''}
-        <button class="card-fs" data-fs title="Show in full screen (Esc to close)">${icon('maximize')}</button></span></header>
+        ${opts.tools || ''}<button class="card-fs" data-fs title="Show in full screen (Esc to close)">${icon('maximize')}</button></span></header>
       <div class="card-body">${body}</div></section>`;
   }
 
@@ -218,61 +223,213 @@
   }
 
   // ---------- treemap (squarified) ----------
-  function squarify(items, x, y, w, h) {
-    const out = [];
-    const total = items.reduce((s, i) => s + i.value, 0);
-    if (!total || w <= 0 || h <= 0) return out;
-    const scale = (w * h) / total;
-    const nodes = items.map(i => ({ ...i, area: i.value * scale }));
-    let row = [];
-    const worst = (r, side) => {
-      const s = r.reduce((a, n) => a + n.area, 0);
-      let mx = 0, mn = Infinity;
-      for (const n of r) { mx = Math.max(mx, n.area); mn = Math.min(mn, n.area); }
-      return Math.max((side * side * mx) / (s * s), (s * s) / (side * side * mn));
-    };
-    const layoutRow = (r) => {
-      const s = r.reduce((a, n) => a + n.area, 0);
-      if (w >= h) {
-        const cw = s / h; let cy = y;
-        for (const n of r) { const ch = n.area / cw; out.push({ ...n, x, y: cy, w: cw, h: ch }); cy += ch; }
-        x += cw; w -= cw;
-      } else {
-        const ch = s / w; let cx = x;
-        for (const n of r) { const cw = n.area / ch; out.push({ ...n, x: cx, y, w: cw, h: ch }); cx += cw; }
-        y += ch; h -= ch;
-      }
-    };
-    for (const n of nodes) {
-      const side = Math.min(w, h);
-      if (!row.length || worst([...row, n], side) <= worst(row, side)) row.push(n);
-      else { layoutRow(row); row = [n]; }
-    }
-    if (row.length) layoutRow(row);
-    return out;
+  // ---------- canvas treemap + graphs ----------
+  let treemap = null;
+  let graphs = {};
+  function positionTip(ev) {
+    const pad = 14;
+    let x = ev.clientX + pad, y = ev.clientY + pad;
+    const r = tip.getBoundingClientRect();
+    if (x + r.width > window.innerWidth - 8) x = ev.clientX - r.width - pad;
+    if (y + r.height > window.innerHeight - 8) y = ev.clientY - r.height - pad;
+    tip.style.left = Math.max(4, x) + 'px';
+    tip.style.top = Math.max(4, y) + 'px';
   }
+  function showTip(html, ev) { tip.innerHTML = html; tip.style.display = 'block'; positionTip(ev); }
+  function hideTip() { tip.style.display = 'none'; }
+  const topGroup = f => {
+    const p = f.path.split('/');
+    const top = p.length > 1 ? p[0] + '/' : '(root files)';
+    return D.multiRoot ? `${f.rootName}/${top}` : top;
+  };
 
   function renderTreemap() {
     const el = document.getElementById('treemap');
-    if (!el) return;
-    const W = el.clientWidth, H = el.clientHeight;
-    const files = D.table.filter(f => f.lines > 0).sort((a, b) => b.lines - a.lines);
-    const MAXN = 400;
-    const shown = files.slice(0, MAXN);
-    const rest = files.slice(MAXN).reduce((s, f) => s + f.lines, 0);
-    const items = shown.map(f => ({ value: f.lines, f }));
-    if (rest) items.push({ value: rest, rest: files.length - MAXN });
-    const rects = squarify(items, 0, 0, W, H);
-    el.innerHTML = rects.map(r => {
-      const big = r.w > 70 && r.h > 28;
-      if (r.rest) {
-        return `<div class="tm" style="left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;background:var(--s-other)" ${tipAttr(`<b>${r.rest} smaller files</b><br>${fmt(r.value)} lines`)}>${big ? `<span>${r.rest} more…</span>` : ''}</div>`;
+    if (!el || !window.LCGraphs) return;
+    if (treemap) { treemap.render(); return; }
+    treemap = LCGraphs.Treemap(el, {
+      files: D.table,
+      colorOf: f => colorOf(f.lang),
+      groupOf: topGroup,
+      onHover: (f, ev) => (f ? showTip(`<b>${esc(f.path)}</b><br>${esc(f.lang)} · ${fmt(f.lines)} lines · ${bytes(f.size)}<br><i>Click: copy path · Double-click: open · Right-click: more</i>`, ev) : hideTip()),
+      onClick: f => copyPath(f.abs),
+      onDblClick: f => vscode.postMessage({ type: 'open', abs: f.abs }),
+      onContext: (f, ev) => openMenu(f.abs, ev.clientX, ev.clientY),
+    });
+  }
+
+  const graphTools = id => `<span class="graph-tools">
+      <button class="gbtn" data-graph="${id}" data-gact="pause" title="Pause / resume the animation">${icon('pause')}</button>
+      <button class="gbtn" data-graph="${id}" data-gact="wiggle" title="Toggle the wiggle">${icon('wave')}</button>
+      <button class="gbtn" data-graph="${id}" data-gact="shake" title="Shake it">${icon('shake')}</button>
+      <button class="gbtn" data-graph="${id}" data-gact="reset" title="Reset zoom">${icon('target')}</button>
+    </span>`;
+
+  function initWordWeb() {
+    const el = document.getElementById('wordweb');
+    const G = D.wordGraph;
+    if (!el || !window.LCGraphs || !G || !G.words.length) return;
+    const maxC = Math.max(...G.words.map(w => w.count));
+    const maxL = Math.max(1, ...G.files.map(f => f.lines));
+    const nodes = [
+      ...G.words.map(w => ({ id: 'w:' + w.id, kind: 'word', label: w.id, count: w.count })),
+      ...G.files.map(f => ({ id: 'f:' + f.abs, kind: 'file', f })),
+    ];
+    const links = G.links.map(l => ({ source: G.words.findIndex(w => w.id === l.w), target: G.words.length + l.f, v: l.v }));
+    graphs.wordweb = LCGraphs.ForceGraph(el, {
+      nodes, links,
+      radius: n => (n.kind === 'word' ? 7 + Math.sqrt(n.count / maxC) * 17 : 3 + Math.sqrt(n.f.lines / maxL) * 6),
+      color: n => (n.kind === 'word' ? 'var(--s1)' : '#8d8d8d'),
+      ring: n => n.kind === 'word',
+      label: n => (n.kind === 'word' ? n.label : n.f.path.split('/').pop()),
+      showLabel: (n, k) => n.kind === 'word' || k > 1.8,
+      labelSize: n => (n.kind === 'word' ? 10 + Math.sqrt(n.count / maxC) * 8 : 10),
+      labelInside: n => n.kind === 'word',
+      labelColor: n => (n.kind === 'word' ? '#ffffff' : '#d6d6d6'),
+      linkWidth: l => 0.6 + Math.log10(l.v + 1),
+      linkColor: () => '#9a6a4a',
+      distance: () => 70,
+      charge: n => (n.kind === 'word' ? -260 : -60),
+      onHover: (n, ev) => {
+        if (!n) return hideTip();
+        showTip(n.kind === 'word'
+          ? `<b>${esc(n.label)}</b><br>used ${fmt(n.count)} times`
+          : `<b>${esc(n.f.path)}</b><br>${fmt(n.f.lines)} lines<br><i>Click: open · Right-click: more</i>`, ev);
+      },
+      onClick: n => { if (n.kind === 'file') vscode.postMessage({ type: 'open', abs: n.f.abs }); },
+      onContext: (n, ev) => { if (n.kind === 'file') openMenu(n.f.abs, ev.clientX, ev.clientY); },
+    });
+  }
+
+  function initImportGraph() {
+    const el = document.getElementById('importgraph');
+    const G = D.importGraph;
+    if (!el || !window.LCGraphs || !G || !G.nodes.length) return;
+    const cyc = new Set(G.cycles.flatMap(c => [c[2] + '\n' + c[3], c[3] + '\n' + c[2]]));
+    const maxIn = Math.max(1, ...G.nodes.map(n => n.in));
+    const nodes = G.nodes.map(n => ({ id: n.abs, f: n }));
+    const links = G.links.map(l => ({ source: l.s, target: l.t, cyc: cyc.has(G.nodes[l.s].abs + '\n' + G.nodes[l.t].abs) }));
+    graphs.importgraph = LCGraphs.ForceGraph(el, {
+      nodes, links, arrows: true,
+      radius: n => 3.5 + Math.sqrt(n.f.in / maxIn) * 13,
+      color: n => colorOf(n.f.lang),
+      label: n => n.f.path.split('/').pop(),
+      showLabel: (n, k) => n.f.in >= Math.max(3, maxIn * 0.25) || k > 1.7,
+      linkColor: l => (l.cyc ? '#ffb46b' : '#7c7c7c'),
+      linkWidth: l => (l.cyc ? 2 : 0.9),
+      linkAlpha: 0.45,
+      distance: () => 45,
+      charge: () => -90,
+      onHover: (n, ev) => (n ? showTip(`<b>${esc(n.f.path)}</b><br>imported by ${fmt(n.f.in)} · imports ${fmt(n.f.out)}<br><i>Click: open · Right-click: more</i>`, ev) : hideTip()),
+      onClick: n => vscode.postMessage({ type: 'open', abs: n.f.abs }),
+      onContext: (n, ev) => openMenu(n.f.abs, ev.clientX, ev.clientY),
+    });
+  }
+
+  // ---------- project structure graph ----------
+  let structTree = null;
+  const structCollapsed = new Set();
+  function buildStructTree() {
+    const rootName = D.multiRoot ? 'workspace' : (D.workspace || 'root');
+    const root = { id: '/', name: rootName, dir: true, children: new Map(), files: 0, lines: 0, depth: 0 };
+    for (const f of D.table) {
+      const parts = (D.multiRoot ? f.rootName + '/' + f.path : f.path).split('/');
+      let cur = root;
+      cur.files++; cur.lines += f.lines;
+      for (let i = 0; i < parts.length - 1; i++) {
+        const id = cur.id + parts[i] + '/';
+        if (!cur.children.has(id)) cur.children.set(id, { id, name: parts[i], dir: true, children: new Map(), files: 0, lines: 0, depth: i + 1, parent: cur });
+        cur = cur.children.get(id);
+        cur.files++; cur.lines += f.lines;
       }
-      const f = r.f;
-      const name = f.path.split('/').pop();
-      return `<div class="tm clickable" data-abs="${esc(f.abs)}" data-copy="1" style="left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;background:${colorOf(f.lang)}"
-        ${tipAttr(`<b>${esc(f.path)}</b><br>${esc(f.lang)} · ${fmt(f.lines)} lines · ${bytes(f.size)}<br><i>Click: copy path · Double-click: open · Right-click: more</i>`)}>${big ? `<span>${esc(name)}</span>` : ''}</div>`;
-    }).join('');
+      cur.children.set(cur.id + parts[parts.length - 1], { id: cur.id + parts[parts.length - 1], name: parts[parts.length - 1], dir: false, f, depth: parts.length, parent: cur });
+    }
+    return root;
+  }
+  function structVisible() {
+    const nodes = [], links = [];
+    const walk = (n, parentIdx) => {
+      const idx = nodes.length;
+      nodes.push({ id: n.id, t: n });
+      if (parentIdx >= 0) links.push({ source: parentIdx, target: idx, file: !n.dir });
+      if (n.dir && !structCollapsed.has(n.id)) for (const c of n.children.values()) walk(c, idx);
+    };
+    walk(structTree, -1);
+    return { nodes, links };
+  }
+  function autoCollapse(limit) {
+    // collapse the deepest folders first until the graph fits into `limit` nodes
+    const dirs = [];
+    const count = n => { let c = 1; if (n.dir) { dirs.push(n); for (const ch of n.children.values()) c += count(ch); } return c; };
+    let total = count(structTree);
+    dirs.sort((a, b) => b.depth - a.depth || b.files - a.files);
+    for (const d of dirs) {
+      if (total <= limit) break;
+      if (d === structTree) continue;
+      let sub = 0;
+      const cnt = n => { for (const ch of n.children.values()) { sub++; if (ch.dir && !structCollapsed.has(ch.id)) cnt(ch); } };
+      cnt(d);
+      structCollapsed.add(d.id);
+      total -= sub;
+    }
+  }
+  function initStructure() {
+    const el = document.getElementById('structure');
+    if (!el || !window.LCGraphs || !D.table.length) return;
+    structTree = buildStructTree();
+    structCollapsed.clear();
+    autoCollapse(1400);
+    const maxFiles = Math.max(1, structTree.files);
+    const { nodes, links } = structVisible();
+    // label budget: only the biggest folders are labelled up front, the rest appear when zooming in
+    let labelled = new Set();
+    const updateLabels = list => {
+      labelled = new Set(list.filter(n => n.t.dir).sort((a, b) => b.t.files - a.t.files).slice(0, 36).map(n => n.id));
+    };
+    updateLabels(nodes);
+    graphs.structure = LCGraphs.ForceGraph(el, {
+      nodes, links,
+      radius: n => (n.t.dir ? (n.t === structTree ? 16 : 4 + Math.min(16, Math.sqrt(n.t.files / maxFiles) * 30)) : 2.5 + Math.min(5, Math.sqrt(n.t.f.lines) / 12)),
+      color: n => (n.t === structTree ? 'var(--s1)' : n.t.dir ? (structCollapsed.has(n.id) ? '#b9521a' : '#5f5f5f') : colorOf(n.t.f.lang)),
+      ring: n => n.t.dir,
+      label: n => (n.t.dir ? n.t.name + (structCollapsed.has(n.id) ? ` (+${fmt(n.t.files)})` : '') : n.t.name),
+      showLabel: (n, k) => (n.t.dir ? labelled.has(n.id) || k > 1.8 : k > 2.8),
+      labelSize: n => (n.t === structTree ? 14 : n.t.dir ? 11 : 9),
+      linkColor: l => (l.file ? '#5a5a5a' : '#8f4721'),
+      linkWidth: l => (l.file ? 0.7 : 1.6),
+      linkAlpha: 0.55,
+      distance: l => (l.file ? 14 : 34),
+      linkStrength: () => 0.9,
+      charge: n => (n.t.dir ? -110 : -18),
+      collidePad: 1,
+      onHover: (n, ev) => {
+        if (!n) return hideTip();
+        const t = n.t;
+        showTip(t.dir
+          ? `<b>${esc(t === structTree ? t.name : t.id.slice(1))}</b><br>${fmt(t.files)} files · ${fmt(t.lines)} lines<br><i>Click: ${structCollapsed.has(t.id) ? 'expand' : 'collapse'}</i>`
+          : `<b>${esc(t.f.path)}</b><br>${esc(t.f.lang)} · ${fmt(t.f.lines)} lines<br><i>Click: open · Right-click: more</i>`, ev);
+      },
+      onClick: n => {
+        const t = n.t;
+        if (!t.dir) { vscode.postMessage({ type: 'open', abs: t.f.abs }); return; }
+        if (t === structTree) return;
+        if (structCollapsed.has(t.id)) structCollapsed.delete(t.id); else structCollapsed.add(t.id);
+        const next = structVisible();
+        const pos = new Map(graphs.structure.positions());
+        for (const nn of next.nodes) {
+          if (!pos.has(nn.id)) { const p = pos.get(t.id) || { x: 0, y: 0 }; nn.x = p.x + (Math.random() - 0.5) * 20; nn.y = p.y + (Math.random() - 0.5) * 20; }
+        }
+        updateLabels(next.nodes);
+        graphs.structure.setData(next.nodes, next.links, true);
+      },
+      onContext: (n, ev) => { if (!n.t.dir) openMenu(n.t.f.abs, ev.clientX, ev.clientY); },
+    });
+  }
+
+  function destroyGraphs() {
+    for (const g of Object.values(graphs)) g.destroy();
+    graphs = {};
+    treemap = null;
   }
 
   // ---------- sections ----------
@@ -422,7 +579,7 @@
         <ol class="podium">${top.map((f, i) => `
           <li class="${i === 0 ? 'gold' : ''}"><span class="medal">${MEDALS[i]}</span>
             <div class="podium-body">${fileLink(f, i === 0 ? f.path : nameOf(f), c.line && c.line(f))}
-            <span class="fame-detail">${esc(c.d(f))}</span></div></li>`).join('')}</ol>
+            <span class="fame-detail">${esc(c.d(f))}</span>${i === 0 ? `<span class="fame-roast">“${esc(roastFor(c.title, f))}”</span>` : ''}</div></li>`).join('')}</ol>
       </div>`).join('')}</div>`;
   }
 
@@ -488,6 +645,14 @@
     'Opening <b>{n}</b> makes the laptop fan spin up. 🌀',
     '<b>{n}</b> is {x}× the limit. This is how legacy code is born. 👶',
     'Code review for <b>{n}</b>: “LGTM” – said nobody who actually read it. 🙈',
+    '<b>{n}</b> has {l} lines. Tolstoy called, he wants his length back. 📖',
+    'Somewhere inside <b>{n}</b> there is a small, clean module trying to get out. 🐣',
+    '<b>{n}</b> has reached the size where people just add code at the bottom and pray. 🙏',
+    'Ctrl+F is the only way to navigate <b>{n}</b>. {l} lines of hide and seek. 🔍',
+    '<b>{n}</b> is {x}× the limit. Even the linter gave up and went home. 🏠',
+    'The merge conflicts in <b>{n}</b> have merge conflicts. ⚔️',
+    '<b>{n}</b> has more lines than your last three pull requests had reviewers combined. Probably. 👥',
+    'If <b>{n}</b> were a function it would violate the Geneva Convention. 🚨',
   ];
   const BLANK_RANTS = [
     '<b>{n}</b> is {p}% empty lines. Is this code or a poem? 📜',
@@ -500,6 +665,11 @@
     '<b>{n}</b> could lose {r} blank lines and nobody would notice. 🤫',
     'Social distancing between the lines of <b>{n}</b> ({p}% blank). 😷',
     '<b>{n}</b> – {p}% blank. Even the code needs space from this code. 🌌',
+    '<b>{n}</b> has {r} blank lines too many. The Enter key needs a vacation. 🏖️',
+    'Reading <b>{n}</b> feels like reading a text from someone who presses Enter after every word. 📱',
+    '<b>{n}</b>: {p}% nothing. Artistic, but not very useful. 🎨',
+    'The blank lines in <b>{n}</b> are load-bearing now. Don’t touch them. 🏗️',
+    '<b>{n}</b> is {p}% vacuum. NASA wants to study it. 🚀',
   ];
   const LONG_LEVELS = [[1.5, '🙄', 'Mild'], [2.5, '😤', 'Spicy'], [5, '🤬', 'Furious'], [Infinity, '💀', 'Nuclear']];
   const BLANK_LEVELS = [[1.5, '🫧', 'Breezy'], [2.5, '🌬️', 'Drafty'], [4, '🏜️', 'Desert'], [Infinity, '🕳️', 'Void']];
@@ -562,6 +732,18 @@
     for (const f of pick(text.filter(f => f.comment === 0 && f.code >= 200 && !NO_COMMENT_LANGS.has(f.lang)), f => f.code, 2)) out.push(['🤐', f, `${fmt(f.code)} lines of code in <b>${esc(nameOf(f))}</b> and not one comment. Good luck, future you.`]);
     for (const f of pick(text.filter(f => f.trailing >= 20), f => f.trailing, 2)) out.push(['🧹', f, `<b>${esc(nameOf(f))}</b> hides ${fmt(f.trailing)} lines with trailing whitespace. Invisible mess is still mess.`]);
     for (const f of pick(text.filter(f => f.wtf >= 3), f => f.wtf, 2)) out.push(['🤯', f, `<b>${esc(nameOf(f))}</b> mentions “wtf / magic / ugly” ${fmt(f.wtf)} times. The code is talking to you.`]);
+    const G = D.importGraph;
+    const byAbs = abs => D.table.find(f => f.abs === abs);
+    if (G) {
+      for (const c of G.cycles.slice(0, 3)) {
+        const f = byAbs(c[2]);
+        if (f) out.push(['🔁', f, `<b>${esc(c[0].split('/').pop())}</b> and <b>${esc(c[1].split('/').pop())}</b> import each other. A toxic relationship in two files.`]);
+      }
+      const mag = G.mostImported[0];
+      if (mag && mag.count >= 8 && byAbs(mag.abs)) out.push(['🧲', byAbs(mag.abs), `<b>${esc(mag.path.split('/').pop())}</b> is imported by ${fmt(mag.count)} files. If it breaks, everything breaks. Sleep well.`]);
+      const oct = G.mostImporting[0];
+      if (oct && oct.count >= 12 && byAbs(oct.abs)) out.push(['🐙', byAbs(oct.abs), `<b>${esc(oct.path.split('/').pop())}</b> imports ${fmt(oct.count)} other files. An octopus would be jealous.`]);
+    }
     if (!out.length) return '<p class="rant-empty">😌 No bonus material. Your code is suspiciously well-behaved.</p>';
     return `<ul class="rant-list">${out.map(([e, f, t, line]) => `<li class="rant-item" data-abs="${esc(f.abs)}" ${line ? `data-line="${line}"` : ''} title="Open ${esc(f.path)}">
       <span class="rant-emoji">${e}</span><div><div class="rant-text">${t}</div><div class="rant-path">${esc(f.path)}</div></div></li>`).join('')}</ul>`;
@@ -604,12 +786,110 @@
         <div class="rant-stat"><span class="rant-stat-emoji">🗑️</span><div><b>${fmt(removable)}</b> blank lines could go</div></div>
         ${worst ? `<div class="rant-stat clickable" data-abs="${esc(worst.abs)}" title="Open ${esc(worst.path)}"><span class="rant-stat-emoji">👑</span><div>Worst offender: <b>${esc(nameOf(worst))}</b> (${(worst.lines / cfg.maxLines).toFixed(1)}×)</div></div>` : ''}
       </div>
+      ${card('🔥 Project roast', projectRoast(), { sub: 'Nothing personal. Okay, a little personal.' })}
       <div class="grid-2">
         ${card(`📚 Too long – over ${fmt(cfg.maxLines)} lines`, `<div id="rant-long">${rantList('long')}</div>`)}
         ${card(`🫧 Too much air – over ${cfg.maxBlankPercent}% blank`, `<div id="rant-blank">${rantList('blank')}</div>`, { sub: 'files with 10+ lines' })}
       </div>
       ${card('🎁 Bonus rants', bonusRants(), { sub: 'Things nobody asked about' })}
+      ${(D.repos || []).map(commitRant).join('')}
       <p class="muted rant-note">Limits come from the settings <code>linecounter.rant.maxFileLines</code> and <code>linecounter.rant.maxBlankPercent</code>.</p>`;
+  }
+
+  // ---------- roasts ----------
+  const FAME_ROASTS = {
+    'Longest file': ['Has its own weather system.', 'Loading… still loading…', 'Visible from space.', 'The IDE asks for a coffee break when opening it.'],
+    'Heaviest file': ['Skipped leg day, every day.', 'Would sink a ship.', 'The git server groans a little every time.'],
+    'Longest line': ['Ultra-wide monitor sponsored content.', 'Line wrapping has left the chat.', 'Scroll right. Keep scrolling. Almost there.'],
+    'Tiniest file': ['Does it even do anything?', 'The intern’s first commit.', 'Proof that size doesn’t matter. Or does it?'],
+    'Deepest nested': ['Bring a flashlight.', 'Java developers feel right at home.', 'cd ../../../../../ – the workout.'],
+    'Longest file name': ['Autocomplete is carrying this one.', 'Named by a committee.', 'The file name is longer than some functions.'],
+    'TODO collector': ['The backlog moved into the code.', 'Future-you has a lot of work to do.', 'TODO: fix TODOs.'],
+    'Best documented': ['Someone actually cared. Frame it.', 'Rare footage of documentation in the wild.', 'Probably comments like “// increment i”.'],
+    'Silent treatment': ['Not a single comment. Pure confidence.', 'Self-documenting code, they said.', 'Good luck to whoever inherits this.'],
+    'Function factory': ['Assembly line of functions. Unionize.', 'Every problem is solved with another function.', 'The single responsibility principle took a day off.'],
+    'Debug print champion': ['console.log is not a debugger. Or is it?', 'print("here"), print("here2"), print("HERE!!!")', 'Logs so loud the terminal needs earplugs.'],
+    'Airiest file': ['Lots of breathing room. Maybe too much.', 'Blank lines: the cheapest way to look productive.', 'Space – the final frontier.'],
+    'Densest file': ['Written by someone who hates the Enter key.', 'Not a single breath taken.', 'Readable only by compilers.'],
+    'Widest code': ['80-column rule? Never heard of it.', 'Written on a cinema screen.', 'Horizontal scrolling enthusiasts unite.'],
+    'Whitespace hoarder': ['Invisible mess is still mess.', 'Your linter is crying quietly.', 'Spaces at the end of lines: a collector’s item.'],
+    'Emoji artist': ['Code with feelings 💅', 'Professional? Never heard of it.', 'Unicode goes brrr.'],
+    'Freshest file': ['Still smells like fresh bugs.', 'The ink is not dry yet.', 'Brand new, not yet regretted.'],
+    'Fossil': ['Carbon dating recommended.', 'Nobody dares to touch it.', 'Written when jQuery was cool.'],
+  };
+  const roastFor = (title, f) => { const l = FAME_ROASTS[title]; return l ? l[hash(f.path + title) % l.length] : ''; };
+
+  function projectRoast() {
+    const t = D.totals;
+    const out = [];
+    const langs = D.languages.filter(l => l.key !== 'Binary' && l.lines > 0);
+    const has = k => langs.some(l => l.key === k);
+    const commentPct = pct(t.comment, t.code + t.comment);
+    const avg = t.textFiles ? t.lines / t.textFiles : 0;
+    const tiny = D.table.filter(f => !f.binary && f.lines > 0 && f.lines < 10).length;
+    const md = D.languages.find(l => l.key === 'Markdown');
+    const longest = D.table.reduce((m, f) => (!m || f.maxLine > m.maxLine ? f : m), null);
+    if (commentPct < 5) out.push(['💬', `Only ${commentPct.toFixed(1)}% of the non-blank lines are comments. Documentation is apparently passed down orally.`]);
+    else if (commentPct > 30) out.push(['📰', `${commentPct.toFixed(0)}% comments. Is this a code base or a blog?`]);
+    if (avg > 300) out.push(['📏', `The average file has ${fmt(Math.round(avg))} lines. Microservices, macro files.`]);
+    if (t.todo + t.fixme + t.hack >= 20) out.push(['📝', `${fmt(t.todo + t.fixme + t.hack)} TODOs, FIXMEs and HACKs. The backlog lives in the code now.`]);
+    if (t.debugPrints >= 20) out.push(['🐛', `${fmt(t.debugPrints)} debug prints. console.log is not a logging framework.`]);
+    if (langs.length >= 8) out.push(['🌍', `${langs.length} languages. Is this a project or the Tower of Babel?`]);
+    if (has('JavaScript') && has('TypeScript')) out.push(['🤝', 'JavaScript and TypeScript living side by side. Commit to the types already.']);
+    if (md && md.lines > t.code * 0.3) out.push(['📚', `Markdown makes up ${pctStr(md.lines, t.lines, 0)} of all lines. More talking than coding.`]);
+    if (t.trailing >= 50) out.push(['🧹', `${fmt(t.trailing)} lines with trailing whitespace. Invisible, but we see you.`]);
+    if (longest && longest.maxLine > 300) out.push(['➡️', `One line in ${esc(longest.path.split('/').pop())} is ${fmt(longest.maxLine)} characters long. Ultra-wide monitors send their thanks.`]);
+    if (t.tabIndent > t.lines * 0.05 && t.spaceIndent > t.lines * 0.05) out.push(['⚔️', `Tabs AND spaces (${fmt(t.tabIndent)} vs. ${fmt(t.spaceIndent)} lines). Pick a side. This is a war.`]);
+    if (t.emojis >= 10) out.push(['😜', `${fmt(t.emojis)} emojis hidden in the code. Very professional.`]);
+    if (t.files >= 1000) out.push(['🗄️', `${fmt(t.files)} files. Somebody really likes creating files.`]);
+    if (t.textFiles && tiny / t.textFiles > 0.25) out.push(['🐜', `${pctStr(tiny, t.textFiles, 0)} of all files have fewer than 10 lines. Was there a sale on files?`]);
+    if (t.fortyTwo >= 5) out.push(['🌌', `The number 42 appears ${fmt(t.fortyTwo)} times. Someone knows the answer, but not the question.`]);
+    if (t.wtf >= 5) out.push(['🤯', `“wtf”, “magic” or “ugly” written ${fmt(t.wtf)} times. The code is trying to tell you something.`]);
+    const G = D.importGraph;
+    if (G && G.cycleCount) out.push(['🔁', `${fmt(G.cycleCount)} pair${G.cycleCount === 1 ? '' : 's'} of files import each other. Codependency is not healthy.`]);
+    if (G && G.mostImported[0] && G.mostImported[0].count >= 15) out.push(['🧲', `${esc(G.mostImported[0].path.split('/').pop())} is imported by ${fmt(G.mostImported[0].count)} files. Please never break it. No pressure.`]);
+    for (const r of D.repos || []) {
+      const top = r.authors[0];
+      if (r.busFactor === 1 && r.authorCount > 1 && top) out.push(['🚌', `Bus factor 1 in ${esc(r.name)}. Please keep ${esc(top.name)} away from buses.`]);
+      if (r.commitCount >= 20 && r.night / r.commitCount > 0.15) out.push(['🦉', `${pctStr(r.night, r.commitCount, 0)} of the commits happened between midnight and 5 am. Sleep is for the weak, apparently.`]);
+      if (r.commitCount >= 20 && r.weekend / r.commitCount > 0.3) out.push(['🏖️', `${pctStr(r.weekend, r.commitCount, 0)} weekend commits. Touch grass.`]);
+    }
+    if (!out.length) out.push(['😇', 'We tried to roast this project and found nothing. Suspicious. Very suspicious.']);
+    return `<ul class="roast-list">${out.map(([e, t2]) => `<li><span class="rant-emoji">${e}</span><span>${t2}</span></li>`).join('')}</ul>`;
+  }
+
+  const WORD_QUIPS = {
+    wip: 'Work in progress. Forever in progress.', asdf: 'Keyboard smash detected.', tmp: 'Nothing is more permanent than a temporary fix.',
+    temp: 'Nothing is more permanent than a temporary fix.', stuff: 'Very descriptive. Stuff happened.', misc: 'Miscellaneous – the junk drawer of git.',
+    oops: 'At least they are honest.', typo: 'Spell checkers exist. Just saying.', final: 'Narrator: it was not the final one.',
+    please: 'Begging the CI does not work. We checked.', hack: 'Hacks all the way down.', whatever: 'Passive-aggressive commit detected.',
+    idk: 'Neither do we.', wtf: 'The commit history is screaming.', lol: 'Glad someone is having fun.', yolo: 'You only deploy once. Hopefully.',
+    again: 'Déjà vu, again.', why: 'The eternal question.', test: 'Testing in production, or testing the commit button?',
+    changes: 'Yes, commits usually contain changes. Thanks for clarifying.', update: 'Updated what? The suspense is killing us.',
+    minor: 'Minor, they said. 400 changed lines, the diff said.', 'small fix': 'Small fix, big hopes.', 'fixed stuff': 'Which stuff? All the stuff?',
+  };
+  const quote = e => `<span class="cm-quote" ${tipAttr(`<b>${esc(e.hash)}</b> · ${esc(e.author)}<br>${date(e.time)}`)}>“${esc(e.subject.length > 90 ? e.subject.slice(0, 88) + '…' : e.subject)}”</span>`;
+
+  function commitRant(r) {
+    const c = r.commitRant;
+    if (!c || !c.total) return '';
+    const items = [];
+    const ex = list => (list.length ? `<div class="cm-examples">${list.slice(0, 5).map(quote).join('')}</div>` : '');
+    if (c.short.count) items.push(['🤏', `<b>${fmt(c.short.count)}</b> commit message${c.short.count === 1 ? '' : 's'} shorter than ${c.minLength} characters (${pctStr(c.short.count, c.total, 0)}). Poetry is about brevity – git is not.`, ex(c.short.examples)]);
+    if (c.long.count) items.push(['📜', `<b>${fmt(c.long.count)}</b> subject line${c.long.count === 1 ? '' : 's'} longer than ${c.maxLength} characters – the longest has ${fmt(c.long.examples[0].subject.length)}. That’s not a subject, that’s a memoir.`, ex(c.long.examples.slice(0, 2))]);
+    for (const w of c.words.slice(0, 8)) items.push(['🚩', `“<b>${esc(w.word)}</b>” appears in ${fmt(w.count)} commit${w.count === 1 ? '' : 's'}. ${esc(WORD_QUIPS[w.word] || 'Seriously?')}`, ex(w.examples.slice(0, 3))]);
+    for (const rp of c.repeats.slice(0, 3)) items.push(['🔁', `“<b>${esc(rp.subject)}</b>” was used <b>${fmt(rp.count)}</b> times as the complete message. Groundhog Day, but with git.`, '']);
+    if (c.shouting.count) items.push(['📢', `<b>${fmt(c.shouting.count)}</b> COMMIT MESSAGES ARE SHOUTING. WHY ARE WE YELLING?`, ex(c.shouting.examples)]);
+    if (c.exclaim.count) items.push(['❗', `<b>${fmt(c.exclaim.count)}</b> messages with “!!” or “??”. Deep breaths. It’s just code.`, ex(c.exclaim.examples)]);
+    if (c.reverts) items.push(['⏪', `<b>${fmt(c.reverts)}</b> reverts. Ctrl+Z, but make it permanent.`, '']);
+    if (c.fridayLate.count) items.push(['🍻', `<b>${fmt(c.fridayLate.count)}</b> commits on Friday after 5 pm. Bold move. Very bold.`, ex(c.fridayLate.examples.slice(0, 3))]);
+    if (c.lowercase / c.total > 0.5) items.push(['🔡', `${pctStr(c.lowercase, c.total, 0)} of the messages start in lowercase. Capital letters are free, by the way.`, '']);
+    if (c.endsWithDot / c.total > 0.1) items.push(['⏺️', `${fmt(c.endsWithDot)} subjects end with a period. It’s a commit, not a letter to grandma.`, '']);
+    const bad = c.short.count + c.long.count + c.words.reduce((s, w) => s + w.count, 0) + c.shouting.count;
+    const verdict = bad / c.total > 0.4 ? '🗑️ Commit hygiene: dumpster fire.' : bad / c.total > 0.2 ? '😬 Commit hygiene: questionable.' : bad / c.total > 0.05 ? '🙂 Commit hygiene: mostly fine, with some crimes.' : '✨ Commit hygiene: impressively clean.';
+    return card(`💬 Commit message rant – ${esc(r.name)}`, `<div class="cm-verdict">${verdict} <span class="muted">${fmt(c.total)} commits checked (merges and bots excluded)</span></div>
+      ${items.length ? `<ul class="rant-list cm-list">${items.map(([e, t, x]) => `<li class="cm-item"><span class="rant-emoji">${e}</span><div><div class="rant-text">${t}</div>${x}</div></li>`).join('')}</ul>` : '<p class="rant-empty">😌 Nothing to complain about. Who writes commit messages like that?</p>'}`,
+    { sub: `limits: ${c.minLength}–${c.maxLength} chars` });
   }
 
   function identifierCloud() {
@@ -719,7 +999,21 @@
   }
 
   // ---------- page ----------
+  function importSection() {
+    const G = D.importGraph;
+    if (!G || !G.nodes.length) return '<p class="muted">No imports between the selected files could be resolved (supported: JS/TS, Python, CSS/SCSS/Less, C/C++, HTML).</p>';
+    const list = (title, arr, unit) => `<div class="imp-col"><div class="imp-title">${title}</div>${arr.length ? `<ol class="imp-list">${arr.map(x => `<li data-abs="${esc(x.abs)}" title="Open ${esc(x.path)}"><span class="imp-name">${esc(x.path)}</span><span class="imp-count">${fmt(x.count)} ${unit}</span></li>`).join('')}</ol>` : '<p class="muted">–</p>'}</div>`;
+    return `<div id="importgraph" class="graph"></div>
+      <div class="imp-legend"><span><i class="imp-line"></i> import</span><span><i class="imp-line cyc"></i> mutual import (A ⇄ B)</span><span class="muted">node size = how often a file is imported</span></div>
+      <div class="imp-cols">
+        ${list('Most imported', G.mostImported, '×')}
+        ${list('Imports the most', G.mostImporting, 'imports')}
+        <div class="imp-col"><div class="imp-title">Mutual imports</div>${G.cycles.length ? `<ol class="imp-list">${G.cycles.slice(0, 5).map(c => `<li data-abs="${esc(c[2])}"><span class="imp-name">${esc(c[0])} ⇄ ${esc(c[1])}</span></li>`).join('')}</ol>` : '<p class="muted">None – nice.</p>'}</div>
+      </div>`;
+  }
+
   function render() {
+    destroyGraphs();
     assignColors();
     const t = D.totals;
     app.innerHTML = `
@@ -738,7 +1032,7 @@
       </header>
       <nav class="toc">
         <a href="#s-overview">Overview</a><a href="#s-lang">Languages</a><a href="#s-files">Files</a>
-        <a href="#s-fame">Hall of Fame</a>${rantCfg().enabled ? '<a href="#s-rant">Code Rant</a>' : ''}<a href="#s-git">Git</a><a href="#s-fun">Fun facts</a><a href="#s-ids">Identifiers</a><a href="#s-rank">Ranking</a>
+        <a href="#s-fame">Hall of Fame</a>${rantCfg().enabled ? '<a href="#s-rant">Code Rant</a>' : ''}<a href="#s-git">Git</a><a href="#s-fun">Fun facts</a><a href="#s-ids">Words & connections</a><a href="#s-rank">Ranking</a><a href="#s-struct">Structure</a>
       </nav>
       <main>
         <h2 id="s-overview">Overview</h2>${overview()}
@@ -748,11 +1042,21 @@
         ${rantSection()}
         <h2 id="s-git">Git</h2>${gitSection()}
         <h2 id="s-fun">Fun facts</h2>${funSection()}
-        <h2 id="s-ids">Most used identifiers</h2>${card('Word cloud of names in your code', identifierCloud())}
+        <h2 id="s-ids">Words & connections</h2>
+        <div class="grid-2">
+          ${card('Word cloud of names in your code', identifierCloud())}
+          ${card('Word web – most used words and the files that use them', D.wordGraph && D.wordGraph.words.length ? '<div id="wordweb" class="graph"></div>' : '<p class="muted">No identifiers found.</p>', { sub: 'drag, zoom, hover', tools: graphTools('wordweb') })}
+        </div>
+        ${card('File connections – who imports whom', importSection(), { sub: D.importGraph ? `${fmt(D.importGraph.edgeCount)} imports between ${fmt(D.importGraph.nodes.length)} files${D.importGraph.truncated ? ' (most connected shown)' : ''}` : '', tools: D.importGraph && D.importGraph.nodes.length ? graphTools('importgraph') : '' })}
         <h2 id="s-rank">File ranking</h2>${tableSection()}
+        <h2 id="s-struct">Project structure</h2>
+        ${card('Folders and files as a living graph', '<div id="structure" class="graph graph-tall"></div>', { sub: 'click a folder to collapse / expand · click a file to open it', tools: graphTools('structure') })}
       </main>`;
     renderTreemap();
     renderTable();
+    initWordWeb();
+    initImportGraph();
+    initStructure();
   }
 
   // ---------- events ----------
@@ -770,6 +1074,17 @@
       const k = /** @type {HTMLElement} */ (sort).dataset.sort;
       if (table.sort === k) table.dir *= -1; else { table.sort = k; table.dir = ['path', 'lang'].includes(k) ? 1 : -1; }
       renderTable();
+      return;
+    }
+    const gb = t.closest('[data-gact]');
+    if (gb) {
+      const g = graphs[/** @type {HTMLElement} */ (gb).dataset.graph];
+      const a = /** @type {HTMLElement} */ (gb).dataset.gact;
+      if (!g) return;
+      if (a === 'pause') { const on = g.toggleRunning(); gb.innerHTML = icon(on ? 'pause' : 'play'); gb.classList.toggle('off', !on); }
+      else if (a === 'wiggle') gb.classList.toggle('off', !g.toggleWiggle());
+      else if (a === 'shake') g.reheat();
+      else if (a === 'reset') g.resetView();
       return;
     }
     const fsBtn = t.closest('[data-fs]');
@@ -859,8 +1174,10 @@
     if (!o || o.classList.contains('deleted')) { hideMenu(); return; }
     ev.preventDefault();
     ev.stopPropagation();
+    openMenu(/** @type {HTMLElement} */ (o).dataset.abs, ev.clientX, ev.clientY);
+  });
+  function openMenu(abs, cx, cy) {
     tip.style.display = 'none';
-    const abs = /** @type {HTMLElement} */ (o).dataset.abs;
     const f = D.table.find(x => x.abs === abs);
     menu.dataset.abs = abs;
     menu.innerHTML = `<div class="ctx-title">${esc(f ? f.path : abs)}</div>
@@ -872,9 +1189,9 @@
       <button data-menu="delete" class="danger">${icon('trash')} Delete file…</button>`;
     menu.style.display = 'block';
     const r = menu.getBoundingClientRect();
-    menu.style.left = Math.min(ev.clientX, window.innerWidth - r.width - 6) + 'px';
-    menu.style.top = Math.min(ev.clientY, window.innerHeight - r.height - 6) + 'px';
-  });
+    menu.style.left = Math.min(cx, window.innerWidth - r.width - 6) + 'px';
+    menu.style.top = Math.min(cy, window.innerHeight - r.height - 6) + 'px';
+  }
   menu.addEventListener('click', ev => {
     const b = /** @type {HTMLElement} */ (ev.target).closest('[data-menu]');
     if (!b) return;
@@ -899,7 +1216,7 @@
     document.querySelectorAll('[data-abs]').forEach(el => {
       if (/** @type {HTMLElement} */ (el).dataset.abs === abs) el.classList.add('deleted');
     });
-    renderTreemap();
+    if (treemap) treemap.remove(abs);
     renderTable();
     for (const kind of ['long', 'blank']) {
       const el = document.getElementById('rant-' + kind);
@@ -924,14 +1241,7 @@
     tip.style.display = 'block';
   });
   document.addEventListener('mousemove', ev => {
-    if (tip.style.display !== 'block') return;
-    const pad = 14;
-    let x = ev.clientX + pad, y = ev.clientY + pad;
-    const r = tip.getBoundingClientRect();
-    if (x + r.width > window.innerWidth - 8) x = ev.clientX - r.width - pad;
-    if (y + r.height > window.innerHeight - 8) y = ev.clientY - r.height - pad;
-    tip.style.left = Math.max(4, x) + 'px';
-    tip.style.top = Math.max(4, y) + 'px';
+    if (tip.style.display === 'block') positionTip(ev);
   });
   document.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
 
