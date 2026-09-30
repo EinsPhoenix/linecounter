@@ -11,7 +11,8 @@
     restricted: { label: 'Restricted / custom', color: '#b8480f' },
     unknown: { label: 'Unknown', color: '#5a5a5a' },
   };
-  const state = { status: 'flagged', eco: '', scope: '', q: '', sev: '', limit: 150, showAllVulns: false };
+  const state = { status: 'flagged', eco: '', scope: '', q: '', sev: '', limit: 150, showAllVulns: false, license: '', category: '' };
+  const declLink = (p, esc) => (p.decl || []).filter(d => d.file).map(d => `<a href="#" class="file" data-abs="${esc(d.file)}" ${d.line ? `data-line="${d.line}"` : ''} title="Open the declaration">${esc(d.file.split(/[\\/]/).slice(-2).join('/'))}${d.line ? ':' + d.line : ''}</a>`).join(', ');
 
   function render(ui, D) {
     const R = D.dependencies;
@@ -27,7 +28,7 @@
     const unused = R.usage.reduce((s, u) => s + u.unused.filter(x => x.type !== 'tool').length, 0);
     const undeclared = R.usage.reduce((s, u) => s + u.undeclared.length, 0);
 
-    const cats = Object.keys(CAT).map(k => ({ label: CAT[k].label, value: P.filter(p => p.category === k).length, color: CAT[k].color })).filter(x => x.value);
+    const cats = Object.keys(CAT).map(k => ({ label: CAT[k].label, value: P.filter(p => p.category === k).length, color: CAT[k].color, attrs: `data-dep-cat="${k}"` })).filter(x => x.value);
     const licCount = new Map();
     for (const p of P) licCount.set(p.license, (licCount.get(p.license) || 0) + 1);
     const topLic = [...licCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12);
@@ -49,7 +50,7 @@
       ])}
       <div class="grid-3">
         ${card('License categories', donut(cats, fmt(P.length), 'packages'))}
-        ${card('Licenses', hbars(topLic.map(([l, c]) => ({ label: l, value: c, color: CAT[(P.find(p => p.license === l) || {}).category || 'unknown'].color, tip: `<b>${esc(l)}</b><br>${fmt(c)} packages` }))))}
+        ${card('Licenses', hbars(topLic.map(([l, c]) => ({ label: l, value: c, color: CAT[(P.find(p => p.license === l) || {}).category || 'unknown'].color, attrs: `data-dep-lic="${esc(l)}"`, tip: `<b>${esc(l)}</b><br>${fmt(c)} packages<br><i>click to list them</i>` }))), { sub: 'click a bar to list the packages' })}
         ${card('Unused & undeclared', usageHtml(ui, R))}
       </div>
       ${card(`${icon('alert')} Vulnerabilities <span class="muted">via OSV.dev</span>`, `<div id="dep-vulns">${vulnsHtml(ui, R)}</div>`, { sub: R.vulns.enabled && !R.vulns.error ? `${fmt(R.vulns.checked)} packages checked`: '', tools: R.vulns.enabled ? `<button class="btn" data-dep-pdf="vulns">${icon('pages')} Vulnerability PDF</button>` : '' })}
@@ -64,6 +65,7 @@
           <select id="depEco"><option value="">npm + Python</option><option value="npm">npm</option><option value="PyPI">Python</option></select>
           <select id="depScope"><option value="">direct + transitive</option><option value="direct">direct only</option><option value="transitive">transitive only</option></select>
           <input id="depQ" type="text" placeholder="Filter packages or licenses…" spellcheck="false">
+          <span id="depActive"></span>
           <span class="muted" id="depCount"></span>
           <button class="btn" data-act="licenses-csv">${icon('download')} License CSV</button>
           <button class="btn" data-dep-pdf="licenses">${icon('pages')} License PDF</button>
@@ -76,8 +78,9 @@
     if (!blocks.length) return '<p class="muted">Every declared package is imported somewhere, and every import is declared. Nice.</p>';
     return blocks.map(u => `<div class="dep-usage">
       <div class="dep-usage-head"><span class="dep-eco ${u.ecosystem === 'npm' ? 'npm' : 'py'}">${u.ecosystem}</span> ${esc(u.file)}</div>
-      ${u.unused.length ? `<div class="dep-usage-title">Possibly unused (${fmt(u.unused.length)})</div><ul class="dep-list">${u.unused.map(x => `<li><b>${esc(x.name)}</b> <span class="dep-tag ${x.type}">${esc(x.type)}</span> <span class="muted">${esc(x.hint)}</span></li>`).join('')}</ul>` : ''}
-      ${u.undeclared.length ? `<div class="dep-usage-title">Imported but not declared (${fmt(u.undeclared.length)})</div><ul class="dep-list">${u.undeclared.map(x => `<li><b>${esc(x.name)}</b>${x.dist && x.dist !== x.name ? ` <span class="muted">(${esc(x.dist)})</span>` : ''} <span class="muted">in ${x.files.map(esc).join(', ')}${x.installed ? ' · installed transitively' : ''}</span></li>`).join('')}</ul>` : ''}
+      ${u.unused.length ? `<div class="dep-usage-title">Possibly unused (${fmt(u.unused.length)})</div><ul class="dep-list">${u.unused.map(x => `<li><a href="#" class="file dep-pkg" data-abs="${esc(u.abs)}" ${x.line ? `data-line="${x.line}"` : ''} title="Open the declaration in ${esc(u.file)}">${esc(x.name)}</a> <span class="dep-tag ${x.type}">${esc(x.type)}</span> <span class="muted">${esc(x.hint)}</span></li>`).join('')}</ul>` : ''}
+      ${u.undeclared.length ? `<div class="dep-usage-title">Imported but not declared (${fmt(u.undeclared.length)}) <a href="#" class="file" data-abs="${esc(u.abs)}" title="Open ${esc(u.file)} to declare them">open ${esc(u.file.split('/').pop())}</a></div><ul class="dep-list">${u.undeclared.map(x => `<li><b>${esc(x.name)}</b>${x.dist && x.dist !== x.name ? ` <span class="muted">(${esc(x.dist)})</span>` : ''}${x.installed ? ' <span class="muted">· installed transitively</span>' : ''}
+        <div class="dep-files">${x.files.map(f => `<a href="#" class="file" data-abs="${esc(f.abs)}" title="Open ${esc(f.path)}">${esc(f.path)}</a>`).join('')}</div></li>`).join('')}</ul>` : ''}
     </div>`).join('');
   }
 
@@ -95,7 +98,7 @@
     return chips + `<div class="table-scroll small"><table class="grid"><thead><tr><th>Severity</th><th>Package</th><th>Advisory</th><th>Summary</th><th>Fixed in</th></tr></thead><tbody>
       ${shown.map(v => `<tr>
         <td><span class="sev" style="background:${SEV_COLOR[v.severity] || SEV_COLOR.UNKNOWN}">${esc(v.severity)}${v.score != null ? ' ' + v.score.toFixed(1) : ''}</span></td>
-        <td><b>${esc(v.name)}</b>@${esc(v.version)} <span class="dep-eco ${v.ecosystem === 'npm' ? 'npm' : 'py'}">${v.ecosystem}</span>${v.direct ? '' : ' <span class="muted">transitive</span>'}${v.dev ? ' <span class="muted">dev</span>' : ''}</td>
+        <td><b>${(() => { const p = R.packages.find(x => x.name === v.name && x.ecosystem === v.ecosystem && (x.decl || []).length); return p ? `<a href="#" class="file" data-abs="${esc(p.decl[0].file)}" ${p.decl[0].line ? `data-line="${p.decl[0].line}"` : ''} title="Open the declaration to update it">${esc(v.name)}</a>` : esc(v.name); })()}</b>@${esc(v.version)}${v.versionFromRange ? ' <span class="muted">(range)</span>' : ''} <span class="dep-eco ${v.ecosystem === 'npm' ? 'npm' : 'py'}">${v.ecosystem}</span>${v.direct ? '' : ' <span class="muted">transitive</span>'}${v.dev ? ' <span class="muted">dev</span>' : ''}</td>
         <td><a href="#" class="file" data-url="${esc(v.url)}">${esc(v.id)}</a>${v.aliases && v.aliases.length ? `<br><span class="muted">${v.aliases.map(esc).join(', ')}</span>` : ''}</td>
         <td class="dep-summary">${esc(v.summary)}</td>
         <td>${v.fixed && v.fixed.length ? v.fixed.map(esc).join(', ') : '<span class="muted">–</span>'}</td></tr>`).join('')}
@@ -108,6 +111,7 @@
     const { esc, fmt } = ui;
     const q = state.q.toLowerCase();
     let rows = D.dependencies.packages.filter(p =>
+      (!state.license || p.license === state.license) && (!state.category || p.category === state.category) &&
       (!state.status || (state.status === 'flagged' ? (p.status === 'problematic' || p.status === 'review') && !p.ignored : p.status === state.status)) &&
       (!state.eco || p.ecosystem === state.eco) &&
       (!state.scope || (state.scope === 'direct' ? p.direct : !p.direct)) &&
@@ -116,16 +120,19 @@
     rows.sort((a, b) => rank[a.status] - rank[b.status] || Number(b.direct) - Number(a.direct) || a.name.localeCompare(b.name));
     const total = rows.length;
     rows = rows.slice(0, state.limit);
-    el.innerHTML = `<thead><tr><th>Package</th><th>Version</th><th>License</th><th>Category</th><th>Status</th><th>Scope</th><th class="num">Vulns</th><th>Declared in</th></tr></thead>
-      <tbody>${rows.map(p => `<tr class="${p.dir ? 'clickable' : ''}" ${p.dir ? `data-dep-dir="${esc(p.dir)}"` : ''} title="${p.dir ? 'Open the package folder' : ''}">
+    el.innerHTML = `<thead><tr><th>Package</th><th>Version</th><th>License</th><th>Category</th><th>Status</th><th>Scope</th><th class="num">Vulns</th><th>Declared in</th><th></th></tr></thead>
+      <tbody>${rows.map(p => `<tr class="${p.decl && p.decl.length || p.dir ? 'clickable' : ''}" ${p.decl && p.decl.length ? `data-abs="${esc(p.decl[0].file)}" ${p.decl[0].line ? `data-line="${p.decl[0].line}"` : ''} title="Open the declaration"` : p.dir ? `data-dep-dir="${esc(p.dir)}" title="Open the package metadata"` : ''}>
         <td><b>${esc(p.name)}</b> <span class="dep-eco ${p.ecosystem === 'npm' ? 'npm' : 'py'}">${p.ecosystem}</span></td>
-        <td>${esc(p.version || p.spec || '–')}${p.installed ? '' : ' <span class="muted">not installed</span>'}</td>
-        <td>${esc(p.license)}</td>
+        <td>${esc(p.versionFromRange ? p.spec : p.version || p.spec || '–')}${p.installed ? '' : ` <span class="muted">${p.latest ? 'latest ' + esc(p.latest) : 'not installed'}</span>`}</td>
+        <td>${esc(p.license)}${p.licenseSource === 'registry' ? ' <span class="muted" title="License taken from the public registry because the package is not installed">(registry)</span>' : ''}</td>
         <td><span class="sw" style="background:${(CAT[p.category] || CAT.unknown).color}"></span>${esc((CAT[p.category] || CAT.unknown).label)}</td>
         <td>${p.ignored ? '<span class="dep-status ign">ignored</span>' : `<span class="dep-status ${p.status}">${p.status === 'problematic' ? 'problematic' : p.status === 'review' ? 'review' : 'ok'}</span>`}${p.notAllowed ? ' <span class="muted">not in allowlist</span>' : ''}</td>
         <td>${p.direct ? 'direct' : '<span class="muted">transitive</span>'}${p.dev ? ' <span class="muted">dev</span>' : ''}</td>
         <td class="num">${p.vulnCount ? `<span class="dep-bad">${fmt(p.vulnCount)}</span>` : ''}</td>
-        <td class="muted">${esc((p.manifests || []).join(', '))}</td></tr>`).join('')}</tbody>`;
+        <td class="muted">${declLink(p, esc) || esc((p.manifests || []).join(', '))}</td>
+        <td>${p.dir ? `<button class="icon-mini" data-dep-dir="${esc(p.dir)}" title="Open the installed package (package.json / METADATA)">${ui.icon('folder')}</button>` : ''}</td></tr>`).join('')}</tbody>`;
+    const act = document.getElementById('depActive');
+    if (act) act.innerHTML = state.license || state.category ? `<span class="dep-filter">${esc(state.license || (CAT[state.category] || {}).label || '')} <button class="link" data-dep-clear>clear</button></span>` : '';
     const cnt = document.getElementById('depCount');
     if (cnt) cnt.textContent = `${fmt(total)} packages`;
     const more = document.getElementById('depMore');
@@ -145,6 +152,20 @@
       ui.post({ type: 'savePdf', data, name: kind === 'licenses' ? 'license-report.pdf' : 'vulnerability-report.pdf' });
       return true;
     }
+    const lic = t.closest('[data-dep-lic]');
+    const cat = t.closest('[data-dep-cat]');
+    if (lic || cat) {
+      state.license = lic ? /** @type {HTMLElement} */ (lic).dataset.depLic : '';
+      state.category = cat ? /** @type {HTMLElement} */ (cat).dataset.depCat : '';
+      state.status = ''; state.limit = Infinity;
+      const sel = /** @type {HTMLSelectElement} */ (document.getElementById('depStatus'));
+      if (sel) sel.value = '';
+      renderTable(ui, D);
+      const tbl = document.getElementById('depTable');
+      if (tbl) tbl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return true;
+    }
+    if (t.closest('[data-dep-clear]')) { state.license = ''; state.category = ''; renderTable(ui, D); return true; }
     const url = t.closest('[data-url]');
     if (url) { ui.post({ type: 'openUrl', url: /** @type {HTMLElement} */ (url).dataset.url }); return true; }
     const dir = t.closest('[data-dep-dir]');

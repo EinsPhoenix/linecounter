@@ -149,14 +149,14 @@
       const s = a0 + gap / 2, e = Math.max(s + 0.001, a1 - gap / 2);
       a0 = a1;
       if (frac >= 0.9999) {
-        return `<circle cx="${C}" cy="${C}" r="${(R + r) / 2}" fill="none" style="stroke:${it.color}" stroke-width="${R - r}" class="hit" ${tipAttr(`<b>${esc(it.label)}</b><br>${fmt(it.value)} (100%)`)}/>`;
+        return `<circle cx="${C}" cy="${C}" r="${(R + r) / 2}" fill="none" style="stroke:${it.color}" stroke-width="${R - r}" class="hit" ${it.attrs || ''} ${tipAttr(`<b>${esc(it.label)}</b><br>${fmt(it.value)} (100%)`)}/>`;
       }
       const large = e - s > Math.PI ? 1 : 0;
       const p = (rad, ang) => `${(C + rad * Math.cos(ang)).toFixed(2)} ${(C + rad * Math.sin(ang)).toFixed(2)}`;
       const d = `M${p(R, s)} A${R} ${R} 0 ${large} 1 ${p(R, e)} L${p(r, e)} A${r} ${r} 0 ${large} 0 ${p(r, s)}Z`;
-      return `<path d="${d}" style="fill:${it.color}" class="hit" ${tipAttr(`<b>${esc(it.label)}</b><br>${fmt(it.value)} · ${pctStr(it.value, total)}`)}/>`;
+      return `<path d="${d}" style="fill:${it.color}" class="hit ${it.attrs ? 'clickable' : ''}" ${it.attrs || ''} ${tipAttr(`<b>${esc(it.label)}</b><br>${fmt(it.value)} · ${pctStr(it.value, total)}`)}/>`;
     }).join('');
-    const legend = items.map(it => `<li ${tipAttr(`<b>${esc(it.label)}</b><br>${fmt(it.value)} · ${pctStr(it.value, total)}`)}>
+    const legend = items.map(it => `<li ${it.attrs ? `class="clickable" ${it.attrs}` : ''} ${tipAttr(`<b>${esc(it.label)}</b><br>${fmt(it.value)} · ${pctStr(it.value, total)}`)}>
       <span class="sw" style="background:${it.color}"></span><span class="lg-label">${esc(it.label)}</span>
       <span class="lg-val">${pctStr(it.value, total)}</span></li>`).join('');
     return `<div class="donut-wrap">
@@ -170,7 +170,7 @@
   function hbars(items, opts = {}) {
     const max = Math.max(1, ...items.map(i => i.value));
     return `<div class="hbars">${items.map(it => `
-      <div class="hbar ${it.abs ? 'clickable' : ''}" ${it.abs ? `data-abs="${esc(it.abs)}"` : ''} ${tipAttr(it.tip || `<b>${esc(it.label)}</b><br>${fmt(it.value)}`)}>
+      <div class="hbar ${it.abs || it.attrs ? 'clickable' : ''}" ${it.abs ? `data-abs="${esc(it.abs)}"` : ''} ${it.attrs || ''} ${tipAttr(it.tip || `<b>${esc(it.label)}</b><br>${fmt(it.value)}`)}>
         <span class="hbar-label" title="${esc(it.label)}"><span>${esc(it.label)}</span></span>
         <span class="hbar-track"><span class="hbar-fill" style="width:${Math.max(0.5, pct(it.value, max))}%;background:${it.color || 'var(--s1)'}"></span></span>
         <span class="hbar-val">${esc(it.valueLabel ?? short(it.value))}</span>

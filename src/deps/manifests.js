@@ -62,11 +62,32 @@ function tomlSections(text) {
   }
   return sections;
 }
+/** Reads a TOML array value (strings may contain "]", e.g. "pydantic[email]>=2"). */
 function tomlArray(lines, key) {
   const text = lines.join('\n');
-  const m = new RegExp('^\\s*' + key.replace(/[.-]/g, '\\$&') + '\\s*=\\s*\\[([\\s\\S]*?)\\]', 'm').exec(text);
+  const m = new RegExp('^\\s*' + key.replace(/[.-]/g, '\\$&') + '\\s*=\\s*\\[', 'm').exec(text);
   if (!m) return [];
-  return [...m[1].matchAll(/"([^"]*)"|'([^']*)'/g)].map(x => x[1] ?? x[2]);
+  return readTomlArrayFrom(text, m.index + m[0].length);
+}
+function readTomlArrayFrom(text, i) {
+  const out = [];
+  let depth = 1;
+  while (i < text.length && depth > 0) {
+    const c = text[i];
+    if (c === '"' || c === "'") {
+      const q = text.startsWith(c.repeat(3), i) ? c.repeat(3) : c;
+      const end = text.indexOf(q, i + q.length);
+      if (end < 0) break;
+      if (depth === 1) out.push(text.slice(i + q.length, end));
+      i = end + q.length;
+      continue;
+    }
+    if (c === '#') { const nl = text.indexOf('\n', i); i = nl < 0 ? text.length : nl; continue; }
+    if (c === '[') depth++;
+    if (c === ']') depth--;
+    i++;
+  }
+  return out;
 }
 function tomlTableKeys(lines) {
   const out = [];
@@ -90,10 +111,15 @@ function parsePyproject(file) {
     for (const r of tomlArray(S.get('project'), 'dependencies')) pushReq(r, 'prod');
   }
   for (const [sec, lines] of S) {
-    if (sec === 'project.optional-dependencies' || sec === 'dependency-groups') {
+    if (sec === 'project.optional-dependencies' || sec === 'dependency-groups' || sec === 'tool.uv' || sec === 'tool.pdm.dev-dependencies') {
       const text2 = lines.join('\n');
-      for (const m of text2.matchAll(/^\s*([\w.-]+)\s*=\s*\[([\s\S]*?)\]/gm)) {
-        for (const q of m[2].matchAll(/"([^"]*)"|'([^']*)'/g)) pushReq(q[1] ?? q[2], /dev|test|lint|doc/i.test(m[1]) ? 'dev' : 'optional');
+      const re = /^\s*([\w.-]+)\s*=\s*\[/gm;
+      let m;
+      while ((m = re.exec(text2))) {
+        const group = m[1];
+        if (sec === 'tool.uv' && group !== 'dev-dependencies') continue;
+        const dev = sec !== 'project.optional-dependencies' || /dev|test|lint|doc|type/i.test(group);
+        for (const req of readTomlArrayFrom(text2, m.index + m[0].length)) pushReq(req, dev ? 'dev' : 'optional');
       }
     }
     if (sec === 'tool.poetry.dependencies' || /^tool\.poetry\.(dev-dependencies|group\.[^.]+\.dependencies)$/.test(sec)) {
@@ -133,7 +159,27 @@ function parseSetupCfg(file) {
   return deps.length ? { ecosystem: 'PyPI', file, dir: path.dirname(file), name: path.basename(path.dirname(file)), deps } : null;
 }
 
+/** 1-based line of a dependency declaration in the manifest text (for "open at line"). */
+function declarationLine(text, name, ecosystem) {
+  const lines = text.split(/\r?\n/);
+  const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = ecosystem === 'npm'
+    ? new RegExp(`"${esc}"\\s*:`)
+    : new RegExp(`(^|["'\\s])${esc.replace(/[-_.]+/g, '[-_.]')}\\s*(\\[|=|>|<|~|!|;|"|'|,|$)`, 'i');
+  const i = lines.findIndex(l => re.test(l));
+  return i >= 0 ? i + 1 : null;
+}
+
 function parseManifest(file) {
+  const m = parseManifestRaw(file);
+  if (m) {
+    const text = readText(file) || '';
+    for (const d of m.deps) d.line = declarationLine(text, d.name, m.ecosystem);
+  }
+  return m;
+}
+
+function parseManifestRaw(file) {
   const name = path.basename(file);
   if (name === 'package.json') return parsePackageJson(file);
   if (name === 'pyproject.toml') return parsePyproject(file);

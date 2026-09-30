@@ -321,6 +321,11 @@
           "default": 20,
           "minimum": 3,
           "description": "Timeout for requests to OSV.dev."
+        },
+        "linecounter.licenses.fetchFromRegistry": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Look up the license of packages that are declared but not installed in the public registries (registry.npmjs.org, pypi.org). Only package names are sent."
         }
       }
     },
