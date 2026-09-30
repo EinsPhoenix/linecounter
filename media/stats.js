@@ -37,7 +37,14 @@
     : '<span class="muted">–</span>';
   const tipAttr = html => `data-tip="${esc(html)}"`;
   /** Helpers shared with the section modules (deps.js, …) */
-  const UI = () => ({ esc, fmt, pct, pctStr, short, bytes, date, icon, card, tiles, donut, hbars, columns, tipAttr, post: m => vscode.postMessage(m) });
+  const UI = () => ({
+    esc, fmt, pct, pctStr, short, bytes, date, icon, card, tiles, donut, hbars, columns, tipAttr,
+    post: m => vscode.postMessage(m),
+    data: () => D,
+    /** re-draw canvas based charts after a theme switch (PDF light mode) */
+    onThemeChange: () => { if (treemap) treemap.render(); for (const g of Object.values(graphs)) g.refreshColors(); },
+  });
+  window.LCUI = UI;
 
   // Line icons (24x24, stroke = currentColor). No emojis anywhere on the page.
   const ICONS = {
@@ -1162,6 +1169,8 @@
           <button class="btn" data-act="refresh" title="Recount with the same selection">${icon('refresh')} Refresh</button>
           <button class="btn" data-act="csv">${icon('download')} CSV</button>
           <button class="btn" data-act="json">${icon('download')} JSON</button>
+          <button class="btn" data-act="pdf" title="Export a PDF report">${icon('pages')} PDF</button>
+          <button class="btn" data-act="html" title="Export a standalone, interactive HTML report">${icon('code')} HTML</button>
           <button class="btn" data-act="maximize" title="Hide side bars and panels">${icon('maximize')} Maximize</button>
           <button class="btn" data-act="fullscreen" title="Toggle window full screen">${icon('screen')} Full screen</button>
         </nav>
@@ -1203,7 +1212,8 @@
     const act = t.closest('[data-act]');
     if (act) {
       const a = /** @type {HTMLElement} */ (act).dataset.act;
-      if (a === 'csv' || a === 'json' || a === 'licenses-csv') vscode.postMessage({ type: 'export', format: a });
+      if (a === 'pdf') { if (window.LCExport) LCExport.openDialog(UI()); return; }
+      if (a === 'csv' || a === 'json' || a === 'licenses-csv' || a === 'html') vscode.postMessage({ type: 'export', format: a });
       else vscode.postMessage({ type: a });
       return;
     }

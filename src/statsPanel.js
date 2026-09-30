@@ -64,6 +64,9 @@ class StatsPanel {
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'vendor', 'd3.min.js'))}"></script>
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'graphs.js'))}"></script>
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'deps.js'))}"></script>
+<script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'vendor', 'jspdf.umd.min.js'))}"></script>
+<script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'vendor', 'html2canvas.min.js'))}"></script>
+<script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'export.js'))}"></script>
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'stats.js'))}"></script></body></html>`;
 
     w.onDidReceiveMessage(msg => this.onMessage(msg), null, context.subscriptions);
@@ -76,6 +79,46 @@ class StatsPanel {
       // bring the Line Counter sidebar back
       vscode.commands.executeCommand('workbench.view.extension.linecounter');
     });
+  }
+
+  defaultDir() {
+    return (vscode.workspace.workspaceFolders || [])[0]?.uri.fsPath || require('os').homedir();
+  }
+
+  /** Standalone HTML report: styles, scripts and data inlined, works in any browser without VS Code. */
+  async exportHtml() {
+    const path = require('path');
+    const uri = await vscode.window.showSaveDialog({
+      defaultUri: vscode.Uri.file(path.join(this.defaultDir(), 'code-statistics.html')),
+      filters: { HTML: ['html'] },
+    });
+    if (!uri) return;
+    const media = path.join(this.context.extensionUri.fsPath, 'media');
+    const read = f => fs.readFileSync(path.join(media, f), 'utf8');
+    const safe = t => t.replace(/<\/script/gi, '<\\/script');
+    const data = JSON.stringify(this.data).replace(/</g, '\\u003c');
+    const html = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Code Statistics – ${String(this.data.workspace || '').replace(/[<>&"]/g, '')}</title>
+<style>${read('stats.css')}
+body.standalone .actions .btn:not([data-act="pdf"]) { display: none; }
+</style></head>
+<body class="vscode-dark standalone"><div id="app"><div class="loading">Loading…</div></div><div id="tooltip" role="tooltip"></div>
+<script>window.__LC_DATA__ = ${data};
+window.acquireVsCodeApi = () => ({
+  postMessage(m) {
+    if (m.type === 'ready') setTimeout(() => window.postMessage({ type: 'data', data: window.__LC_DATA__ }, '*'), 0);
+    else if (m.type === 'openUrl') window.open(m.url, '_blank');
+    else if (m.type === 'savePdf') { const a = document.createElement('a'); a.href = 'data:application/pdf;base64,' + m.data; a.download = 'code-statistics.pdf'; a.click(); }
+    else if (m.type === 'copy' && navigator.clipboard) navigator.clipboard.writeText(m.text);
+  },
+  getState() { return null; }, setState() {},
+});</script>
+${['vendor/d3.min.js', 'graphs.js', 'deps.js', 'vendor/jspdf.umd.min.js', 'vendor/html2canvas.min.js', 'export.js', 'stats.js'].map(f => `<script>${safe(read(f))}</script>`).join('\n')}
+</body></html>`;
+    await fs.promises.writeFile(uri.fsPath, html, 'utf8');
+    const open = await vscode.window.showInformationMessage(`HTML report saved to ${uri.fsPath}`, 'Open in browser');
+    if (open) await vscode.env.openExternal(uri);
   }
 
   update(data) {
@@ -102,6 +145,17 @@ class StatsPanel {
         const inside = msg.inEditor && ['package.json', 'METADATA', 'PKG-INFO'].map(f => pathP.join(msg.abs, f)).find(f => fsP.existsSync(f));
         if (inside) await this.handlers.open(inside);
         else await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(msg.abs));
+        break;
+      }
+      case 'savePdf': {
+        const uri = await vscode.window.showSaveDialog({
+          defaultUri: vscode.Uri.file(require('path').join(this.defaultDir(), msg.name || 'code-statistics.pdf')),
+          filters: { PDF: ['pdf'] },
+        });
+        if (!uri) return;
+        await fs.promises.writeFile(uri.fsPath, Buffer.from(msg.data, 'base64'));
+        const open = await vscode.window.showInformationMessage(`PDF report saved to ${uri.fsPath}`, 'Open');
+        if (open) await vscode.env.openExternal(uri);
         break;
       }
       case 'openUrl':
@@ -139,6 +193,7 @@ class StatsPanel {
         await StatsPanel.maximize();
         break;
       case 'export': {
+        if (msg.format === 'html') { await this.exportHtml(); return; }
         const isCsv = msg.format === 'csv' || msg.format === 'licenses-csv';
         const isLic = msg.format === 'licenses-csv';
         const uri = await vscode.window.showSaveDialog({

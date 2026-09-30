@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.0
+- PDF export of the statistics page (choose sections, A4/Letter, dark or light printer-friendly theme, cover page with key numbers)
+- Separate License report PDF and Vulnerability report PDF (searchable text tables)
+- Standalone interactive HTML report (works in any browser, includes PDF export)
+
 ## 1.6.0
 - Dependency, license and vulnerability report for npm and Python (new section on the statistics page)
 - License report with SPDX normalisation, categories and a configurable policy (`linecounter.licenses.*`), CSV export
