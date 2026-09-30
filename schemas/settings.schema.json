@@ -130,7 +130,7 @@
         "type": "string"
       },
       "default": [],
-      "markdownDescription": "Words or phrases in commit messages to rant about. Leave empty for the built-in list (`wip`, `asdf`, `tmp`, `stuff`, `misc`, `oops`, `typo`, `final`, `please`, `hack`, `whatever`, `idk`, `wtf`, `lol`, `yolo`, `again`, `why`, `test`, `changes`, `update`, `minor`, \u2026)."
+      "description": "Words or phrases in commit messages to rant about. Leave empty for the built-in list (`wip`, `asdf`, `tmp`, `stuff`, `misc`, `oops`, `typo`, `final`, `please`, `hack`, `whatever`, `idk`, `wtf`, `lol`, `yolo`, `again`, `why`, `test`, `changes`, `update`, `minor`, …)."
     },
     "linecounter.rant.commitWords": {
       "type": "array",
@@ -138,7 +138,7 @@
         "type": "string"
       },
       "default": [],
-      "markdownDescription": "Words or phrases in commit messages to rant about. Leave empty for the built-in list (`wip`, `asdf`, `tmp`, `stuff`, `misc`, `oops`, `typo`, `final`, `please`, `hack`, `whatever`, `idk`, `wtf`, `lol`, `yolo`, `again`, `why`, `test`, `changes`, `update`, `minor`, \u2026)."
+      "description": "Words or phrases in commit messages to rant about. Leave empty for the built-in list (`wip`, `asdf`, `tmp`, `stuff`, `misc`, `oops`, `typo`, `final`, `please`, `hack`, `whatever`, `idk`, `wtf`, `lol`, `yolo`, `again`, `why`, `test`, `changes`, `update`, `minor`, …)."
     },
     "excludePatterns": {
       "type": "array",
@@ -146,7 +146,7 @@
         "type": "string"
       },
       "default": [],
-      "markdownDescription": "Additional glob patterns to exclude, like `.gitignore` (e.g. `*.generated.ts`, `docs/`, `/build`, `src/**/*.spec.ts`). Shown as the predefined filter *Custom patterns*."
+      "description": "Additional glob patterns to exclude, like `.gitignore` (e.g. `*.generated.ts`, `docs/`, `/build`, `src/**/*.spec.ts`). Shown as the predefined filter *Custom patterns*."
     },
     "linecounter.excludePatterns": {
       "type": "array",
@@ -154,7 +154,7 @@
         "type": "string"
       },
       "default": [],
-      "markdownDescription": "Additional glob patterns to exclude, like `.gitignore` (e.g. `*.generated.ts`, `docs/`, `/build`, `src/**/*.spec.ts`). Shown as the predefined filter *Custom patterns*."
+      "description": "Additional glob patterns to exclude, like `.gitignore` (e.g. `*.generated.ts`, `docs/`, `/build`, `src/**/*.spec.ts`). Shown as the predefined filter *Custom patterns*."
     },
     "defaultFilters": {
       "type": "array",
@@ -279,7 +279,7 @@
         "BUSL*",
         "Proprietary"
       ],
-      "markdownDescription": "Licenses that are flagged as **problematic** (SPDX ids, `*` wildcards). Example: `GPL*` matches GPL-2.0 and GPL-3.0, but not LGPL."
+      "description": "Licenses that are flagged as **problematic** (SPDX ids, `*` wildcards). Example: `GPL*` matches GPL-2.0 and GPL-3.0, but not LGPL."
     },
     "linecounter.licenses.problematic": {
       "type": "array",
@@ -294,7 +294,7 @@
         "BUSL*",
         "Proprietary"
       ],
-      "markdownDescription": "Licenses that are flagged as **problematic** (SPDX ids, `*` wildcards). Example: `GPL*` matches GPL-2.0 and GPL-3.0, but not LGPL."
+      "description": "Licenses that are flagged as **problematic** (SPDX ids, `*` wildcards). Example: `GPL*` matches GPL-2.0 and GPL-3.0, but not LGPL."
     },
     "licenses.review": {
       "type": "array",
@@ -311,7 +311,7 @@
         "Unknown",
         "Custom"
       ],
-      "markdownDescription": "Licenses that **need a review** (weak copyleft, unknown or custom licenses)."
+      "description": "Licenses that **need a review** (weak copyleft, unknown or custom licenses)."
     },
     "linecounter.licenses.review": {
       "type": "array",
@@ -328,7 +328,7 @@
         "Unknown",
         "Custom"
       ],
-      "markdownDescription": "Licenses that **need a review** (weak copyleft, unknown or custom licenses)."
+      "description": "Licenses that **need a review** (weak copyleft, unknown or custom licenses)."
     },
     "licenses.allowed": {
       "type": "array",
@@ -336,7 +336,7 @@
         "type": "string"
       },
       "default": [],
-      "markdownDescription": "Optional allowlist. If set, every license that does not match is flagged as problematic (e.g. `[\"MIT\", \"BSD*\", \"Apache-2.0\", \"ISC\"]`)."
+      "description": "Optional allowlist. If set, every license that does not match is flagged as problematic (e.g. `[\"MIT\", \"BSD*\", \"Apache-2.0\", \"ISC\"]`)."
     },
     "linecounter.licenses.allowed": {
       "type": "array",
@@ -344,7 +344,7 @@
         "type": "string"
       },
       "default": [],
-      "markdownDescription": "Optional allowlist. If set, every license that does not match is flagged as problematic (e.g. `[\"MIT\", \"BSD*\", \"Apache-2.0\", \"ISC\"]`)."
+      "description": "Optional allowlist. If set, every license that does not match is flagged as problematic (e.g. `[\"MIT\", \"BSD*\", \"Apache-2.0\", \"ISC\"]`)."
     },
     "licenses.ignorePackages": {
       "type": "array",
@@ -375,12 +375,12 @@
     "vulnerabilities.enabled": {
       "type": "boolean",
       "default": true,
-      "markdownDescription": "Check npm and PyPI packages for known vulnerabilities via [OSV.dev](https://osv.dev). Only package names and versions are sent."
+      "description": "Check npm and PyPI packages for known vulnerabilities via [OSV.dev](https://osv.dev). Only package names and versions are sent."
     },
     "linecounter.vulnerabilities.enabled": {
       "type": "boolean",
       "default": true,
-      "markdownDescription": "Check npm and PyPI packages for known vulnerabilities via [OSV.dev](https://osv.dev). Only package names and versions are sent."
+      "description": "Check npm and PyPI packages for known vulnerabilities via [OSV.dev](https://osv.dev). Only package names and versions are sent."
     },
     "vulnerabilities.includeTransitive": {
       "type": "boolean",
@@ -407,13 +407,198 @@
     "licenses.fetchFromRegistry": {
       "type": "boolean",
       "default": true,
-      "markdownDescription": "Look up the license of packages that are declared but not installed in the public registries (registry.npmjs.org, pypi.org). Only package names are sent."
+      "description": "Look up the license of packages that are declared but not installed in the public registries (registry.npmjs.org, pypi.org). Only package names are sent."
     },
     "linecounter.licenses.fetchFromRegistry": {
       "type": "boolean",
       "default": true,
-      "markdownDescription": "Look up the license of packages that are declared but not installed in the public registries (registry.npmjs.org, pypi.org). Only package names are sent."
+      "description": "Look up the license of packages that are declared but not installed in the public registries (registry.npmjs.org, pypi.org). Only package names are sent."
+    },
+    "train.keys": {
+      "type": "object",
+      "default": {
+        "forward": "w",
+        "back": "s",
+        "left": "a",
+        "right": "d",
+        "up": "q",
+        "down": "e",
+        "snap": "r",
+        "fly": "x",
+        "camera": "c"
+      },
+      "properties": {
+        "forward": {
+          "type": "string"
+        },
+        "back": {
+          "type": "string"
+        },
+        "left": {
+          "type": "string"
+        },
+        "right": {
+          "type": "string"
+        },
+        "up": {
+          "type": "string"
+        },
+        "down": {
+          "type": "string"
+        },
+        "snap": {
+          "type": "string"
+        },
+        "fly": {
+          "type": "string"
+        },
+        "camera": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Key bindings of the 3D train: forward (drive / thrust), back (turn around / brake), left/right (choose relation / steer), up/down (climb / dive when flying), snap (snap back onto the nearest relation), fly (leave the rails), camera."
+    },
+    "linecounter.train.keys": {
+      "type": "object",
+      "default": {
+        "forward": "w",
+        "back": "s",
+        "left": "a",
+        "right": "d",
+        "up": "q",
+        "down": "e",
+        "snap": "r",
+        "fly": "x",
+        "camera": "c"
+      },
+      "properties": {
+        "forward": {
+          "type": "string"
+        },
+        "back": {
+          "type": "string"
+        },
+        "left": {
+          "type": "string"
+        },
+        "right": {
+          "type": "string"
+        },
+        "up": {
+          "type": "string"
+        },
+        "down": {
+          "type": "string"
+        },
+        "snap": {
+          "type": "string"
+        },
+        "fly": {
+          "type": "string"
+        },
+        "camera": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false,
+      "description": "Key bindings of the 3D train: forward (drive / thrust), back (turn around / brake), left/right (choose relation / steer), up/down (climb / dive when flying), snap (snap back onto the nearest relation), fly (leave the rails), camera."
+    },
+    "graphs.maxFunctions": {
+      "type": "number",
+      "default": 600,
+      "minimum": 0,
+      "description": "Maximum number of functions shown when functions are switched on in the import graph and the 3D train."
+    },
+    "linecounter.graphs.maxFunctions": {
+      "type": "number",
+      "default": 600,
+      "minimum": 0,
+      "description": "Maximum number of functions shown when functions are switched on in the import graph and the 3D train."
+    },
+    "health.enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Code health scan: complexity per function, long functions, duplicate code."
+    },
+    "linecounter.health.enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Code health scan: complexity per function, long functions, duplicate code."
+    },
+    "health.maxComplexity": {
+      "type": "number",
+      "default": 15,
+      "minimum": 2,
+      "description": "Functions with a higher cyclomatic complexity are flagged (and roasted)."
+    },
+    "linecounter.health.maxComplexity": {
+      "type": "number",
+      "default": 15,
+      "minimum": 2,
+      "description": "Functions with a higher cyclomatic complexity are flagged (and roasted)."
+    },
+    "health.maxFunctionLines": {
+      "type": "number",
+      "default": 80,
+      "minimum": 5,
+      "description": "Functions longer than this are flagged."
+    },
+    "linecounter.health.maxFunctionLines": {
+      "type": "number",
+      "default": 80,
+      "minimum": 5,
+      "description": "Functions longer than this are flagged."
+    },
+    "health.duplicateMinLines": {
+      "type": "number",
+      "default": 6,
+      "minimum": 3,
+      "description": "Minimum number of identical (normalized) lines that count as duplicated code."
+    },
+    "linecounter.health.duplicateMinLines": {
+      "type": "number",
+      "default": 6,
+      "minimum": 3,
+      "description": "Minimum number of identical (normalized) lines that count as duplicated code."
+    },
+    "secrets.enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Scan for hard-coded secrets (API keys, tokens, private keys, passwords). Values are masked in the report."
+    },
+    "linecounter.secrets.enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Scan for hard-coded secrets (API keys, tokens, private keys, passwords). Values are masked in the report."
+    },
+    "secrets.ignore": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "**/*.test.*",
+        "**/test/**",
+        "**/tests/**",
+        "**/*.example",
+        "**/*.sample"
+      ],
+      "description": "Glob patterns of files that are not scanned for secrets."
+    },
+    "linecounter.secrets.ignore": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "**/*.test.*",
+        "**/test/**",
+        "**/tests/**",
+        "**/*.example",
+        "**/*.sample"
+      ],
+      "description": "Glob patterns of files that are not scanned for secrets."
     }
-  },
-  "additionalProperties": true
+  }
 }
