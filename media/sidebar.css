@@ -105,3 +105,14 @@ button.primary {
 button.primary .ic { width: 16px; height: 16px; }
 button.primary:hover:not(:disabled) { background: var(--accent-hover); }
 button.primary:disabled { opacity: .5; cursor: default; }
+.presetbar { display: flex; align-items: center; gap: 4px; padding: 6px 8px; border-top: 1px solid var(--border); }
+.presetbar-label { font-weight: 600; font-size: 0.85em; text-transform: uppercase; letter-spacing: .04em; margin-right: 2px; }
+.presetbar select {
+  flex: 1; min-width: 0; padding: 3px 4px; font: inherit;
+  background: var(--vscode-dropdown-background, var(--vscode-input-background)); color: var(--vscode-dropdown-foreground, var(--fg));
+  border: 1px solid var(--vscode-dropdown-border, var(--border)); border-radius: 2px;
+}
+.icon-btn2 { background: none; border: 1px solid transparent; color: var(--fg); cursor: pointer; padding: 3px; border-radius: 3px; display: inline-flex; }
+.icon-btn2:hover:not(:disabled) { color: var(--accent-hover); border-color: var(--border); }
+.icon-btn2:disabled { opacity: .35; cursor: default; }
+.icon-btn2 .ic { width: 15px; height: 15px; }

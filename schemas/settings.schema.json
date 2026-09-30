@@ -1,0 +1,227 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Line Counter workspace settings (.linecounter/settings.json)",
+  "description": "Overrides the linecounter.* VS Code settings for this workspace. Keys may be written with or without the 'linecounter.' prefix.",
+  "type": "object",
+  "properties": {
+    "statisticsLayout": {
+      "type": "string",
+      "enum": [
+        "maximized",
+        "fullscreen",
+        "normal"
+      ],
+      "enumDescriptions": [
+        "Open the statistics page maximized (side bars and panel hidden).",
+        "Maximized and additionally switch the VS Code window to full screen.",
+        "Open the statistics page like a normal editor tab."
+      ],
+      "default": "maximized",
+      "description": "How the statistics page is opened."
+    },
+    "linecounter.statisticsLayout": {
+      "type": "string",
+      "enum": [
+        "maximized",
+        "fullscreen",
+        "normal"
+      ],
+      "enumDescriptions": [
+        "Open the statistics page maximized (side bars and panel hidden).",
+        "Maximized and additionally switch the VS Code window to full screen.",
+        "Open the statistics page like a normal editor tab."
+      ],
+      "default": "maximized",
+      "description": "How the statistics page is opened."
+    },
+    "maxFileSizeKB": {
+      "type": "number",
+      "default": 2048,
+      "description": "Files larger than this (in KB) are counted by size only; their lines are not analyzed."
+    },
+    "linecounter.maxFileSizeKB": {
+      "type": "number",
+      "default": 2048,
+      "description": "Files larger than this (in KB) are counted by size only; their lines are not analyzed."
+    },
+    "maxEntries": {
+      "type": "number",
+      "default": 200000,
+      "description": "Maximum number of files and folders scanned for the tree."
+    },
+    "linecounter.maxEntries": {
+      "type": "number",
+      "default": 200000,
+      "description": "Maximum number of files and folders scanned for the tree."
+    },
+    "maxCommits": {
+      "type": "number",
+      "default": 20000,
+      "description": "Maximum number of commits read per git repository."
+    },
+    "linecounter.maxCommits": {
+      "type": "number",
+      "default": 20000,
+      "description": "Maximum number of commits read per git repository."
+    },
+    "rant.enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Show the \"Code Rant\" section that complains about files that are too long or contain too many blank lines."
+    },
+    "linecounter.rant.enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Show the \"Code Rant\" section that complains about files that are too long or contain too many blank lines."
+    },
+    "rant.maxFileLines": {
+      "type": "number",
+      "default": 500,
+      "minimum": 1,
+      "description": "Rant about files longer than this many lines."
+    },
+    "linecounter.rant.maxFileLines": {
+      "type": "number",
+      "default": 500,
+      "minimum": 1,
+      "description": "Rant about files longer than this many lines."
+    },
+    "rant.maxBlankPercent": {
+      "type": "number",
+      "default": 10,
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Rant about files (with at least 10 lines) and the whole project when more than this percentage of lines is blank."
+    },
+    "linecounter.rant.maxBlankPercent": {
+      "type": "number",
+      "default": 10,
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Rant about files (with at least 10 lines) and the whole project when more than this percentage of lines is blank."
+    },
+    "rant.commitMinLength": {
+      "type": "number",
+      "default": 10,
+      "minimum": 0,
+      "description": "Rant about commit messages (subject line) shorter than this many characters."
+    },
+    "linecounter.rant.commitMinLength": {
+      "type": "number",
+      "default": 10,
+      "minimum": 0,
+      "description": "Rant about commit messages (subject line) shorter than this many characters."
+    },
+    "rant.commitMaxLength": {
+      "type": "number",
+      "default": 72,
+      "minimum": 1,
+      "description": "Rant about commit messages (subject line) longer than this many characters."
+    },
+    "linecounter.rant.commitMaxLength": {
+      "type": "number",
+      "default": 72,
+      "minimum": 1,
+      "description": "Rant about commit messages (subject line) longer than this many characters."
+    },
+    "rant.commitWords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "markdownDescription": "Words or phrases in commit messages to rant about. Leave empty for the built-in list (`wip`, `asdf`, `tmp`, `stuff`, `misc`, `oops`, `typo`, `final`, `please`, `hack`, `whatever`, `idk`, `wtf`, `lol`, `yolo`, `again`, `why`, `test`, `changes`, `update`, `minor`, \u2026)."
+    },
+    "linecounter.rant.commitWords": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "markdownDescription": "Words or phrases in commit messages to rant about. Leave empty for the built-in list (`wip`, `asdf`, `tmp`, `stuff`, `misc`, `oops`, `typo`, `final`, `please`, `hack`, `whatever`, `idk`, `wtf`, `lol`, `yolo`, `again`, `why`, `test`, `changes`, `update`, `minor`, \u2026)."
+    },
+    "excludePatterns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "markdownDescription": "Additional glob patterns to exclude, like `.gitignore` (e.g. `*.generated.ts`, `docs/`, `/build`, `src/**/*.spec.ts`). Shown as the predefined filter *Custom patterns*."
+    },
+    "linecounter.excludePatterns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "markdownDescription": "Additional glob patterns to exclude, like `.gitignore` (e.g. `*.generated.ts`, `docs/`, `/build`, `src/**/*.spec.ts`). Shown as the predefined filter *Custom patterns*."
+    },
+    "defaultFilters": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "node_modules",
+          "venv",
+          "vcs",
+          "build",
+          "ide",
+          "vendor",
+          "lockfiles",
+          "minified",
+          "binary",
+          "gitignore",
+          "custom"
+        ]
+      },
+      "default": [
+        "node_modules",
+        "venv",
+        "vcs",
+        "build",
+        "ide",
+        "vendor",
+        "lockfiles",
+        "minified",
+        "binary",
+        "gitignore",
+        "custom"
+      ],
+      "description": "Predefined filters that are enabled in a new workspace (unless a preset from .linecounter/presets.json is active)."
+    },
+    "linecounter.defaultFilters": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "node_modules",
+          "venv",
+          "vcs",
+          "build",
+          "ide",
+          "vendor",
+          "lockfiles",
+          "minified",
+          "binary",
+          "gitignore",
+          "custom"
+        ]
+      },
+      "default": [
+        "node_modules",
+        "venv",
+        "vcs",
+        "build",
+        "ide",
+        "vendor",
+        "lockfiles",
+        "minified",
+        "binary",
+        "gitignore",
+        "custom"
+      ],
+      "description": "Predefined filters that are enabled in a new workspace (unless a preset from .linecounter/presets.json is active)."
+    }
+  },
+  "additionalProperties": true
+}

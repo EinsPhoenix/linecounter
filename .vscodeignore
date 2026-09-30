@@ -5,3 +5,6 @@ test/**
 *.vsix
 media/icon-source.html
 .vscode/**
+releases/**
+scripts/**
+CHANGELOG.md.bak

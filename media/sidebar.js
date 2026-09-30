@@ -15,12 +15,21 @@
   let pendingStats = false;
   let loaded = false;
   let busyText = '';
+  /** @type {{name:string, savedAt:string|null, excluded:number, hiddenExt:number}[]} */ let userPresets = [];
+  let activePreset = null;
+  let hasWorkspace = true;
   const ui = vscode.getState() || { filtersOpen: true, typesOpen: true };
 
   /** @type {any[]} */ let allNodes = [];
   /** @type {any[]} */ let rows = [];
   const extCounts = new Map();
 
+  const svg = d => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="pointer-events:none"><path d="${d}"/></svg>`;
+  const SVG = {
+    save: svg('M5 3h11l3 3v15H5zM8 3v5h7V3M8 21v-7h8v7'),
+    trash: svg('M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3'),
+    gear: svg('M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z'),
+  };
   const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const extOf = name => {
     const i = name.lastIndexOf('.');
@@ -201,6 +210,16 @@
           <button class="link" id="inMatches">Include all</button>
         </div>` : ''}
       </div>
+      <div class="presetbar" title="Filter presets are stored in .linecounter/presets.json">
+        <span class="presetbar-label">Preset</span>
+        <select id="presetSel" ${hasWorkspace ? '' : 'disabled'}>
+          <option value="">${userPresets.length ? '— none —' : '— no presets yet —'}</option>
+          ${userPresets.map(p => `<option value="${esc(p.name)}" ${p.name === activePreset ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}
+        </select>
+        <button class="icon-btn2" id="presetSave" title="Save current filters as preset" ${hasWorkspace ? '' : 'disabled'}>${SVG.save}</button>
+        <button class="icon-btn2" id="presetDelete" title="Delete selected preset" ${activePreset ? '' : 'disabled'}>${SVG.trash}</button>
+        <button class="icon-btn2" id="openConfig" title="Open .linecounter/settings.json">${SVG.gear}</button>
+      </div>
       <details id="filters" ${ui.filtersOpen ? 'open' : ''}>
         <summary>Predefined filters</summary>
         <div class="presets">${presetHtml}</div>
@@ -283,6 +302,11 @@
     on('collapseAll', () => { expanded = new Set(roots.map(r => r.key)); render(); });
     on('resetEx', () => { excluded.clear(); included.clear(); hiddenExt.clear(); save(true); render(); });
     on('stats', createStats);
+    on('presetSave', () => vscode.postMessage({ type: 'presetSave' }));
+    on('presetDelete', () => activePreset && vscode.postMessage({ type: 'presetDelete', name: activePreset }));
+    on('openConfig', () => vscode.postMessage({ type: 'openConfig' }));
+    const sel = /** @type {HTMLSelectElement} */ (document.getElementById('presetSel'));
+    if (sel) sel.addEventListener('change', () => { busyText = 'Loading preset…'; render(); vscode.postMessage({ type: 'presetLoad', name: sel.value }); });
 
     for (const id of ['filters', 'types']) {
       const d = document.getElementById(id);
@@ -355,6 +379,9 @@
       excluded = new Set(msg.state.excluded);
       included = new Set(msg.state.included);
       hiddenExt = new Set(msg.state.hiddenExt);
+      userPresets = msg.userPresets || [];
+      activePreset = msg.activePreset || null;
+      hasWorkspace = msg.hasWorkspace !== false;
       loaded = true;
       busyText = '';
       prepare();

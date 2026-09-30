@@ -4,7 +4,8 @@ const vscode = require('vscode');
 const fs = require('fs');
 
 class StatsPanel {
-  static show(context, data, handlers) {
+  static show(context, config, data, handlers) {
+    StatsPanel.config = config;
     if (StatsPanel.current) {
       StatsPanel.current.handlers = handlers;
       StatsPanel.current.update(data);
@@ -18,7 +19,7 @@ class StatsPanel {
 
   /** Makes the statistics page take the whole window, depending on `linecounter.statisticsLayout`. */
   static async maximize() {
-    const layout = vscode.workspace.getConfiguration('linecounter').get('statisticsLayout', 'maximized');
+    const layout = StatsPanel.config ? StatsPanel.config.get('statisticsLayout', 'maximized') : 'maximized';
     if (layout === 'normal') return;
     const tryCmd = async (...cmds) => {
       for (const c of cmds) {
