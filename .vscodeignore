@@ -1,0 +1,7 @@
+node_modules/**
+test/**
+.github/**
+.gitignore
+*.vsix
+media/icon-source.html
+.vscode/**
