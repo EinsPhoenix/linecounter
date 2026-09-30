@@ -63,6 +63,7 @@ class StatsPanel {
 <body><div id="app"><div class="loading">Crunching numbers…</div></div><div id="tooltip" role="tooltip"></div>
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'vendor', 'd3.min.js'))}"></script>
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'graphs.js'))}"></script>
+<script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'deps.js'))}"></script>
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'stats.js'))}"></script></body></html>`;
 
     w.onDidReceiveMessage(msg => this.onMessage(msg), null, context.subscriptions);
@@ -96,8 +97,15 @@ class StatsPanel {
       case 'copy':
         await vscode.env.clipboard.writeText(msg.text);
         break;
-      case 'reveal':
-        await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(msg.abs));
+      case 'reveal': {
+        const fsP = require('fs'), pathP = require('path');
+        const inside = msg.inEditor && ['package.json', 'METADATA', 'PKG-INFO'].map(f => pathP.join(msg.abs, f)).find(f => fsP.existsSync(f));
+        if (inside) await this.handlers.open(inside);
+        else await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(msg.abs));
+        break;
+      }
+      case 'openUrl':
+        if (/^https?:\/\//.test(msg.url)) await vscode.env.openExternal(vscode.Uri.parse(msg.url));
         break;
       case 'delete': {
         const name = require('path').basename(msg.abs);
@@ -131,15 +139,16 @@ class StatsPanel {
         await StatsPanel.maximize();
         break;
       case 'export': {
-        const isCsv = msg.format === 'csv';
+        const isCsv = msg.format === 'csv' || msg.format === 'licenses-csv';
+        const isLic = msg.format === 'licenses-csv';
         const uri = await vscode.window.showSaveDialog({
           defaultUri: vscode.Uri.file(require('path').join(
             (vscode.workspace.workspaceFolders || [])[0]?.uri.fsPath || require('os').homedir(),
-            isCsv ? 'code-statistics.csv' : 'code-statistics.json')),
+            isLic ? 'license-report.csv' : isCsv ? 'code-statistics.csv' : 'code-statistics.json')),
           filters: isCsv ? { CSV: ['csv'] } : { JSON: ['json'] },
         });
         if (!uri) return;
-        const content = isCsv ? toCsv(this.data.table) : JSON.stringify(this.data, null, 2);
+        const content = isLic ? licenseCsv(this.data.dependencies) : isCsv ? toCsv(this.data.table) : JSON.stringify(this.data, null, 2);
         await fs.promises.writeFile(uri.fsPath, content, 'utf8');
         vscode.window.showInformationMessage(`Statistics exported to ${uri.fsPath}`);
         break;
@@ -149,6 +158,13 @@ class StatsPanel {
 }
 StatsPanel.current = null;
 StatsPanel.wentFullScreen = false;
+
+function licenseCsv(deps) {
+  const rows = ((deps && deps.packages) || []).map(p => ({ ...p, manifests: (p.manifests || []).join(' '), vulns: p.vulnCount || 0 }));
+  const cols = ['ecosystem', 'name', 'version', 'license', 'category', 'status', 'direct', 'dev', 'installed', 'ignored', 'vulns', 'manifests'];
+  const esc = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+  return [cols.join(','), ...rows.map(r => cols.map(c => esc(r[c])).join(','))].join('\n');
+}
 
 function toCsv(rows) {
   const cols = ['rootName', 'path', 'lang', 'ext', 'lines', 'code', 'comment', 'blank', 'size', 'maxLine', 'todo', 'binary'];

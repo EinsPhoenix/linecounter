@@ -385,3 +385,27 @@ body.has-fs { overflow: hidden; }
 .imp-line.user { background: #ff4d4f; height: 3px; opacity: .7; }
 .gbtn-text { gap: 4px; align-items: center; font: inherit; font-size: 11px; }
 @media (max-width: 1100px) { .imp-body { grid-template-columns: 1fr; } .imp-side { max-height: none; } }
+
+/* dependencies */
+.dep-manifests { margin: -4px 0 12px; font-size: 12px; line-height: 1.8; }
+.dep-eco { font-size: 10px; font-weight: 700; padding: 0 6px; border-radius: 8px; vertical-align: 1px; }
+.dep-eco.npm { background: rgba(224, 98, 27, .22); color: #f39a4f; }
+.dep-eco.py { background: rgba(160, 160, 160, .2); color: #d0d0d0; }
+.dep-bad { color: #ff6b6b; }
+.dep-warn { color: #f7ae62; }
+.dep-okmsg { color: #f7ae62; font-weight: 600; }
+.dep-usage { margin-bottom: 12px; }
+.dep-usage-head { font-weight: 600; margin-bottom: 4px; word-break: break-all; }
+.dep-usage-title { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 6px 0 3px; }
+.dep-list { margin: 0; padding-left: 16px; font-size: 12px; display: flex; flex-direction: column; gap: 2px; }
+.dep-tag { font-size: 10px; padding: 0 6px; border-radius: 8px; background: #3a3a3a; }
+.dep-tag.prod { background: rgba(255, 77, 79, .25); color: #ffb3b3; }
+.dep-tools select { max-width: 220px; }
+.sev { display: inline-block; font-size: 10.5px; font-weight: 700; color: #111; padding: 1px 7px; border-radius: 8px; white-space: nowrap; }
+.sev-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 5px; }
+.dep-summary { white-space: normal !important; min-width: 280px; max-width: 520px; }
+.dep-status { font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 8px; }
+.dep-status.problematic { background: #ff4d4f; color: #fff; }
+.dep-status.review { background: #f7ae62; color: #1b1b1b; }
+.dep-status.ok { background: #2e2e2e; color: #bdbdbd; }
+.dep-status.ign { background: transparent; border: 1px dashed #666; color: #999; }

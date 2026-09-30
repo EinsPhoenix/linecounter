@@ -111,8 +111,12 @@ function analyzeUsage(manifests, files, installed) {
         if (NPM_IMPLICIT.has(d.name) && (d.type === 'dev' || hasTs)) continue;
         unused.push({ name: d.name, type: d.type, spec: d.spec, hint: pluginLike ? 'plugin/preset not referenced in any config' : d.type === 'dev' ? 'dev tool not referenced in scripts or configs' : 'never imported' });
       }
+      // modules provided by the host environment
+      const hostProvided = new Set();
+      if (m.raw && m.raw.engines && m.raw.engines.vscode) hostProvided.add('vscode');
+      if (m.raw && m.raw.engines && m.raw.engines.electron) hostProvided.add('electron');
       for (const [name, where] of r.used) {
-        if (declared.has(name) || name === m.name) continue;
+        if (declared.has(name) || name === m.name || hostProvided.has(name)) continue;
         undeclared.push({ name, files: where, installed: inst.has(name) });
       }
     } else {
@@ -147,7 +151,7 @@ function analyzeUsage(manifests, files, installed) {
         undeclared.push({ name, files: where, installed: instByImport.has(name), dist: instByImport.get(name) || null });
       }
     }
-    out.push({ ecosystem: m.ecosystem, file: m.file, name: m.name, unused, undeclared });
+    out.push({ ecosystem: m.ecosystem, file: m.rel || m.file, abs: m.file, name: m.name, unused, undeclared });
   }
   return out;
 }

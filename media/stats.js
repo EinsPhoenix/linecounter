@@ -36,6 +36,8 @@
     ? `<a class="file" href="#" data-abs="${esc(f.abs)}" ${line ? `data-line="${line}"` : ''} title="Open ${esc(f.path)}">${esc(label || f.path)}</a>`
     : '<span class="muted">–</span>';
   const tipAttr = html => `data-tip="${esc(html)}"`;
+  /** Helpers shared with the section modules (deps.js, …) */
+  const UI = () => ({ esc, fmt, pct, pctStr, short, bytes, date, icon, card, tiles, donut, hbars, columns, tipAttr, post: m => vscode.postMessage(m) });
 
   // Line icons (24x24, stroke = currentColor). No emojis anywhere on the page.
   const ICONS = {
@@ -1000,6 +1002,7 @@
       if (r.commitCount >= 20 && r.night / r.commitCount > 0.15) out.push(['🦉', `${pctStr(r.night, r.commitCount, 0)} of the commits happened between midnight and 5 am. Sleep is for the weak, apparently.`]);
       if (r.commitCount >= 20 && r.weekend / r.commitCount > 0.3) out.push(['🏖️', `${pctStr(r.weekend, r.commitCount, 0)} weekend commits. Touch grass.`]);
     }
+    if (window.LCDeps && D.dependencies) out.push(...LCDeps.rants(UI(), D));
     if (!out.length) out.push(['😇', 'We tried to roast this project and found nothing. Suspicious. Very suspicious.']);
     return `<ul class="roast-list">${out.map(([e, t2]) => `<li><span class="rant-emoji">${e}</span><span>${t2}</span></li>`).join('')}</ul>`;
   }
@@ -1165,13 +1168,14 @@
       </header>
       <nav class="toc">
         <a href="#s-overview">Overview</a><a href="#s-lang">Languages</a><a href="#s-files">Files</a>
-        <a href="#s-fame">Hall of Fame</a>${rantCfg().enabled ? '<a href="#s-rant">Code Rant</a>' : ''}<a href="#s-git">Git</a><a href="#s-fun">Fun facts</a><a href="#s-ids">Words & connections</a><a href="#s-rank">Ranking</a><a href="#s-struct">Structure</a>
+        <a href="#s-fame">Hall of Fame</a>${D.dependencies ? '<a href="#s-deps">Dependencies</a>' : ''}${rantCfg().enabled ? '<a href="#s-rant">Code Rant</a>' : ''}<a href="#s-git">Git</a><a href="#s-fun">Fun facts</a><a href="#s-ids">Words & connections</a><a href="#s-rank">Ranking</a><a href="#s-struct">Structure</a>
       </nav>
       <main>
         <h2 id="s-overview">Overview</h2>${overview()}
         <h2 id="s-lang">Languages</h2>${languageSection()}
         <h2 id="s-files">Files & folders</h2>${filesSection()}
         <h2 id="s-fame">Hall of Fame</h2>${hallOfFame()}
+        ${D.dependencies && window.LCDeps ? `<h2 id="s-deps">Dependencies, licenses & vulnerabilities</h2>${LCDeps.render(UI(), D)}` : ''}
         ${rantSection()}
         <h2 id="s-git">Git</h2>${gitSection()}
         <h2 id="s-fun">Fun facts</h2>${funSection()}
@@ -1187,6 +1191,7 @@
       </main>`;
     renderTreemap();
     renderTable();
+    if (D.dependencies && window.LCDeps) LCDeps.renderTable(UI(), D);
     initWordWeb();
     initImportGraph();
     initStructure();
@@ -1198,7 +1203,7 @@
     const act = t.closest('[data-act]');
     if (act) {
       const a = /** @type {HTMLElement} */ (act).dataset.act;
-      if (a === 'csv' || a === 'json') vscode.postMessage({ type: 'export', format: a });
+      if (a === 'csv' || a === 'json' || a === 'licenses-csv') vscode.postMessage({ type: 'export', format: a });
       else vscode.postMessage({ type: a });
       return;
     }
@@ -1209,6 +1214,7 @@
       renderTable();
       return;
     }
+    if (window.LCDeps && D.dependencies && LCDeps.handleClick(UI(), D, t)) { ev.preventDefault(); return; }
     const gb = t.closest('[data-gact]');
     if (gb) {
       const g = graphs[/** @type {HTMLElement} */ (gb).dataset.graph];
@@ -1411,10 +1417,12 @@
   app.addEventListener('input', ev => {
     const t = /** @type {HTMLInputElement} */ (ev.target);
     if (t.id === 'tfilter') { table.filter = t.value; table.limit = 100; renderTable(); }
+    if (window.LCDeps && D.dependencies) LCDeps.handleInput(UI(), D, t);
   });
   app.addEventListener('change', ev => {
     const t = /** @type {HTMLSelectElement} */ (ev.target);
     if (t.id === 'tlang') { table.lang = t.value; table.limit = 100; renderTable(); }
+    if (window.LCDeps && D.dependencies && t.id !== 'depQ') LCDeps.handleInput(UI(), D, t);
   });
 
   // tooltip

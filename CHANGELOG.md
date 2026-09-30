@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.0
+- Dependency, license and vulnerability report for npm and Python (new section on the statistics page)
+- License report with SPDX normalisation, categories and a configurable policy (`linecounter.licenses.*`), CSV export
+- Vulnerability report via OSV.dev with CVSS v3 scores, advisory links and fixed versions (`linecounter.vulnerabilities.*`)
+- Unused and undeclared packages for npm and Python
+- Dependency rants in the project roast
+
 ## 1.5.0
 - Import graph: circular imports of any length (Tarjan SCC), always drawn in red; click a cycle to trace its path in red
 - Longest dependency chains with path, click to trace in red, copy path
