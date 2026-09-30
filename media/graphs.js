@@ -191,6 +191,24 @@
     };
   }
 
+  /** Small vector skull (used for packages with known vulnerabilities). */
+  function drawSkull(c, x, y, r, color) {
+    c.save();
+    c.fillStyle = color;
+    c.beginPath();
+    c.arc(x, y - r * 0.15, r * 0.85, Math.PI * 0.95, Math.PI * 0.05, false); // cranium
+    c.lineTo(x + r * 0.55, y + r * 0.55);
+    c.lineTo(x - r * 0.55, y + r * 0.55);
+    c.closePath(); c.fill();
+    c.fillRect(x - r * 0.45, y + r * 0.45, r * 0.9, r * 0.45); // jaw
+    c.globalCompositeOperation = 'destination-out';
+    c.beginPath(); c.arc(x - r * 0.33, y - r * 0.1, r * 0.24, 0, Math.PI * 2); c.fill(); // eyes
+    c.beginPath(); c.arc(x + r * 0.33, y - r * 0.1, r * 0.24, 0, Math.PI * 2); c.fill();
+    c.beginPath(); c.moveTo(x, y + r * 0.12); c.lineTo(x - r * 0.1, y + r * 0.32); c.lineTo(x + r * 0.1, y + r * 0.32); c.closePath(); c.fill(); // nose
+    for (let i = -1; i <= 1; i++) c.fillRect(x + i * r * 0.22 - r * 0.04, y + r * 0.6, r * 0.08, r * 0.3); // teeth gaps
+    c.restore();
+  }
+
   function isDark(hex) {
     const m = /^#?([0-9a-f]{6})$/i.exec(hex);
     if (!m) return false;
@@ -410,7 +428,18 @@
         ctx.globalAlpha = dim ? (hl ? 0.12 : 0.15) : 1;
         const r = nodeR(n) * (hc ? 1.25 : 1);
         ctx.fillStyle = col(opts.color ? opts.color(n) : '#e0621b');
-        ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, Math.PI * 2); ctx.fill();
+        const shape = opts.shape ? opts.shape(n) : 'circle';
+        if (shape === 'skull') { drawSkull(ctx, n.x, n.y, r * 1.25, ctx.fillStyle); ctx.beginPath(); ctx.arc(n.x, n.y, r * 1.3, 0, Math.PI * 2); }
+        else if (shape === 'square') {
+          ctx.beginPath();
+          const s = r * 1.7, rr = r * 0.45;
+          ctx.moveTo(n.x - s / 2 + rr, n.y - s / 2);
+          ctx.arcTo(n.x + s / 2, n.y - s / 2, n.x + s / 2, n.y + s / 2, rr);
+          ctx.arcTo(n.x + s / 2, n.y + s / 2, n.x - s / 2, n.y + s / 2, rr);
+          ctx.arcTo(n.x - s / 2, n.y + s / 2, n.x - s / 2, n.y - s / 2, rr);
+          ctx.arcTo(n.x - s / 2, n.y - s / 2, n.x + s / 2, n.y - s / 2, rr);
+          ctx.closePath(); ctx.fill();
+        } else { ctx.beginPath(); ctx.arc(n.x, n.y, r, 0, Math.PI * 2); ctx.fill(); }
         const ringC = hc || (opts.ringColor && opts.ringColor(n));
         if (ringC) {
           ctx.lineWidth = (hc ? 3 : 2.2) / k; ctx.strokeStyle = col(ringC); ctx.stroke();
@@ -581,5 +610,5 @@
     };
   }
 
-  window.LCGraphs = { Treemap, ForceGraph, resolveColor };
+  window.LCGraphs = { Treemap, ForceGraph, resolveColor, drawSkull };
 })();

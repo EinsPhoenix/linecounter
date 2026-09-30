@@ -1,6 +1,7 @@
 'use strict';
 
 const path = require('path').posix;
+const { npmPackageOf, PY_IMPORT_ALIASES, PY_STDLIB, NODE_BUILTINS } = require('./deps/usage');
 
 /**
  * Word web: the most used identifiers and the files that use them most.
@@ -102,17 +103,68 @@ function buildImportGraph(files, opts = {}) {
     return tryList(spec, JS_EXT);
   };
 
+  // ---- external libraries (optional): bare imports that are not files of the project ----
+  const libs = new Map();
+  const libInfo = libraryLookup(opts.deps);
+  const libraryOf = (f, spec) => {
+    if (!opts.libraries) return null;
+    let eco, name;
+    if (f.lang === 'Python') {
+      if (spec.startsWith('.')) return null;
+      name = spec.split('.')[0];
+      if (!name || PY_STDLIB.has(name)) return null;
+      eco = 'PyPI';
+    } else if (JS_LANGS.has(f.lang)) {
+      name = npmPackageOf(spec);
+      if (!name || NODE_BUILTINS.has(name) || name.startsWith('node:')) return null;
+      eco = 'npm';
+    } else return null;
+    const key = `lib:${eco}:${name}`;
+    if (!libs.has(key)) {
+      const info = libInfo(eco, name) || {};
+      libs.set(key, {
+        abs: key, path: info.name || name, name: info.name || name, lang: 'Library', lines: 0, library: true, ecosystem: eco,
+        version: info.version || null, license: info.license || null, licenseStatus: info.status || null,
+        vulns: info.vulns || 0, severity: info.severity || null, dir: info.dir || null,
+      });
+    }
+    return libs.get(key);
+  };
+
   // ---- edges over all files ----
   const edges = new Map();
   for (const f of files) {
     if (!f.deps) continue;
     for (const spec of f.deps) {
-      const t = resolve(f, spec);
+      const t = resolve(f, spec) || libraryOf(f, spec);
       if (!t || t === f) continue;
       edges.set(f.abs + '\n' + t.abs, [f, t]);
     }
   }
-  return analyzeDependencies([...edges.values()], maxNodes);
+  const g = analyzeDependencies([...edges.values()], maxNodes + libs.size);
+  g.libraryCount = libs.size;
+  g.vulnerableLibraries = [...libs.values()].filter(l => l.vulns).length;
+  return g;
+}
+
+const JS_LANGS = new Set(['JavaScript', 'JSX', 'TypeScript', 'TSX', 'Vue', 'Svelte', 'Astro']);
+
+/** Finds version, license and vulnerabilities of a library in the dependency report. */
+function libraryLookup(report) {
+  if (!report || !report.packages) return () => null;
+  const aliasToDist = new Map();
+  for (const [dist, names] of Object.entries(PY_IMPORT_ALIASES)) for (const n of names) aliasToDist.set(n.toLowerCase(), dist);
+  const norm = n => String(n).toLowerCase().replace(/[-_.]+/g, '-');
+  const rank = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, UNKNOWN: 0, NONE: 0 };
+  return (eco, name) => {
+    const want = eco === 'PyPI' ? norm(aliasToDist.get(name.toLowerCase()) || name) : name;
+    const same = x => x.ecosystem === eco && (eco === 'PyPI' ? norm(x.name) === want : x.name === want);
+    const p = report.packages.find(x => same(x) && x.direct) || report.packages.find(same);
+    if (!p) return null;
+    const vulns = ((report.vulns && report.vulns.items) || []).filter(v => v.ecosystem === eco && v.name === p.name && v.version === p.version);
+    const worst = vulns.reduce((w, v) => (!w || rank[v.severity] > rank[w] ? v.severity : w), null);
+    return { name: p.name, version: p.version, license: p.license, status: p.status, vulns: vulns.length, severity: worst, dir: p.dir };
+  };
 }
 
 /**
@@ -243,6 +295,7 @@ function analyzeDependencies(edgeList, maxNodes) {
     const f = all[v];
     return {
       abs: f.abs, path: f.path, rootName: f.rootName, lang: f.lang, lines: f.lines,
+      ...(f.library ? { library: true, ecosystem: f.ecosystem, version: f.version, license: f.license, licenseStatus: f.licenseStatus, vulns: f.vulns, severity: f.severity, dir: f.dir } : {}),
       in: inn[v].length, out: out[v].length, layer: layer[comp[v]],
       cycle: inCycle(v) ? comp[v] : -1,
       dependents: N <= 4000 ? reach(v, inn) : null,
@@ -254,11 +307,12 @@ function analyzeDependencies(edgeList, maxNodes) {
     if (pos.has(a) && pos.has(b)) links.push({ s: pos.get(a), t: pos.get(b), cyc: comp[a] === comp[b] });
   }
   const top = (arr, n) => arr.slice().sort((x, y) => y.count - x.count).slice(0, n);
-  const counts = (adj) => all.map((f, v) => ({ path: f.path, abs: f.abs, count: adj[v].length })).filter(x => x.count);
-  const blast = nodes.filter(n => n.dependents).map(n => ({ path: n.path, abs: n.abs, count: n.dependents }));
+  const counts = (adj) => all.map((f, v) => ({ path: f.path, abs: f.abs, count: adj[v].length, library: !!f.library })).filter(x => x.count && !x.library);
+  const blast = nodes.filter(n => n.dependents && !n.library).map(n => ({ path: n.path, abs: n.abs, count: n.dependents }));
+  const libUse = all.map((f, v) => ({ path: f.path, abs: f.abs, count: inn[v].length, library: !!f.library, vulns: f.vulns || 0, severity: f.severity || null, version: f.version || null })).filter(x => x.library);
   return {
     nodes, links, edgeCount: E.length, truncated: N > maxNodes,
-    mostImported: top(counts(inn), 5), mostImporting: top(counts(out), 5), blastRadius: top(blast, 5),
+    mostImported: top(counts(inn), 5), mostImporting: top(counts(out), 5), blastRadius: top(blast, 5), mostUsedLibraries: top(libUse, 8),
     cycles, cycleCount: cyclicComps.length, filesInCycles: cyclicComps.reduce((s, x) => s + x.m.length, 0),
     chains, longestChain: chains.length ? chains[0].length : 0, maxLayer: Math.max(0, ...nodes.map(n => n.layer)),
   };

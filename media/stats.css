@@ -442,3 +442,6 @@ body.print-light .tm span { color: #111 !important; }
 body.print-light .imp-cycle .imp-path { color: #b3261e; }
 body.print-light .rant-text b, body.print-light .fame-roast { color: #a8410f; }
 body.print-light .cm-quote { background: #f1efec; border-color: #ddd; color: #7a3a10; }
+.lib-box { display: inline-block; width: 10px; height: 10px; border-radius: 3px; background: #8d8d8d; margin-right: 6px; vertical-align: -1px; }
+.lib-skull { display: inline-flex; margin-right: 5px; vertical-align: -2px; }
+.imp-legend .lib-box { margin-right: 4px; }

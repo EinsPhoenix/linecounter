@@ -10,6 +10,7 @@
   let excluded = new Set();
   let included = new Set();
   let hiddenExt = new Set();
+  let libraries = false;
   let expanded = new Set();
   let query = '';
   let pendingStats = false;
@@ -138,7 +139,7 @@
   }
 
   function save(rescan) {
-    vscode.postMessage({ type: 'saveState', excluded: [...excluded], included: [...included], hiddenExt: [...hiddenExt], rescan: !!rescan });
+    vscode.postMessage({ type: 'saveState', excluded: [...excluded], included: [...included], hiddenExt: [...hiddenExt], libraries, rescan: !!rescan });
   }
 
   function toggle(n) {
@@ -223,6 +224,8 @@
       <details id="filters" ${ui.filtersOpen ? 'open' : ''}>
         <summary>Predefined filters</summary>
         <div class="presets">${presetHtml}</div>
+        <label class="check libs-toggle" title="External packages (npm, Python) become nodes in the import graph and the 3D train view. They are not counted in any statistic."><input type="checkbox" id="libToggle" ${libraries ? 'checked' : ''}>
+          <span>Show libraries as graph nodes <span class="muted">(not counted)</span></span></label>
       </details>
       <details id="types" ${ui.typesOpen ? 'open' : ''}>
         <summary>File types <span class="muted">(${exts.length - [...hiddenExt].filter(e => extCounts.has(e)).length}/${exts.length} shown)</span></summary>
@@ -302,6 +305,8 @@
     on('collapseAll', () => { expanded = new Set(roots.map(r => r.key)); render(); });
     on('resetEx', () => { excluded.clear(); included.clear(); hiddenExt.clear(); save(true); render(); });
     on('stats', createStats);
+    const lt = /** @type {HTMLInputElement} */ (document.getElementById('libToggle'));
+    if (lt) lt.addEventListener('change', () => { libraries = lt.checked; save(); });
     on('presetSave', () => vscode.postMessage({ type: 'presetSave' }));
     on('presetDelete', () => activePreset && vscode.postMessage({ type: 'presetDelete', name: activePreset }));
     on('openConfig', () => vscode.postMessage({ type: 'openConfig' }));
@@ -379,6 +384,7 @@
       excluded = new Set(msg.state.excluded);
       included = new Set(msg.state.included);
       hiddenExt = new Set(msg.state.hiddenExt);
+      libraries = !!msg.state.libraries;
       userPresets = msg.userPresets || [];
       activePreset = msg.activePreset || null;
       hasWorkspace = msg.hasWorkspace !== false;

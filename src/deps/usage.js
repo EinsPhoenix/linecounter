@@ -156,4 +156,4 @@ function analyzeUsage(manifests, files, installed) {
   return out;
 }
 
-module.exports = { analyzeUsage, npmPackageOf };
+module.exports = { analyzeUsage, npmPackageOf, PY_IMPORT_ALIASES, PY_STDLIB, NODE_BUILTINS };

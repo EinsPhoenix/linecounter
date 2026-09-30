@@ -11,7 +11,7 @@ const { scanDependencies } = require('./deps');
  * Runs the whole analysis for the selected files and returns the data model for the statistics page.
  * roots: [{ name, path, gitRepos }], selection: [{ r: rootIndex, p: relPath }]
  */
-async function computeStatistics(config, roots, selection) {
+async function computeStatistics(config, roots, selection, options = {}) {
   const maxBytes = config.get('maxFileSizeKB', 2048) * 1024;
   const maxCommits = config.get('maxCommits', 20000);
 
@@ -51,6 +51,7 @@ async function computeStatistics(config, roots, selection) {
     progress.report({ increment: 20, message: 'Building charts…' });
     return aggregate(results, {
       dependencies,
+      includeLibraries: !!options.libraries,
       workspace: vscode.workspace.name || roots.map(r => r.name).join(', '),
       repos,
       graphMotion: config.get('graphs.motion', 'auto'),
