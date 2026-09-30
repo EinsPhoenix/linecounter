@@ -67,11 +67,11 @@ class SidebarProvider {
         await this.scan();
         break;
       case 'saveState':
-        await this.setState({ excluded: msg.excluded, included: msg.included, hiddenExt: msg.hiddenExt });
+        await this.setState({ excluded: msg.excluded, included: msg.included, hiddenExt: msg.hiddenExt, ...(msg.libraries !== undefined ? { libraries: !!msg.libraries } : {}) });
         if (msg.rescan) await this.scan();
         break;
       case 'createStats':
-        await this.onCreateStats(this.roots, msg.files);
+        await this.onCreateStats(this.roots, msg.files, { libraries: !!this.state.libraries });
         break;
       case 'open':
         if (this.roots[msg.r]) await openFile(path.join(this.roots[msg.r].path, ...msg.p.split('/')));
@@ -184,6 +184,7 @@ function normalizeState(s) {
     excluded: Array.isArray(s.excluded) ? s.excluded : [],
     included: Array.isArray(s.included) ? s.included : [],
     hiddenExt: Array.isArray(s.hiddenExt) ? s.hiddenExt : [],
+    libraries: !!s.libraries,
   };
 }
 

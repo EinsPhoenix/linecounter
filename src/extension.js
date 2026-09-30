@@ -12,17 +12,17 @@ let lastRun = null;
 function activate(context) {
   const config = new LineCounterConfig();
 
-  const createStatistics = async (roots, selection) => {
+  const createStatistics = async (roots, selection, options = {}) => {
     if (!selection || !selection.length) {
       vscode.window.showWarningMessage('Line Counter: no files selected – every file is excluded by your filters.');
       return;
     }
-    lastRun = { roots, selection };
-    const data = await computeStatistics(config, roots, selection);
+    lastRun = { roots, selection, options };
+    const data = await computeStatistics(config, roots, selection, options);
     if (!data) return;
     StatsPanel.show(context, config, data, {
       open: openFile,
-      refresh: () => lastRun && createStatistics(lastRun.roots, lastRun.selection),
+      refresh: () => lastRun && createStatistics(lastRun.roots, lastRun.selection, lastRun.options),
       deleted: () => provider.scan(),
     });
   };

@@ -45,6 +45,10 @@
           },
           "savedAt": {
             "type": "string"
+          },
+          "libraries": {
+            "type": "boolean",
+            "description": "External libraries are shown as graph nodes"
           }
         }
       }

@@ -268,6 +268,7 @@
   }
 
   const RED = '#ff4d4f';
+  const SKULL_SVG = '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path fill="#ff4d4f" d="M12 2C6.5 2 3 5.6 3 10.2c0 2.6 1.2 4.6 3 5.8V19a1 1 0 0 0 1 1h2v-2h2v2h2v-2h2v2h2a1 1 0 0 0 1-1v-3c1.8-1.2 3-3.2 3-5.8C21 5.6 17.5 2 12 2zM8.5 13.5a2 2 0 1 1 0-4 2 2 0 0 1 0 4zm7 0a2 2 0 1 1 0-4 2 2 0 0 1 0 4zM12 16l-1.2-2h2.4z"/></svg>';
   const RED_SOFT = '#ff8a80';
   const AMBER = '#f7ae62';
   const graphTools = id => `<span class="graph-tools">
@@ -325,21 +326,22 @@
       motion: motionFor('importgraph'),
       layout: 'force',
       layer: n => n.f.layer,
-      radius: n => 3.5 + Math.sqrt(n.f.in / maxIn) * 13,
-      color: n => colorOf(n.f.lang),
+      radius: n => Math.max(n.f.library && n.f.vulns ? 7 : 0, 3.5 + Math.sqrt(n.f.in / maxIn) * 13),
+      color: n => (n.f.library ? (n.f.vulns ? RED : '#8d8d8d') : colorOf(n.f.lang)),
+      shape: n => (n.f.library ? (n.f.vulns ? 'skull' : 'square') : 'circle'),
       ringColor: n => (n.f.cycle >= 0 ? RED : null),
-      label: n => n.f.path.split('/').pop(),
-      showLabel: (n, k) => n.f.in >= Math.max(3, maxIn * 0.25) || n.f.cycle >= 0 || k > 1.7,
+      label: n => (n.f.library ? n.f.path + (n.f.version ? '@' + n.f.version : '') : n.f.path.split('/').pop()),
+      showLabel: (n, k) => n.f.in >= Math.max(3, maxIn * 0.25) || n.f.cycle >= 0 || (n.f.library && n.f.vulns) || k > 1.7,
       linkColor: l => (l.cyc ? RED : '#7c7c7c'),
       linkWidth: l => (l.cyc ? 2.2 : 0.9),
       linkAlpha: 0.5,
       distance: () => 45,
       charge: () => -90,
-      onHover: (n, ev) => (n ? showTip(`<b>${esc(n.f.path)}</b><br>imports ${fmt(n.f.out)}${n.f.dependencies != null ? ` (${fmt(n.f.dependencies)} transitively)` : ''} · imported by ${fmt(n.f.in)}${n.f.dependents != null ? ` (${fmt(n.f.dependents)} transitively)` : ''}${n.f.cycle >= 0 ? '<br><b style="color:' + RED + '">part of a circular import</b>' : ''}<br><i>Click: show dependencies · Double-click: open · Right-click: more</i>`, ev) : hideTip()),
+      onHover: (n, ev) => (n ? showTip(n.f.library ? libraryTip(n.f) : `<b>${esc(n.f.path)}</b><br>imports ${fmt(n.f.out)}${n.f.dependencies != null ? ` (${fmt(n.f.dependencies)} transitively)` : ''} · imported by ${fmt(n.f.in)}${n.f.dependents != null ? ` (${fmt(n.f.dependents)} transitively)` : ''}${n.f.cycle >= 0 ? '<br><b style="color:' + RED + '">part of a circular import</b>' : ''}<br><i>Click: show dependencies · Double-click: open · Right-click: more</i>`, ev) : hideTip()),
       onClick: n => selectImportNode(n.index),
-      onDblClick: n => vscode.postMessage({ type: 'open', abs: n.f.abs }),
+      onDblClick: n => (n.f.library ? n.f.dir && vscode.postMessage({ type: 'reveal', abs: n.f.dir, inEditor: true }) : vscode.postMessage({ type: 'open', abs: n.f.abs })),
       onBackground: () => clearImportHighlight(),
-      onContext: (n, ev) => openMenu(n.f.abs, ev.clientX, ev.clientY),
+      onContext: (n, ev) => { if (!n.f.library) openMenu(n.f.abs, ev.clientX, ev.clientY); },
     });
     const input = /** @type {HTMLInputElement} */ (document.getElementById('impFind'));
     if (input) {
@@ -351,6 +353,11 @@
       });
     }
   }
+
+  const libraryTip = f => `<b>${esc(f.path)}</b>${f.version ? '@' + esc(f.version) : ''} <span style="opacity:.7">${esc(f.ecosystem)} library</span>
+    ${f.license ? `<br>license: ${esc(f.license)}${f.licenseStatus && f.licenseStatus !== 'ok' ? ` (<b style="color:${f.licenseStatus === 'problematic' ? RED : AMBER}">${esc(f.licenseStatus)}</b>)` : ''}` : ''}
+    ${f.vulns ? `<br><b style="color:${RED}">${f.vulns} known vulnerabilit${f.vulns === 1 ? 'y' : 'ies'} (${esc(f.severity || 'unknown')})</b>` : ''}
+    <br>imported by ${fmt(f.in)} file${f.in === 1 ? '' : 's'}<br><i>not counted in the statistics</i>`;
 
   function setImpStatus(html) {
     const el = document.getElementById('impStatus');
@@ -465,12 +472,13 @@
         <aside class="imp-side">
           <div class="imp-block"><div class="imp-title red">Circular imports <span class="muted">click to trace</span></div>${cycles}</div>
           <div class="imp-block"><div class="imp-title">Longest dependency chains <span class="muted">click to trace</span></div>${chains}</div>
+          ${G.mostUsedLibraries && G.mostUsedLibraries.length ? `<div class="imp-block"><div class="imp-title">Libraries <span class="muted">${fmt(G.libraryCount)} external packages · not counted</span></div><ol class="imp-list">${G.mostUsedLibraries.map(x => `<li class="imp-item" data-imp-node="${esc(x.abs)}" title="${esc(x.path)}"><span class="imp-name">${x.vulns ? `<span class="lib-skull" title="${x.vulns} vulnerabilities">${SKULL_SVG}</span>` : '<span class="lib-box"></span>'}${esc(x.path)}${x.version ? `<span class="muted">@${esc(x.version)}</span>` : ''}</span><span class="imp-count">${fmt(x.count)} ×</span></li>`).join('')}</ol></div>` : ''}
           ${list('Biggest blast radius <span class="muted">files that break if it breaks</span>', G.blastRadius || [], 'dependents', true)}
           ${list('Most imported', G.mostImported, '×', true)}
           ${list('Imports the most', G.mostImporting, 'imports', true)}
         </aside>
       </div>
-      <div class="imp-legend"><span><i class="imp-line"></i> import (arrow = direction)</span><span><i class="imp-line cyc"></i> circular import</span><span><i class="imp-line dep"></i> depends on (selection)</span><span><i class="imp-line user"></i> depended on by (selection)</span><span class="muted">node size = how often a file is imported · click a file to trace it, double-click to open</span></div>`;
+      <div class="imp-legend"><span><i class="imp-line"></i> import (arrow = direction)</span><span><i class="imp-line cyc"></i> circular import</span><span><i class="imp-line dep"></i> depends on (selection)</span><span><i class="imp-line user"></i> depended on by (selection)</span>${G.libraryCount ? `<span><span class="lib-box"></span> library</span><span>${SKULL_SVG} library with vulnerabilities</span>` : ''}<span class="muted">node size = how often a file is imported · click a file to trace it, double-click to open</span></div>`;
   }
 
   // ---------- project structure graph ----------

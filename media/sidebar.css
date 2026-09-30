@@ -116,3 +116,4 @@ button.primary:disabled { opacity: .5; cursor: default; }
 .icon-btn2:hover:not(:disabled) { color: var(--accent-hover); border-color: var(--border); }
 .icon-btn2:disabled { opacity: .35; cursor: default; }
 .icon-btn2 .ic { width: 15px; height: 15px; }
+.libs-toggle { border-top: 1px dashed var(--border); margin-top: 4px; padding-top: 6px !important; }

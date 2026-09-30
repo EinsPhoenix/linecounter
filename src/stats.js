@@ -82,7 +82,7 @@ function aggregate(files, meta) {
   return {
     generated: now, ...meta, multiRoot,
     totals, languages, extensions, folders, histogram, identifiers, ages, table,
-    wordGraph: buildWordGraph(text), importGraph: buildImportGraph(text),
+    wordGraph: buildWordGraph(text), importGraph: buildImportGraph(text, { libraries: !!meta.includeLibraries, deps: meta.dependencies }),
   };
 }
 
