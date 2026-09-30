@@ -90,6 +90,37 @@ class StatsPanel {
       case 'refresh':
         await this.handlers.refresh();
         break;
+      case 'copy':
+        await vscode.env.clipboard.writeText(msg.text);
+        break;
+      case 'reveal':
+        await vscode.commands.executeCommand('revealFileInOS', vscode.Uri.file(msg.abs));
+        break;
+      case 'delete': {
+        const name = require('path').basename(msg.abs);
+        const choice = await vscode.window.showWarningMessage(
+          `Delete "${name}"?`,
+          { modal: true, detail: `${msg.abs}\n\nThe file is moved to the trash (if supported).` },
+          'Move to Trash', 'Delete Permanently');
+        if (!choice) return;
+        try {
+          const uri = vscode.Uri.file(msg.abs);
+          try {
+            await vscode.workspace.fs.delete(uri, { useTrash: choice === 'Move to Trash' });
+          } catch (e) {
+            if (choice !== 'Move to Trash') throw e;
+            // Trash not available (e.g. remote/headless): ask again before deleting for good
+            const again = await vscode.window.showWarningMessage(`The trash is not available. Delete "${name}" permanently?`, { modal: true }, 'Delete Permanently');
+            if (!again) return;
+            await vscode.workspace.fs.delete(uri, { useTrash: false });
+          }
+          this.panel.webview.postMessage({ type: 'deleted', abs: msg.abs });
+          if (this.handlers.deleted) this.handlers.deleted(msg.abs);
+        } catch (e) {
+          vscode.window.showErrorMessage(`Could not delete ${name}: ${e.message}`);
+        }
+        break;
+      }
       case 'fullscreen':
         await vscode.commands.executeCommand('workbench.action.toggleFullScreen');
         break;

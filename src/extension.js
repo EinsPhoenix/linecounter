@@ -141,6 +141,7 @@ async function openFile(abs, line) {
 }
 
 let lastRun = null;
+let sidebar = null;
 
 async function createStatistics(context, roots, selection) {
   if (!selection || !selection.length) {
@@ -194,6 +195,11 @@ async function createStatistics(context, roots, selection) {
     return aggregate(results, {
       workspace: vscode.workspace.name || roots.map(r => r.name).join(', '),
       repos,
+      rant: {
+        enabled: cfg.get('rant.enabled', true),
+        maxLines: Math.max(1, cfg.get('rant.maxFileLines', 500)),
+        maxBlankPercent: Math.max(0, cfg.get('rant.maxBlankPercent', 10)),
+      },
     });
   });
   if (!data) return;
@@ -201,11 +207,13 @@ async function createStatistics(context, roots, selection) {
   StatsPanel.show(context, data, {
     open: openFile,
     refresh: () => lastRun && createStatistics(context, lastRun.roots, lastRun.selection),
+    deleted: () => sidebar && sidebar.scan(),
   });
 }
 
 function activate(context) {
   const provider = new SidebarProvider(context);
+  sidebar = provider;
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider('linecounter.explorer', provider, { webviewOptions: { retainContextWhenHidden: true } }),
     vscode.commands.registerCommand('linecounter.refresh', () => provider.scan()),

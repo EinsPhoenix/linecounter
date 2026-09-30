@@ -3,8 +3,12 @@
   --muted: var(--vscode-descriptionForeground);
   --border: var(--vscode-panel-border, rgba(128,128,128,.35));
   --hover: var(--vscode-list-hoverBackground);
-  --accent: var(--vscode-focusBorder);
+  --accent: #d9611a;
+  --accent-hover: #e8702a;
+  --accent-soft: rgba(217, 97, 26, .18);
 }
+.ic { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -2px; }
+.icon-btn { display: inline-flex; }
 html, body { height: 100%; }
 body {
   margin: 0; padding: 0;
@@ -25,6 +29,7 @@ body {
   border: 1px solid var(--vscode-input-border, transparent); border-radius: 2px; outline: none;
 }
 .search input:focus { border-color: var(--accent); }
+.row.excluded .badge { border-color: rgba(217, 97, 26, .5); }
 .icon-btn {
   position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
   background: none; border: none; color: var(--muted); cursor: pointer; padding: 2px 6px;
@@ -33,21 +38,21 @@ body {
 .search-actions { display: flex; gap: 10px; align-items: center; margin-top: 4px; }
 button.link {
   background: none; border: none; padding: 0; cursor: pointer;
-  color: var(--vscode-textLink-foreground); font: inherit; font-size: 0.92em;
+  color: var(--accent-hover); font: inherit; font-size: 0.92em;
 }
 button.link:hover { text-decoration: underline; }
 details { border-top: 1px solid var(--border); padding: 4px 8px; }
 summary { cursor: pointer; font-weight: 600; font-size: 0.85em; text-transform: uppercase; letter-spacing: .04em; padding: 3px 0; user-select: none; }
 .presets { display: flex; flex-direction: column; gap: 2px; padding: 4px 0; }
 .check { display: flex; gap: 6px; align-items: center; cursor: pointer; padding: 1px 0; }
-.check input { margin: 0; accent-color: var(--vscode-button-background); }
+.check input { margin: 0; accent-color: var(--accent); }
 .type-actions { display: flex; gap: 10px; padding: 2px 0 6px; }
 .chips { display: flex; flex-wrap: wrap; gap: 4px; max-height: 150px; overflow-y: auto; padding-bottom: 4px; }
 .chip {
   display: inline-flex; align-items: center; gap: 4px; cursor: pointer; user-select: none;
   padding: 1px 7px; border-radius: 10px; font-size: 0.9em;
-  background: var(--vscode-badge-background); color: var(--vscode-badge-foreground);
-  border: 1px solid transparent;
+  background: var(--accent); color: #fff;
+  border: 1px solid var(--accent);
 }
 .chip input { display: none; }
 .chip.off { background: transparent; color: var(--muted); border-color: var(--border); text-decoration: line-through; }
@@ -61,14 +66,14 @@ summary { cursor: pointer; font-weight: 600; font-size: 0.85em; text-transform: 
   display: flex; align-items: center; gap: 4px; height: 22px; cursor: pointer; white-space: nowrap;
   padding-right: 6px; user-select: none;
 }
-.row:hover { background: var(--hover); }
+.row:hover { background: var(--accent-soft); }
 .row.rootrow { font-weight: 600; text-transform: uppercase; font-size: .85em; letter-spacing: .03em; }
 .row.excluded .name { opacity: .45; }
 .row.excluded .icon { opacity: .35; }
 .row.self .name { text-decoration: line-through; }
 .row.match .name { font-weight: 600; }
 .name { overflow: hidden; text-overflow: ellipsis; }
-mark { background: var(--vscode-editor-findMatchHighlightBackground, rgba(234,92,0,.33)); color: inherit; border-radius: 2px; }
+mark { background: var(--accent-soft); color: inherit; border-bottom: 1px solid var(--accent); border-radius: 2px; }
 .twisty { width: 12px; height: 12px; flex: none; display: inline-flex; align-items: center; justify-content: center; }
 .twisty::before {
   content: ''; width: 0; height: 0;
@@ -86,15 +91,17 @@ mark { background: var(--vscode-editor-findMatchHighlightBackground, rgba(234,92
   font-size: .78em; padding: 0 5px; border-radius: 8px; border: 1px solid var(--border); color: var(--muted);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 45%;
 }
-.eye { margin-left: auto; opacity: 0; color: var(--muted); padding: 0 4px; }
+.eye { margin-left: auto; opacity: 0; color: var(--muted); padding: 0 4px; display: inline-flex; }
 .row:hover .eye { opacity: 1; }
-.eye:hover { color: var(--vscode-textLink-foreground); }
+.eye:hover { color: var(--accent-hover); }
 .more { padding: 6px 12px; }
 .bottom { padding: 8px; border-top: 1px solid var(--border); }
 button.primary {
   width: 100%; padding: 7px; cursor: pointer; font: inherit; font-weight: 600;
-  background: var(--vscode-button-background); color: var(--vscode-button-foreground);
-  border: none; border-radius: 2px;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 3px;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
 }
-button.primary:hover:not(:disabled) { background: var(--vscode-button-hoverBackground); }
+button.primary .ic { width: 16px; height: 16px; }
+button.primary:hover:not(:disabled) { background: var(--accent-hover); }
 button.primary:disabled { opacity: .5; cursor: default; }

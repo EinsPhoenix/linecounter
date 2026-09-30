@@ -2,7 +2,7 @@
   "name": "linecounter",
   "displayName": "Line Counter & Code Statistics",
   "description": "Browse your workspace as a filterable tree, exclude files and folders with a click and generate full-screen code statistics with charts, git insights, fun facts and a file ranking.",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "publisher": "einsphoenix",
   "icon": "media/icon.png",
   "repository": {
@@ -116,6 +116,24 @@
           "type": "number",
           "default": 20000,
           "description": "Maximum number of commits read per git repository."
+        },
+        "linecounter.rant.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the \"Code Rant\" section that complains about files that are too long or contain too many blank lines."
+        },
+        "linecounter.rant.maxFileLines": {
+          "type": "number",
+          "default": 500,
+          "minimum": 1,
+          "description": "Rant about files longer than this many lines."
+        },
+        "linecounter.rant.maxBlankPercent": {
+          "type": "number",
+          "default": 10,
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Rant about files (with at least 10 lines) and the whole project when more than this percentage of lines is blank."
         }
       }
     }

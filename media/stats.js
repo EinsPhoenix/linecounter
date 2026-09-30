@@ -37,8 +37,61 @@
     : '<span class="muted">–</span>';
   const tipAttr = html => `data-tip="${esc(html)}"`;
 
+  // Line icons (24x24, stroke = currentColor). No emojis anywhere on the page.
+  const ICONS = {
+    chart: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
+    refresh: 'M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7',
+    download: 'M12 3v12M7 10l5 5 5-5M4 21h16',
+    maximize: 'M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5',
+    minimize: 'M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5',
+    screen: 'M3 5h18v12H3zM8 21h8M12 17v4',
+    close: 'M6 6l12 12M18 6L6 18',
+    copy: 'M9 9h11v11H9zM5 15H4V4h11v1',
+    trash: 'M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3',
+    open: 'M14 4h6v6M20 4l-9 9M18 14v6H4V6h6',
+    folder: 'M3 6a1 1 0 0 1 1-1h5l2 2h9a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z',
+    file: 'M14 3H6v18h12V7zM14 3v4h4',
+    weight: 'M6 8h12l2 12H4zM9 8a3 3 0 0 1 6 0',
+    ruler: 'M3 17L17 3l4 4L7 21zM7 13l2 2M10 10l2 2M13 7l2 2',
+    dot: 'M12 10a2 2 0 1 1 0 4 2 2 0 0 1 0-4zM12 3v3M12 18v3M3 12h3M18 12h3',
+    layers: 'M12 3l9 5-9 5-9-5zM3 12.5l9 5 9-5M3 17l9 5 9-5',
+    type: 'M4 7V5h16v2M12 5v14M9 19h6',
+    todo: 'M10 6h10M10 12h10M10 18h10M4 6l1.5 1.5L8 5M4 12h3M4 18h3',
+    book: 'M4 4h6a2 2 0 0 1 2 2v14a2 2 0 0 0-2-2H4zM20 4h-6a2 2 0 0 0-2 2v14a2 2 0 0 1 2-2h6z',
+    clock: 'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zM12 7v5l3 2',
+    archive: 'M3 4h18v4H3zM5 8v12h14V8M10 12h4',
+    moon: 'M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z',
+    sun: 'M12 8a4 4 0 1 1 0 8 4 4 0 0 1 0-8zM12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4',
+    flame: 'M12 3c1 4 5 5.5 5 10.5a5 5 0 0 1-10 0c0-3 2-4 2-6.5 1.2 1 2 2 3 2.5.3-2.2-.6-4.3 0-6.5z',
+    calendar: 'M3 5h18v16H3zM3 10h18M8 3v4M16 3v4',
+    users: 'M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6',
+    wrench: 'M14.7 6.3l3 3 3.6-3.6a6 6 0 0 1-7.9 7.9l-6.9 6.9a2.1 2.1 0 0 1-3-3l6.9-6.9a6 6 0 0 1 7.9-7.9z',
+    eyeoff: 'M3 3l18 18M10.6 6.1A9.7 9.7 0 0 1 12 6c5 0 9 6 9 6a15 15 0 0 1-2.6 3.2M6.1 7.6A15 15 0 0 0 3 12s4 6 9 6a9 9 0 0 0 3.9-.9M9.9 9.9a3 3 0 0 0 4.2 4.2',
+    pen: 'M4 20l4-1L19 8l-3-3L5 16zM14 7l3 3',
+    pages: 'M7 3h8l4 4v14H7zM15 3v4h4M10 12h6M10 16h6M4 7v14h11',
+    distance: 'M3 12h18M6 9l-3 3 3 3M18 9l3 3-3 3',
+    keyboard: 'M2 6h20v12H2zM6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10',
+    coffee: 'M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 11h2a2 2 0 0 1 0 4h-2M8 3v3M12 3v3',
+    coins: 'M12 3c3.9 0 7 1.3 7 3s-3.1 3-7 3-7-1.3-7-3 3.1-3 7-3zM5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6',
+    alert: 'M12 3l10 18H2zM12 10v5M12 18v.01',
+    award: 'M12 3a6 6 0 1 1 0 12 6 6 0 0 1 0-12zM8.5 14l-1.5 7 5-3 5 3-1.5-7',
+    wind: 'M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h7',
+    indent: 'M3 6h18M3 18h18M11 10h10M11 14h10M3 9l3 3-3 3',
+    bug: 'M8 7h8v8a4 4 0 0 1-8 0zM12 7v12M4 10h4M16 10h4M4 15h4M16 15h4M9 3l1.5 3M15 3l-1.5 3',
+    code: 'M8 7l-5 5 5 5M16 7l5 5-5 5M14 4l-4 16',
+    space: 'M4 13v4h16v-4',
+    star: 'M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z',
+    smile: 'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zM8 14a5 5 0 0 0 8 0M9 9.5h.01M15 9.5h.01',
+    message: 'M4 5h16v11H9l-5 4z',
+    save: 'M5 3h11l3 3v15H5zM8 3v5h7V3M8 21v-7h8v7',
+    fossil: 'M12 3a9 9 0 1 1 0 18 9 9 0 0 1 0-18zM12 7v5l-3 3',
+    repo: 'M3 7l9-4 9 4v10l-9 4-9-4zM3 7l9 4 9-4M12 11v10',
+    megaphone: 'M3 10v4h4l7 5V5L7 10zM17 9a4 4 0 0 1 0 6M19.5 6.5a8 8 0 0 1 0 11',
+  };
+  const icon = (name, cls = '') => `<svg class="ic ${cls}" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[name] || ICONS.dot}"/></svg>`;
+
   // Categorical slots follow the entity (language), never the rank on a given chart.
-  const SLOTS = 7;
+  const SLOTS = 6;
   function assignColors() {
     langColor = new Map();
     const langs = D.languages.filter(l => l.key !== 'Binary' && l.key !== 'Other' && l.lines > 0);
@@ -65,7 +118,8 @@
   // ---------- chart primitives ----------
   function card(title, body, opts = {}) {
     return `<section class="card ${opts.cls || ''}" ${opts.id ? `id="${opts.id}"` : ''}>
-      <header><h3>${title}</h3>${opts.sub ? `<span class="sub">${opts.sub}</span>` : ''}</header>
+      <header><h3>${title}</h3><span class="head-right">${opts.sub ? `<span class="sub">${opts.sub}</span>` : ''}
+        <button class="card-fs" data-fs title="Show in full screen (Esc to close)">${icon('maximize')}</button></span></header>
       <div class="card-body">${body}</div></section>`;
   }
 
@@ -216,8 +270,8 @@
       }
       const f = r.f;
       const name = f.path.split('/').pop();
-      return `<div class="tm clickable" data-abs="${esc(f.abs)}" style="left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;background:${colorOf(f.lang)}"
-        ${tipAttr(`<b>${esc(f.path)}</b><br>${esc(f.lang)} · ${fmt(f.lines)} lines · ${bytes(f.size)}<br><i>click to open</i>`)}>${big ? `<span>${esc(name)}</span>` : ''}</div>`;
+      return `<div class="tm clickable" data-abs="${esc(f.abs)}" data-copy="1" style="left:${r.x}px;top:${r.y}px;width:${r.w}px;height:${r.h}px;background:${colorOf(f.lang)}"
+        ${tipAttr(`<b>${esc(f.path)}</b><br>${esc(f.lang)} · ${fmt(f.lines)} lines · ${bytes(f.size)}<br><i>Click: copy path · Double-click: open · Right-click: more</i>`)}>${big ? `<span>${esc(name)}</span>` : ''}</div>`;
     }).join('');
   }
 
@@ -254,14 +308,14 @@
     const t = D.totals;
     const series = [
       { name: 'Code', color: 'var(--s1)' },
-      { name: 'Comments', color: 'var(--s3)' },
-      { name: 'Blank', color: 'var(--s-other)' },
+      { name: 'Comments', color: 'var(--c-comment)' },
+      { name: 'Blank', color: 'var(--c-blank)' },
     ];
     const rows = D.languages.filter(l => l.lines > 0).slice(0, 14).map(l => ({
       label: l.key, parts: [
         { name: 'Code', value: l.code, color: 'var(--s1)' },
-        { name: 'Comments', value: l.comment, color: 'var(--s3)' },
-        { name: 'Blank', value: l.blank, color: 'var(--s-other)' },
+        { name: 'Comments', value: l.comment, color: 'var(--c-comment)' },
+        { name: 'Blank', value: l.blank, color: 'var(--c-blank)' },
       ],
     }));
     const langTable = `<div class="table-scroll small"><table class="grid">
@@ -276,8 +330,8 @@
       ${card('Files by language', donut(byFiles, short(t.files), 'files'))}
       ${card('Lines overall', donut([
         { label: 'Code', value: t.code, color: 'var(--s1)' },
-        { label: 'Comments', value: t.comment, color: 'var(--s3)' },
-        { label: 'Blank', value: t.blank, color: 'var(--s-other)' },
+        { label: 'Comments', value: t.comment, color: 'var(--c-comment)' },
+        { label: 'Blank', value: t.blank, color: 'var(--c-blank)' },
       ].filter(i => i.value), pctStr(t.code, t.lines, 0), 'is code'))}
     </div>
     <div class="grid-2">
@@ -293,7 +347,7 @@
     const folders = D.folders.slice(0, 15);
     return `
     ${card('Treemap – every rectangle is a file, sized by lines', `<div id="treemap" class="treemap"></div>
-      <ul class="legend inline">${[...langColor.entries()].map(([l, c]) => `<li><span class="sw" style="background:${c}"></span>${esc(l)}</li>`).join('')}<li><span class="sw" style="background:var(--s-other)"></span>Other</li></ul>`, { sub: 'Click a file to open it' })}
+      <ul class="legend inline">${[...langColor.entries()].map(([l, c]) => `<li><span class="sw" style="background:${c}"></span>${esc(l)}</li>`).join('')}<li><span class="sw" style="background:var(--s-other)"></span>Other</li></ul>`, { sub: 'Click copies the path · double-click opens · right-click for more' })}
     <div class="grid-2">
       ${card('Largest files (lines)', hbars(top.map(f => ({ label: f.path, value: f.lines, color: colorOf(f.lang), abs: f.abs, tip: `<b>${esc(f.path)}</b><br>${esc(f.lang)} · ${fmt(f.lines)} lines<br><i>click to open</i>` }))), { sub: 'Colored by language' })}
       ${card('Largest files (bytes)', hbars(topSize.map(f => ({ label: f.path, value: f.size, valueLabel: bytes(f.size), color: f.binary ? 'var(--s-other)' : colorOf(f.lang), abs: f.abs, tip: `<b>${esc(f.path)}</b><br>${bytes(f.size)}<br><i>click to open</i>` }))))}
@@ -307,19 +361,19 @@
   function hallOfFame() {
     const r = D.records;
     const items = [
-      ['🏔️', 'Longest file', r.longestFile, r.longestFile && `${fmt(r.longestFile.lines)} lines`],
-      ['🐘', 'Heaviest file', r.biggestFile, r.biggestFile && bytes(r.biggestFile.size)],
-      ['📏', 'Longest line', r.longestLine, r.longestLine && `${fmt(r.longestLine.maxLine)} chars in line ${r.longestLine.maxLineNo}`, r.longestLine && r.longestLine.maxLineNo],
-      ['🐜', 'Tiniest file', r.smallestFile, r.smallestFile && `${fmt(r.smallestFile.lines)} line${r.smallestFile.lines === 1 ? '' : 's'}`],
-      ['🕳️', 'Deepest nested', r.deepestFile, r.deepestFile && `${r.deepestFile.depth} folders deep`],
-      ['🐍', 'Longest file name', r.longestName, r.longestName && `${r.longestName.nameLen} characters`],
-      ['📝', 'Most TODOs', r.mostTodos, r.mostTodos && `${r.mostTodos.count} TODO / FIXME / HACK`],
-      ['📖', 'Best commented', r.mostCommented, r.mostCommented && `${(r.mostCommented.ratio * 100).toFixed(0)}% comments`],
-      ['🆕', 'Most recently changed', r.newestFile, r.newestFile && date(r.newestFile.mtime ?? D.table.find(f => f.abs === r.newestFile.abs)?.mtime)],
-      ['🦖', 'Untouched the longest', r.oldestFile, r.oldestFile && date(D.table.find(f => f.abs === r.oldestFile.abs)?.mtime)],
+      ['lines', 'Longest file', r.longestFile, r.longestFile && `${fmt(r.longestFile.lines)} lines`],
+      ['weight', 'Heaviest file', r.biggestFile, r.biggestFile && bytes(r.biggestFile.size)],
+      ['ruler', 'Longest line', r.longestLine, r.longestLine && `${fmt(r.longestLine.maxLine)} chars in line ${r.longestLine.maxLineNo}`, r.longestLine && r.longestLine.maxLineNo],
+      ['dot', 'Tiniest file', r.smallestFile, r.smallestFile && `${fmt(r.smallestFile.lines)} line${r.smallestFile.lines === 1 ? '' : 's'}`],
+      ['layers', 'Deepest nested', r.deepestFile, r.deepestFile && `${r.deepestFile.depth} folders deep`],
+      ['type', 'Longest file name', r.longestName, r.longestName && `${r.longestName.nameLen} characters`],
+      ['todo', 'Most TODOs', r.mostTodos, r.mostTodos && `${r.mostTodos.count} TODO / FIXME / HACK`],
+      ['book', 'Best commented', r.mostCommented, r.mostCommented && `${(r.mostCommented.ratio * 100).toFixed(0)}% comments`],
+      ['clock', 'Most recently changed', r.newestFile, r.newestFile && date(r.newestFile.mtime ?? D.table.find(f => f.abs === r.newestFile.abs)?.mtime)],
+      ['archive', 'Untouched the longest', r.oldestFile, r.oldestFile && date(D.table.find(f => f.abs === r.oldestFile.abs)?.mtime)],
     ].filter(i => i[2]);
-    return `<div class="fame">${items.map(([icon, title, f, detail, line]) => `
-      <div class="fame-item"><span class="fame-icon">${icon}</span><div>
+    return `<div class="fame">${items.map(([ic, title, f, detail, line]) => `
+      <div class="fame-item"><span class="fame-icon">${icon(ic)}</span><div>
         <div class="fame-title">${title}</div>
         <div class="fame-file">${fileLink(f, f.path, line)}</div>
         <div class="fame-detail">${esc(detail)}</div></div></div>`).join('')}</div>`;
@@ -341,34 +395,108 @@
     const commentRatio = pct(t.comment, t.code + t.comment);
     const grade = commentRatio >= 25 ? 'A' : commentRatio >= 15 ? 'B' : commentRatio >= 10 ? 'C' : commentRatio >= 5 ? 'D' : 'F';
     const blankRatio = pct(t.blank, t.lines);
-    const air = blankRatio > 20 ? 'Airy – your code can breathe 🌬️' : blankRatio > 10 ? 'Cozy – just right 🛋️' : 'Cramped – open a window! 🥵';
-    const tabWin = t.tabIndent === t.spaceIndent ? 'It’s a tie. Peace in our time.' : t.tabIndent > t.spaceIndent ? 'Team Tabs wins ⇥' : 'Team Spaces wins ␣';
+    const air = blankRatio > 20 ? 'Airy – your code can breathe.' : blankRatio > 10 ? 'Cozy – just right.' : 'Cramped – open a window!';
+    const tabWin = t.tabIndent === t.spaceIndent ? 'It’s a tie. Peace in our time.' : t.tabIndent > t.spaceIndent ? 'Team Tabs wins' : 'Team Spaces wins';
     const distance = meters >= 1000 ? `${(meters / 1000).toFixed(2)} km` : `${meters.toFixed(0)} m`;
     const eiffel = meters / 330;
     const oldest = (D.repos || []).reduce((m, r) => (r.first && (!m || r.first < m) ? r.first : m), null);
 
     const facts = [
-      ['📄', `${fmt(Math.ceil(pages))} pages`, `If you printed everything (50 lines/page), the stack would be <b>${(pages * 0.01).toFixed(1)} cm</b> high.`],
-      ['📏', distance, `All characters in one single line (2.5 mm each) – that’s <b>${eiffel.toFixed(1)}×</b> the Eiffel Tower${meters > 42195 ? ' or more than a marathon! 🏃' : ''}.`],
-      ['⌨️', dur(typingHours), 'Time to type it all again at 40 words per minute – without a single typo.'],
-      ['📚', `${potter.toFixed(2)} × Harry Potter`, `${fmt(t.words)} words ≈ ${dur(readingHours)} of reading (Philosopher’s Stone has 76,944 words).`],
-      ['☕', `${fmt(Math.round(coffee))} cups`, 'Estimated coffee consumption (scientifically proven rate: 1 cup per 100 lines of code).'],
-      ['💰', `${effort.toFixed(1)} person-months`, `Basic COCOMO estimate – about ${schedule.toFixed(1)} months with ${schedule ? (effort / schedule).toFixed(1) : 0} developers, ≈ €${fmt(Math.round(effort * 6000))}.`],
-      ['🤬', `${wtfPerK.toFixed(1)} WTF/kLOC`, `The only valid code quality metric. ${fmt(wtf)} TODOs, FIXMEs, HACKs & “magic” comments found.`],
-      ['📖', `Grade ${grade}`, `Documentation grade: ${commentRatio.toFixed(1)}% of non-blank lines are comments.`],
-      ['🫁', `${blankRatio.toFixed(1)}% blank`, air],
-      ['⚔️', tabWin, `${fmt(t.tabIndent)} lines indented with tabs vs. ${fmt(t.spaceIndent)} with spaces.`],
-      ['🐛', fmt(t.debugPrints), 'Debug prints (console.log, print, printf…) – some of them are surely still needed…'],
-      ['😶', fmt(t.semicolons), `Semicolons. Plus ${fmt(t.braces)} curly braces and ${fmt(t.parens)} parentheses.`],
-      ['🧹', fmt(t.trailing), 'Lines with trailing whitespace – invisible, but they are there.'],
-      ['🌌', fmt(t.fortyTwo), 'Occurrences of 42 – the answer to life, the universe and everything.'],
-      ['😀', fmt(t.emojis), 'Emojis hidden in your files.'],
-      ['🐦', fmt(Math.ceil(t.chars / 280)), 'Tweets needed to post the whole code base (280 chars each).'],
-      ['💾', fmt(Math.ceil(D.totals.size / 1474560)), 'Floppy disks (1.44 MB) required for a backup, 1995 style.'],
-      ...(oldest ? [['🦕', `${fmt(Math.floor((Date.now() - oldest) / 86400000))} days`, `Age of the project – first commit on ${date(oldest)}.`]] : []),
+      ['pages', `${fmt(Math.ceil(pages))} pages`, `If you printed everything (50 lines/page), the stack would be <b>${(pages * 0.01).toFixed(1)} cm</b> high.`],
+      ['distance', distance, `All characters in one single line (2.5 mm each) – that’s <b>${eiffel.toFixed(1)}×</b> the Eiffel Tower${meters > 42195 ? ' – longer than a marathon!' : ''}.`],
+      ['keyboard', dur(typingHours), 'Time to type it all again at 40 words per minute – without a single typo.'],
+      ['book', `${potter.toFixed(2)} × Harry Potter`, `${fmt(t.words)} words ≈ ${dur(readingHours)} of reading (Philosopher’s Stone has 76,944 words).`],
+      ['coffee', `${fmt(Math.round(coffee))} cups`, 'Estimated coffee consumption (scientifically proven rate: 1 cup per 100 lines of code).'],
+      ['coins', `${effort.toFixed(1)} person-months`, `Basic COCOMO estimate – about ${schedule.toFixed(1)} months with ${schedule ? (effort / schedule).toFixed(1) : 0} developers, ≈ €${fmt(Math.round(effort * 6000))}.`],
+      ['alert', `${wtfPerK.toFixed(1)} WTF/kLOC`, `The only valid code quality metric. ${fmt(wtf)} TODOs, FIXMEs, HACKs & “magic” comments found.`],
+      ['award', `Grade ${grade}`, `Documentation grade: ${commentRatio.toFixed(1)}% of non-blank lines are comments.`],
+      ['wind', `${blankRatio.toFixed(1)}% blank`, air],
+      ['indent', tabWin, `${fmt(t.tabIndent)} lines indented with tabs vs. ${fmt(t.spaceIndent)} with spaces.`],
+      ['bug', fmt(t.debugPrints), 'Debug prints (console.log, print, printf…) – some of them are surely still needed…'],
+      ['code', fmt(t.semicolons), `Semicolons. Plus ${fmt(t.braces)} curly braces and ${fmt(t.parens)} parentheses.`],
+      ['space', fmt(t.trailing), 'Lines with trailing whitespace – invisible, but they are there.'],
+      ['star', fmt(t.fortyTwo), 'Occurrences of 42 – the answer to life, the universe and everything.'],
+      ['smile', fmt(t.emojis), 'Emojis hidden in your files.'],
+      ['message', fmt(Math.ceil(t.chars / 280)), 'Tweets needed to post the whole code base (280 chars each).'],
+      ['save', fmt(Math.ceil(D.totals.size / 1474560)), 'Floppy disks (1.44 MB) required for a backup, 1995 style.'],
+      ...(oldest ? [['fossil', `${fmt(Math.floor((Date.now() - oldest) / 86400000))} days`, `Age of the project – first commit on ${date(oldest)}.`]] : []),
     ];
-    return `<div class="fun">${facts.map(([icon, big, text]) => `
-      <div class="fun-item"><div class="fun-icon">${icon}</div><div class="fun-big">${esc(big)}</div><div class="fun-text">${text}</div></div>`).join('')}</div>`;
+    return `<div class="fun">${facts.map(([ic, big, text]) => `
+      <div class="fun-item"><div class="fun-icon">${icon(ic)}</div><div class="fun-big">${esc(big)}</div><div class="fun-text">${text}</div></div>`).join('')}</div>`;
+  }
+
+  // ---------- code rant ----------
+  const LONG_RANTS = [
+    '<b>{n}</b> has {l} lines. That is not a file, that is a novel. Split it up.',
+    '{l} lines? <b>{n}</b> is {x}× over the {m}-line limit. Somewhere the single-responsibility principle is crying.',
+    'Scrolling through <b>{n}</b> counts as cardio.',
+    '<b>{n}</b> is where functions go to never be refactored again.',
+    'Nobody has read <b>{n}</b> top to bottom since it passed {m} lines. Nobody.',
+    '<b>{n}</b> wants to be three files when it grows up.',
+    'Git blame on <b>{n}</b> is basically a family tree at this point.',
+    'If <b>{n}</b> were a book it would need a table of contents. And an index.',
+    '<b>{n}</b>: {l} lines of “I will clean this up later”.',
+    'Your IDE’s minimap for <b>{n}</b> needs its own minimap.',
+  ];
+  const BLANK_RANTS = [
+    '<b>{n}</b> is {p}% empty lines. Is this code or a poem?',
+    '{p}% whitespace in <b>{n}</b>. Your scroll wheel files a complaint.',
+    '<b>{n}</b> contains more air than a bag of chips ({p}% blank).',
+    '<b>{n}</b>: {p}% blank lines. Minimalism is nice, but this is just emptiness.',
+    'Mind the gap – <b>{n}</b> is {p}% blank lines.',
+    '<b>{n}</b> is being paid by the line, isn’t it? {p}% of them are empty.',
+    'Somebody leaned on the Enter key in <b>{n}</b>. {p}% blank.',
+  ];
+  const hash = str => { let h = 0; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0; return Math.abs(h); };
+  const fill = (tpl, vals) => tpl.replace(/\{(\w)\}/g, (_, k) => vals[k]);
+  const rantCfg = () => D.rant || { enabled: false };
+  const isTooLong = f => rantCfg().enabled && !f.binary && f.lines > rantCfg().maxLines;
+  const blankPct = f => (f.lines ? (f.blank / f.lines) * 100 : 0);
+  const isTooAiry = f => rantCfg().enabled && !f.binary && f.lines >= 10 && blankPct(f) > rantCfg().maxBlankPercent;
+  const rantShowAll = { long: false, blank: false };
+
+  function rantList(kind) {
+    const cfg = rantCfg();
+    const long = kind === 'long';
+    const files = D.table.filter(long ? isTooLong : isTooAiry)
+      .sort((a, b) => (long ? b.lines - a.lines : blankPct(b) - blankPct(a)));
+    if (!files.length) {
+      return `<p class="muted">${long ? `No file is longer than ${fmt(cfg.maxLines)} lines. Respect.` : `No file has more than ${cfg.maxBlankPercent}% blank lines. Tight.`}</p>`;
+    }
+    const shown = rantShowAll[kind] ? files : files.slice(0, 20);
+    const items = shown.map(f => {
+      const name = esc(f.path.split('/').pop());
+      const tpl = (long ? LONG_RANTS : BLANK_RANTS)[hash(f.path) % (long ? LONG_RANTS.length : BLANK_RANTS.length)];
+      const text = fill(tpl, { n: name, l: fmt(f.lines), m: fmt(cfg.maxLines), x: (f.lines / cfg.maxLines).toFixed(1), p: blankPct(f).toFixed(0) });
+      const badge = long ? `${fmt(f.lines)} lines` : `${blankPct(f).toFixed(1)}% blank`;
+      return `<li class="rant-item" data-abs="${esc(f.abs)}" title="Open ${esc(f.path)}">
+        <span class="rant-badge">${badge}</span>
+        <div><div class="rant-text">${text}</div><div class="rant-path">${esc(f.path)}</div></div></li>`;
+    }).join('');
+    const more = files.length > shown.length
+      ? `<button class="btn" data-rant-all="${kind}">Show all ${fmt(files.length)}</button>` : '';
+    return `<p class="muted rant-count">${fmt(files.length)} file${files.length === 1 ? '' : 's'} ${long ? `longer than ${fmt(cfg.maxLines)} lines` : `with more than ${cfg.maxBlankPercent}% blank lines (files with 10+ lines)`}</p>
+      <ul class="rant-list">${items}</ul>${more}`;
+  }
+
+  function rantSection() {
+    const cfg = rantCfg();
+    if (!cfg.enabled) return '';
+    const t = D.totals;
+    const projBlank = pct(t.blank, t.lines);
+    const longCount = D.table.filter(isTooLong).length;
+    const airyCount = D.table.filter(isTooAiry).length;
+    let headline;
+    if (!longCount && !airyCount && projBlank <= cfg.maxBlankPercent) headline = 'Nothing to rant about. Suspicious. Very suspicious.';
+    else if (projBlank > cfg.maxBlankPercent) headline = `Across the whole project ${projBlank.toFixed(1)}% of all lines are blank – that is ${fmt(t.blank)} lines of pure nothing. The limit is ${cfg.maxBlankPercent}%.`;
+    else headline = `${fmt(longCount)} oversized and ${fmt(airyCount)} overly airy file${longCount + airyCount === 1 ? '' : 's'}. Let’s talk about it.`;
+    return `<h2 id="s-rant">Code Rant</h2>
+      <div class="rant-head">${icon('megaphone', 'rant-ic')}<div><div class="rant-headline">${esc(headline)}</div>
+        <div class="muted">Limits: ${fmt(cfg.maxLines)} lines per file, ${cfg.maxBlankPercent}% blank lines – change them in the settings (linecounter.rant.*).</div></div></div>
+      <div class="grid-2">
+        ${card(`Too long – over ${fmt(cfg.maxLines)} lines`, `<div id="rant-long">${rantList('long')}</div>`)}
+        ${card(`Too much air – over ${cfg.maxBlankPercent}% blank`, `<div id="rant-blank">${rantList('blank')}</div>`)}
+      </div>`;
   }
 
   function identifierCloud() {
@@ -391,18 +519,18 @@
       const age = r.first ? Math.max(1, Math.round((r.last - r.first) / 86400000)) : 0;
       const topAuthors = r.authors.slice(0, 12);
       const facts = [
-        ['🦉', `${pctStr(r.night, r.commitCount, 0)}`, 'Night-owl commits (00:00–04:59)'],
-        ['🏖️', `${pctStr(r.weekend, r.commitCount, 0)}`, 'Weekend-warrior commits'],
-        ['🔥', `${r.streak} day${r.streak === 1 ? '' : 's'}`, `Longest daily commit streak${r.streakEnd ? ` (ended ${date(Date.parse(r.streakEnd))})` : ''}`],
-        ['📅', r.busiestDay ? `${r.busiestDay.count}` : '–', r.busiestDay ? `Commits on the busiest day, ${date(Date.parse(r.busiestDay.day))}` : 'Busiest day'],
-        ['🚌', `${r.busFactor}`, 'Bus factor – authors behind 50% of all commits'],
-        ['🔧', `${pctStr(r.fixes, r.commitCount, 0)}`, `of commits are fixes (${fmt(r.fixes)} commits mention fix / bug / typo / oops)`],
-        ['🙈', fmt(r.lazy), 'Lazy commit messages (“wip”, “update”, “stuff”, “fix”…)'],
-        ['✍️', `${r.avgMsgLen} chars`, 'Average commit message length'],
+        ['moon', `${pctStr(r.night, r.commitCount, 0)}`, 'Night-owl commits (00:00–04:59)'],
+        ['sun', `${pctStr(r.weekend, r.commitCount, 0)}`, 'Weekend-warrior commits'],
+        ['flame', `${r.streak} day${r.streak === 1 ? '' : 's'}`, `Longest daily commit streak${r.streakEnd ? ` (ended ${date(Date.parse(r.streakEnd))})` : ''}`],
+        ['calendar', r.busiestDay ? `${r.busiestDay.count}` : '–', r.busiestDay ? `Commits on the busiest day, ${date(Date.parse(r.busiestDay.day))}` : 'Busiest day'],
+        ['users', `${r.busFactor}`, 'Bus factor – authors behind 50% of all commits'],
+        ['wrench', `${pctStr(r.fixes, r.commitCount, 0)}`, `of commits are fixes (${fmt(r.fixes)} commits mention fix / bug / typo / oops)`],
+        ['eyeoff', fmt(r.lazy), 'Lazy commit messages (“wip”, “update”, “stuff”, “fix”…)'],
+        ['pen', `${r.avgMsgLen} chars`, 'Average commit message length'],
       ];
       const msg = (label, c) => c ? `<div class="msg"><span class="muted">${label}</span> <code>${esc(c.hash)}</code> “${esc(c.subject)}” <span class="muted">– ${esc(c.author)}, ${date(c.time)}${c.ins || c.del ? `, +${fmt(c.ins)} / −${fmt(c.del)}` : ''}</span></div>` : '';
       return `<div class="repo">
-        <h2 class="repo-title">📦 ${esc(r.name)} <span class="sub">${esc(r.branch || '')}${r.remote ? ' · ' + esc(r.remote) : ''}</span></h2>
+        <h2 class="repo-title">${icon('repo')} ${esc(r.name)} <span class="sub">${esc(r.branch || '')}${r.remote ? ' · ' + esc(r.remote) : ''}</span></h2>
         ${tiles([
           { label: 'Commits', value: fmt(r.commitCount) + (r.truncated ? '+' : ''), sub: `${fmt(r.mergeCount)} merges` },
           { label: 'Contributors', value: fmt(r.authorCount) },
@@ -425,7 +553,7 @@
             tip: `<b>${esc(h.file)}</b><br>changed in ${fmt(h.count)} commits<br><i>click to open</i>`,
           }))))}
         </div>
-        ${card('Git fun facts', `<div class="fun small">${facts.map(([i, b, t]) => `<div class="fun-item"><div class="fun-icon">${i}</div><div class="fun-big">${esc(b)}</div><div class="fun-text">${esc(t)}</div></div>`).join('')}</div>
+        ${card('Git fun facts', `<div class="fun small">${facts.map(([i, b, t]) => `<div class="fun-item"><div class="fun-icon">${icon(i)}</div><div class="fun-big">${esc(b)}</div><div class="fun-text">${esc(t)}</div></div>`).join('')}</div>
           <div class="msgs">${msg('Shortest message:', r.shortest)}${msg('Longest message:', r.longest)}${msg('Biggest commit:', r.biggest)}</div>
           ${r.topWords.length ? `<div class="words"><span class="muted">Favourite commit words:</span> ${r.topWords.map(([w, c]) => `<span class="word" ${tipAttr(`${fmt(c)}×`)}>${esc(w)}</span>`).join(' ')}</div>` : ''}`)}
       </div>`;
@@ -467,8 +595,8 @@
         <td class="rank">${i + 1}</td>
         <td class="path">${D.multiRoot ? `<span class="muted">${esc(f.rootName)}/</span>` : ''}${esc(f.path)}</td>
         <td><span class="sw" style="background:${f.binary ? 'var(--s-other)' : colorOf(f.lang)}"></span>${esc(f.lang)}</td>
-        <td class="num">${f.binary ? '<span class="muted">binary</span>' : f.skipped ? '<span class="muted">too large</span>' : fmt(f.lines)}</td>
-        <td class="num">${fmt(f.code)}</td><td class="num">${fmt(f.comment)}</td><td class="num">${fmt(f.blank)}</td>
+        <td class="num ${isTooLong(f) ? 'over' : ''}" ${isTooLong(f) ? `title="Longer than ${fmt(rantCfg().maxLines)} lines"` : ''}>${f.binary ? '<span class="muted">binary</span>' : f.skipped ? '<span class="muted">too large</span>' : fmt(f.lines)}</td>
+        <td class="num">${fmt(f.code)}</td><td class="num">${fmt(f.comment)}</td><td class="num ${isTooAiry(f) ? 'over' : ''}" ${isTooAiry(f) ? `title="${blankPct(f).toFixed(1)}% blank lines"` : ''}>${fmt(f.blank)}</td>
         <td class="num">${bytes(f.size)}</td><td class="num">${fmt(f.maxLine)}</td><td class="num">${f.todo ? fmt(f.todo) : ''}</td>
         <td class="share"><span class="share-bar" style="width:${pct(f.lines, maxLines)}%;background:${colorOf(f.lang)}"></span></td>
       </tr>`).join('')}</tbody>`;
@@ -484,26 +612,27 @@
     app.innerHTML = `
       <header class="page-head">
         <div>
-          <h1>📊 Code Statistics <span class="ws">${esc(D.workspace || '')}</span></h1>
+          <h1>${icon('chart', 'h1-ic')} Code Statistics <span class="ws">${esc(D.workspace || '')}</span></h1>
           <div class="muted">${fmt(t.files)} files · ${fmt(t.lines)} lines · generated ${new Date(D.generated).toLocaleString()}</div>
         </div>
         <nav class="actions">
-          <button class="btn" data-act="refresh" title="Recount with the same selection">⟳ Refresh</button>
-          <button class="btn" data-act="csv">⤓ CSV</button>
-          <button class="btn" data-act="json">⤓ JSON</button>
-          <button class="btn" data-act="maximize" title="Hide side bars and panels">⤢ Maximize</button>
-          <button class="btn" data-act="fullscreen" title="Toggle window full screen">⛶ Full screen</button>
+          <button class="btn" data-act="refresh" title="Recount with the same selection">${icon('refresh')} Refresh</button>
+          <button class="btn" data-act="csv">${icon('download')} CSV</button>
+          <button class="btn" data-act="json">${icon('download')} JSON</button>
+          <button class="btn" data-act="maximize" title="Hide side bars and panels">${icon('maximize')} Maximize</button>
+          <button class="btn" data-act="fullscreen" title="Toggle window full screen">${icon('screen')} Full screen</button>
         </nav>
       </header>
       <nav class="toc">
         <a href="#s-overview">Overview</a><a href="#s-lang">Languages</a><a href="#s-files">Files</a>
-        <a href="#s-fame">Hall of Fame</a><a href="#s-git">Git</a><a href="#s-fun">Fun facts</a><a href="#s-ids">Identifiers</a><a href="#s-rank">Ranking</a>
+        <a href="#s-fame">Hall of Fame</a>${rantCfg().enabled ? '<a href="#s-rant">Code Rant</a>' : ''}<a href="#s-git">Git</a><a href="#s-fun">Fun facts</a><a href="#s-ids">Identifiers</a><a href="#s-rank">Ranking</a>
       </nav>
       <main>
         <h2 id="s-overview">Overview</h2>${overview()}
         <h2 id="s-lang">Languages</h2>${languageSection()}
         <h2 id="s-files">Files & folders</h2>${filesSection()}
         <h2 id="s-fame">Hall of Fame</h2>${hallOfFame()}
+        ${rantSection()}
         <h2 id="s-git">Git</h2>${gitSection()}
         <h2 id="s-fun">Fun facts</h2>${funSection()}
         <h2 id="s-ids">Most used identifiers</h2>${card('Word cloud of names in your code', identifierCloud())}
@@ -530,6 +659,15 @@
       renderTable();
       return;
     }
+    const fsBtn = t.closest('[data-fs]');
+    if (fsBtn) { toggleCardFullscreen(/** @type {HTMLElement} */ (fsBtn.closest('.card'))); return; }
+    const rantAll = t.closest('[data-rant-all]');
+    if (rantAll) {
+      const kind = /** @type {HTMLElement} */ (rantAll).dataset.rantAll;
+      rantShowAll[kind] = true;
+      document.getElementById('rant-' + kind).innerHTML = rantList(kind);
+      return;
+    }
     if (t.id === 'showMore') { table.limit += 200; renderTable(); return; }
     if (t.id === 'showAll') { table.limit = Infinity; renderTable(); return; }
     const toc = t.closest('.toc a');
@@ -543,9 +681,111 @@
     if (open) {
       ev.preventDefault();
       const o = /** @type {HTMLElement} */ (open);
+      if (o.classList.contains('deleted')) return;
+      if (o.dataset.copy) { copyPath(o.dataset.abs); return; }
       vscode.postMessage({ type: 'open', abs: o.dataset.abs, line: o.dataset.line ? Number(o.dataset.line) : undefined });
     }
   });
+  app.addEventListener('dblclick', ev => {
+    const o = /** @type {HTMLElement} */ (ev.target).closest('[data-copy]');
+    if (o && !o.classList.contains('deleted')) vscode.postMessage({ type: 'open', abs: /** @type {HTMLElement} */ (o).dataset.abs });
+  });
+
+  // ---------- card full screen ----------
+  function toggleCardFullscreen(cardEl, force) {
+    if (!cardEl) return;
+    const on = force !== undefined ? force : !cardEl.classList.contains('fs');
+    document.querySelectorAll('.card.fs').forEach(c => { if (c !== cardEl) setFs(c, false); });
+    setFs(cardEl, on);
+    document.body.classList.toggle('has-fs', on);
+    if (cardEl.querySelector('#treemap')) requestAnimationFrame(renderTreemap);
+  }
+  function setFs(cardEl, on) {
+    cardEl.classList.toggle('fs', on);
+    const b = cardEl.querySelector('[data-fs]');
+    if (b) { b.innerHTML = icon(on ? 'minimize' : 'maximize'); b.title = on ? 'Exit full screen (Esc)' : 'Show in full screen (Esc to close)'; }
+  }
+  document.addEventListener('keydown', ev => {
+    if (ev.key !== 'Escape') return;
+    if (menu.style.display === 'block') { hideMenu(); return; }
+    const fs = document.querySelector('.card.fs');
+    if (fs) toggleCardFullscreen(/** @type {HTMLElement} */ (fs), false);
+  });
+
+  // ---------- context menu, copy, delete ----------
+  const menu = document.createElement('div');
+  menu.id = 'ctxmenu';
+  document.body.appendChild(menu);
+  const toast = document.createElement('div');
+  toast.id = 'toast';
+  document.body.appendChild(toast);
+  let toastTimer = 0;
+  function showToast(html) {
+    toast.innerHTML = html;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+  }
+  function copyPath(abs, relative) {
+    const f = D.table.find(x => x.abs === abs);
+    const text = relative && f ? f.path : abs;
+    vscode.postMessage({ type: 'copy', text });
+    showToast(`${icon('copy')} Copied <b>${esc(text)}</b>`);
+  }
+  function hideMenu() { menu.style.display = 'none'; }
+  document.addEventListener('contextmenu', ev => {
+    const o = /** @type {HTMLElement} */ (ev.target).closest && /** @type {HTMLElement} */ (ev.target).closest('[data-abs]');
+    if (!o || o.classList.contains('deleted')) { hideMenu(); return; }
+    ev.preventDefault();
+    ev.stopPropagation();
+    tip.style.display = 'none';
+    const abs = /** @type {HTMLElement} */ (o).dataset.abs;
+    const f = D.table.find(x => x.abs === abs);
+    menu.dataset.abs = abs;
+    menu.innerHTML = `<div class="ctx-title">${esc(f ? f.path : abs)}</div>
+      <button data-menu="open">${icon('open')} Open file</button>
+      <button data-menu="copy">${icon('copy')} Copy path</button>
+      ${f ? `<button data-menu="copyrel">${icon('copy')} Copy relative path</button>` : ''}
+      <button data-menu="reveal">${icon('folder')} Reveal in file manager</button>
+      <div class="ctx-sep"></div>
+      <button data-menu="delete" class="danger">${icon('trash')} Delete file…</button>`;
+    menu.style.display = 'block';
+    const r = menu.getBoundingClientRect();
+    menu.style.left = Math.min(ev.clientX, window.innerWidth - r.width - 6) + 'px';
+    menu.style.top = Math.min(ev.clientY, window.innerHeight - r.height - 6) + 'px';
+  });
+  menu.addEventListener('click', ev => {
+    const b = /** @type {HTMLElement} */ (ev.target).closest('[data-menu]');
+    if (!b) return;
+    const abs = menu.dataset.abs;
+    const act = /** @type {HTMLElement} */ (b).dataset.menu;
+    hideMenu();
+    if (act === 'open') vscode.postMessage({ type: 'open', abs });
+    else if (act === 'copy') copyPath(abs);
+    else if (act === 'copyrel') copyPath(abs, true);
+    else if (act === 'reveal') vscode.postMessage({ type: 'reveal', abs });
+    else if (act === 'delete') vscode.postMessage({ type: 'delete', abs });
+  });
+  document.addEventListener('mousedown', ev => {
+    if (menu.style.display === 'block' && !menu.contains(/** @type {Node} */ (ev.target))) hideMenu();
+  });
+  window.addEventListener('blur', hideMenu);
+  document.addEventListener('scroll', hideMenu, true);
+
+  function markDeleted(abs) {
+    const f = D.table.find(x => x.abs === abs);
+    D.table = D.table.filter(x => x.abs !== abs);
+    document.querySelectorAll('[data-abs]').forEach(el => {
+      if (/** @type {HTMLElement} */ (el).dataset.abs === abs) el.classList.add('deleted');
+    });
+    renderTreemap();
+    renderTable();
+    for (const kind of ['long', 'blank']) {
+      const el = document.getElementById('rant-' + kind);
+      if (el) el.innerHTML = rantList(kind);
+    }
+    showToast(`${icon('trash')} Deleted <b>${esc(f ? f.path : abs)}</b> – press Refresh to recalculate all statistics`);
+  }
   app.addEventListener('input', ev => {
     const t = /** @type {HTMLInputElement} */ (ev.target);
     if (t.id === 'tfilter') { table.filter = t.value; table.limit = 100; renderTable(); }
@@ -583,7 +823,10 @@
   window.addEventListener('message', ev => {
     if (ev.data.type === 'data') {
       D = ev.data.data;
+      document.body.classList.remove('has-fs');
       render();
+    } else if (ev.data.type === 'deleted') {
+      markDeleted(ev.data.abs);
     }
   });
   vscode.postMessage({ type: 'ready' });
