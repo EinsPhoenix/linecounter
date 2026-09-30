@@ -25,15 +25,20 @@ Alternativ in VS Code: *Extensions → „…“ → Install from VSIX…*
 
 ## Statistik-Seite (öffnet maximiert oder im Vollbild)
 
-Die Seite nutzt ein festes Farbschema aus dunklem Orange und Grau. Icons sind SVGs, Emojis kommen nicht vor. **Jedes Diagramm** hat oben rechts einen Vollbild-Button, mit `Esc` geht es zurück.
+Die Seite nutzt ein festes Farbschema aus dunklem Orange und Grau mit SVG-Icons. Nur die Hall of Fame und der Code Rant verwenden Emojis. **Jedes Diagramm** hat oben rechts einen Vollbild-Button, mit `Esc` geht es zurück.
 
 - **Übersicht**: Zeilen gesamt, Code, Kommentare, Leerzeilen, Dateien, Ordner, Größe, Sprachen, Ø Zeilen/Datei, Median, Ø Zeilenlänge, geschätzte Funktionen, Imports, TODO/FIXME/HACK
 - **Sprachen**: Donut-Charts (Zeilen, Dateien, Code/Kommentar/Leer), gestapelte Balken pro Sprache, Sprachtabelle
 - **Dateien und Ordner**: Treemap aller Dateien, größte Dateien nach Zeilen und Bytes, Top-Ordner, Dateiendungen, Verteilung der Dateilängen, letzte Änderung
   - **Treemap-Kachel:** Ein **Linksklick kopiert den Pfad** in die Zwischenablage, ein Doppelklick öffnet die Datei.
   - **Rechtsklick** (auch in Rangliste, Balken und Rant-Listen): Datei öffnen, Pfad bzw. relativen Pfad kopieren, im Dateimanager anzeigen oder **Datei löschen**. Beim Löschen kommt eine Sicherheitsabfrage, danach landet die Datei im Papierkorb oder wird endgültig gelöscht.
-- **Hall of Fame**: längste Datei, schwerste Datei, längste Zeile (öffnet direkt an der Zeile), kleinste Datei, tiefste Verschachtelung, längster Dateiname, meiste TODOs, am besten kommentiert, neueste und älteste Datei
-- **Code Rant**: lästert über Dateien, die länger als die eingestellte Zeilengrenze sind (Standard **500**), und über Dateien mit mehr als **10 %** Leerzeilen. Ist das ganze Projekt zu luftig, gibt es auch dafür einen Kommentar. Betroffene Werte sind zusätzlich in der Rangliste orange markiert. Beide Grenzen lassen sich einstellen, und der Rant kann abgeschaltet werden.
+- **Hall of Fame**: 18 Kategorien mit Podest (🥇🥈🥉), darunter längste und schwerste Datei, längste Zeile (öffnet direkt an der Stelle), kleinste Datei, tiefste Verschachtelung, längster Name, TODO-Sammler, am besten dokumentiert, „Silent treatment“ (viel Code, kein Kommentar), Function Factory, Debug-Print-Champion, luftigste und dichteste Datei, breitester Code, Whitespace-Hoarder, Emoji-Artist, neueste Datei und Fossil. Die Hero-Karte 🏆 zeigt die meistdekorierte Datei.
+- **Code Rant**: lästert über Dateien über der Zeilengrenze (Standard **500**) und über Dateien mit mehr als **10 %** Leerzeilen.
+  - **Rant-o-Meter** (0–100) mit Stimmung von 😇 Zen bis 🌋 Volcanic
+  - **Kennzahlen:** Zeilen über dem Limit, überflüssige Leerzeilen, schlimmster Übeltäter 👑
+  - **Eskalationsstufen** zum Filtern: 🙄 Mild, 😤 Spicy, 🤬 Furious, 💀 Nuclear für zu lange Dateien und 🫧 Breezy, 🌬️ Drafty, 🏜️ Desert, 🕳️ Void für zu viele Leerzeilen
+  - **🎁 Bonus-Rants:** sehr lange Zeilen, Debug-Prints, TODO-Wunschlisten, Code ohne Kommentare, Trailing Whitespace
+  - Betroffene Werte sind in der Rangliste orange markiert.
 - **Git** (Repos werden automatisch erkannt, auch verschachtelte): Commits, Contributors, erster und letzter Commit, Projektalter, +/− Zeilen, Branches und Tags, Commits pro Monat, Heatmap nach Wochentag × Uhrzeit, Top-Contributors, Hotspots (am häufigsten geänderte Dateien)
 - **Git-Fun-Facts**: Nachteulen-Commits, Wochenend-Commits, längste Commit-Serie, busiest day, Bus-Factor, Fix-Quote, faule Commit-Messages, kürzeste und längste Message, größter Commit, Lieblingswörter
 - **Fun Facts**: gedruckte Seiten und Stapelhöhe, Länge des Codes in einer Zeile (× Eiffelturm), Tippzeit, „× Harry Potter“, Kaffeeverbrauch, COCOMO-Aufwand und -Kosten, WTF/kLOC, Doku-Note, Tabs vs. Spaces, Debug-Prints, Semikolons, Trailing Whitespace, Vorkommen von 42, Emojis, Tweets, Disketten
