@@ -12,6 +12,12 @@ code --install-extension linecounter.vsix
 
 Alternativ in VS Code: *Extensions → „…“ → Install from VSIX…*
 
+## Downloads
+
+- Neueste Version: [`linecounter.vsix`](linecounter.vsix)
+- Alle Versionen: Ordner [`releases/`](releases/), jede Version hat außerdem ein Git-Tag (`v1.4.0`, …)
+- Änderungen: [`CHANGELOG.md`](CHANGELOG.md)
+
 ## Sidebar („Line Counter“ in der Activity Bar)
 
 - **Baum aller Dateien und Ordner** (rekursiv, Multi-Root-Workspaces werden unterstützt)
@@ -21,6 +27,8 @@ Alternativ in VS Code: *Extensions → „…“ → Install from VSIX…*
   Ausgeschlossene Preset-Ordner werden nicht gescannt. Das hält große Workspaces schnell. Klickst du einen solchen Ordner an, wird er nachgeladen und eingeschlossen.
 - **Dateitypen**: alle erkannten Endungen mit Anzahl als Chips. Ein Klick blendet einen Typ aus oder ein, dazu gibt es *All*, *None* und *Invert*.
 - Die Auswahl wird pro Workspace gespeichert.
+- **Filter-Presets:** Über die Preset-Leiste speicherst du die aktuelle Auswahl als benanntes Preset: ausgeschlossene Dateien und Ordner, ausgeblendete Dateitypen und aktive vordefinierte Filter. Du kannst Presets laden oder löschen. Sie liegen in `.linecounter/presets.json` im Workspace und lassen sich committen und im Team teilen. Das aktive Preset ist der Startzustand für neue Checkouts.
+- **Eigene Ausschluss-Muster:** `linecounter.excludePatterns` nimmt Glob-Muster wie in `.gitignore` (`*.generated.ts`, `docs/`, `/build`, `src/**/*.spec.ts`). Sie erscheinen als Filter „Custom patterns“.
 - **Create Statistics** startet die Auswertung.
 
 ## Statistik-Seite (öffnet maximiert oder im Vollbild)
@@ -56,6 +64,17 @@ Die Seite nutzt ein festes Farbschema aus dunklem Orange und Grau mit SVG-Icons.
 
 ## Einstellungen
 
+Alle Einstellungen lassen sich auch pro Projekt in **`.linecounter/settings.json`** setzen. Diese Werte haben Vorrang vor den VS-Code-Einstellungen. Der Befehl *Line Counter: Open Workspace Settings* (Zahnrad in der Sidebar) legt die Datei mit den aktuellen Werten an. Autovervollständigung und Validierung liefert ein JSON-Schema. Schlüssel funktionieren mit oder ohne Präfix `linecounter.`, auch verschachtelt, und Kommentare sind erlaubt. Änderungen an der Datei werden sofort übernommen.
+
+```jsonc
+// .linecounter/settings.json
+{
+  "rant.maxFileLines": 400,
+  "rant.maxBlankPercent": 15,
+  "excludePatterns": ["*.generated.ts", "docs/"]
+}
+```
+
 | Setting | Default | Beschreibung |
 |---|---|---|
 | `linecounter.statisticsLayout` | `maximized` | `maximized` blendet Sidebars und Panel aus, `fullscreen` schaltet zusätzlich das Fenster in den Vollbildmodus, `normal` öffnet die Seite als normalen Tab |
@@ -65,6 +84,8 @@ Die Seite nutzt ein festes Farbschema aus dunklem Orange und Grau mit SVG-Icons.
 | `linecounter.rant.commitMinLength` | `10` | Commit-Messages, die kürzer sind, bekommen einen Rant |
 | `linecounter.rant.commitMaxLength` | `72` | Commit-Messages, die länger sind, bekommen einen Rant |
 | `linecounter.rant.commitWords` | `[]` | Begriffe, die in Commit-Messages einen Rant auslösen (leer bedeutet die eingebaute Liste) |
+| `linecounter.excludePatterns` | `[]` | Zusätzliche Glob-Muster zum Ausschließen |
+| `linecounter.defaultFilters` | alle | Vordefinierte Filter, die in einem neuen Workspace aktiv sind |
 | `linecounter.maxFileSizeKB` | `2048` | Größere Dateien zählen nur mit ihrer Größe |
 | `linecounter.maxEntries` | `200000` | Maximale Anzahl gescannter Einträge |
 | `linecounter.maxCommits` | `20000` | Maximale Anzahl gelesener Commits pro Repo |
@@ -76,13 +97,17 @@ Reines JavaScript, kein Build-Schritt. d3 (ISC-Lizenz) liegt fertig in `media/ve
 ```bash
 npm install
 npm test          # Smoke-Test (Scanner, Analyzer, Git, Aggregation)
-npm run package   # erzeugt linecounter.vsix
+npm run release   # erzeugt releases/linecounter-<version>.vsix und aktualisiert linecounter.vsix
 ```
 
 Zum Debuggen öffnest du den Ordner in VS Code und startest mit `F5` einen Extension Development Host.
 
 ```
-src/extension.js   Aktivierung, Sidebar-Provider, Ablauf „Create Statistics“
+src/extension.js       Aktivierung und Befehle
+src/config.js          .linecounter/settings.json + presets.json (Overrides, Presets, File-Watcher)
+src/sidebarProvider.js Sidebar-Webview, Scan, Presets
+src/statistics.js      Ablauf „Create Statistics“ (Analyse, Git, Aggregation)
+src/util.js            Datei öffnen, Glob → RegExp
 src/scanner.js     Rekursiver Scan und vordefinierte Filter
 src/analyzer.js    Zeilen-Klassifizierung (Code/Kommentar/Leer) und Kennzahlen pro Datei
 src/languages.js   Spracherkennung und Kommentarsyntax

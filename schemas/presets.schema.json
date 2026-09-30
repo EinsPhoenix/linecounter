@@ -1,0 +1,53 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Line Counter filter presets (.linecounter/presets.json)",
+  "type": "object",
+  "properties": {
+    "active": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Name of the preset that is loaded by default."
+    },
+    "presets": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "presets": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Enabled predefined filters"
+          },
+          "excluded": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Excluded files/folders as '<workspace folder>/<relative path>'"
+          },
+          "included": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Folders re-included although a predefined filter matches"
+          },
+          "hiddenExt": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Hidden file extensions, e.g. '.md'"
+          },
+          "savedAt": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

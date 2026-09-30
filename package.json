@@ -2,7 +2,7 @@
   "name": "linecounter",
   "displayName": "Line Counter & Code Statistics",
   "description": "Browse your workspace as a filterable tree, exclude files and folders with a click and generate full-screen code statistics with charts, git insights, fun facts and a file ranking.",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "publisher": "einsphoenix",
   "icon": "media/icon.png",
   "repository": {
@@ -25,7 +25,9 @@
     "git"
   ],
   "main": "./src/extension.js",
-  "activationEvents": [],
+  "activationEvents": [
+    "workspaceContains:.linecounter/settings.json"
+  ],
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -63,6 +65,24 @@
         "title": "Reset All Filters",
         "category": "Line Counter",
         "icon": "$(clear-all)"
+      },
+      {
+        "command": "linecounter.savePreset",
+        "title": "Save Filter Preset…",
+        "category": "Line Counter",
+        "icon": "$(save)"
+      },
+      {
+        "command": "linecounter.loadPreset",
+        "title": "Load Filter Preset…",
+        "category": "Line Counter",
+        "icon": "$(folder-opened)"
+      },
+      {
+        "command": "linecounter.openWorkspaceSettings",
+        "title": "Open Workspace Settings (.linecounter/settings.json)",
+        "category": "Line Counter",
+        "icon": "$(settings-gear)"
       }
     ],
     "menus": {
@@ -81,6 +101,21 @@
           "command": "linecounter.resetFilters",
           "when": "view == linecounter.explorer",
           "group": "navigation@3"
+        },
+        {
+          "command": "linecounter.savePreset",
+          "when": "view == linecounter.explorer",
+          "group": "presets@1"
+        },
+        {
+          "command": "linecounter.loadPreset",
+          "when": "view == linecounter.explorer",
+          "group": "presets@2"
+        },
+        {
+          "command": "linecounter.openWorkspaceSettings",
+          "when": "view == linecounter.explorer",
+          "group": "presets@3"
         }
       ]
     },
@@ -154,13 +189,65 @@
           },
           "default": [],
           "markdownDescription": "Words or phrases in commit messages to rant about. Leave empty for the built-in list (`wip`, `asdf`, `tmp`, `stuff`, `misc`, `oops`, `typo`, `final`, `please`, `hack`, `whatever`, `idk`, `wtf`, `lol`, `yolo`, `again`, `why`, `test`, `changes`, `update`, `minor`, …)."
+        },
+        "linecounter.excludePatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "markdownDescription": "Additional glob patterns to exclude, like `.gitignore` (e.g. `*.generated.ts`, `docs/`, `/build`, `src/**/*.spec.ts`). Shown as the predefined filter *Custom patterns*."
+        },
+        "linecounter.defaultFilters": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "node_modules",
+              "venv",
+              "vcs",
+              "build",
+              "ide",
+              "vendor",
+              "lockfiles",
+              "minified",
+              "binary",
+              "gitignore",
+              "custom"
+            ]
+          },
+          "default": [
+            "node_modules",
+            "venv",
+            "vcs",
+            "build",
+            "ide",
+            "vendor",
+            "lockfiles",
+            "minified",
+            "binary",
+            "gitignore",
+            "custom"
+          ],
+          "description": "Predefined filters that are enabled in a new workspace (unless a preset from .linecounter/presets.json is active)."
         }
       }
-    }
+    },
+    "jsonValidation": [
+      {
+        "fileMatch": "**/.linecounter/settings.json",
+        "url": "./schemas/settings.schema.json"
+      },
+      {
+        "fileMatch": "**/.linecounter/presets.json",
+        "url": "./schemas/presets.schema.json"
+      }
+    ]
   },
   "scripts": {
     "package": "vsce package --skip-license --out linecounter.vsix",
-    "test": "node test/smoke.js"
+    "test": "node test/smoke.js",
+    "release": "node scripts/release.js"
   },
   "devDependencies": {
     "@vscode/vsce": "^3.2.0",
