@@ -343,3 +343,45 @@ body.has-fs { overflow: hidden; }
 .cm-item:hover { background: var(--track); }
 .cm-examples { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 5px; }
 .cm-quote { font-family: var(--vscode-editor-font-family, monospace); font-size: 11.5px; background: #2e2e2e; border: 1px solid #3a3a3a; border-radius: 10px; padding: 1px 8px; color: #e5c2a5; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* import graph: toolbar, side panel, highlights */
+.imp-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 10px; }
+.seg { display: inline-flex; align-items: center; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; background: var(--card-2); }
+.seg-label { font-size: 11px; color: var(--muted); padding: 0 8px; text-transform: uppercase; letter-spacing: .05em; }
+.seg-btn { background: none; border: none; border-left: 1px solid var(--border); color: var(--fg); font: inherit; font-size: 12px; padding: 5px 10px; cursor: pointer; }
+.seg-btn:hover { background: var(--accent-soft); }
+.seg-btn.on { background: var(--accent); color: #fff; }
+#impFind { background: var(--card-2); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; padding: 5px 8px; font: inherit; min-width: 240px; }
+#impClear:disabled { opacity: .4; cursor: default; }
+.imp-summary { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.imp-chip { font-size: 12px; padding: 2px 10px; border-radius: 10px; background: var(--card-2); border: 1px solid var(--border); }
+.imp-chip.red { background: rgba(255, 77, 79, .16); border-color: rgba(255, 77, 79, .6); color: #ff9c9d; font-weight: 600; }
+.imp-chip.ok { border-color: rgba(247, 174, 98, .5); color: #f7ae62; }
+.imp-status { min-height: 22px; font-size: 12.5px; margin-bottom: 8px; line-height: 1.6; }
+.imp-body { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 14px; }
+.imp-graph { height: 600px; }
+.card.fs .imp-body { flex: 1; min-height: 0; }
+.card.fs .imp-graph { height: 100%; }
+.imp-side { max-height: 600px; overflow: auto; display: flex; flex-direction: column; gap: 14px; padding-right: 4px; }
+.card.fs .imp-side { max-height: none; }
+.imp-block .imp-title { font-weight: 600; margin-bottom: 6px; }
+.imp-title.red { color: #ff7b7c; }
+.imp-title .muted { font-weight: 400; font-size: 11px; margin-left: 6px; }
+.imp-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; }
+.imp-item { cursor: pointer; font-size: 12px; padding: 5px 7px; border-radius: 6px; border: 1px solid transparent; display: flex; gap: 8px; align-items: flex-start; }
+.imp-item:hover { background: var(--accent-soft); }
+.imp-item.active { border-color: #ff4d4f; background: rgba(255, 77, 79, .12); }
+.imp-cycle .imp-path { color: #ffb3b3; }
+.imp-path { line-height: 1.6; word-break: break-all; }
+.imp-hop { white-space: nowrap; }
+.imp-arrow { color: #ff4d4f; font-weight: 700; }
+.imp-badge { flex: none; font-size: 10.5px; font-weight: 700; padding: 1px 7px; border-radius: 9px; background: #3a3a3a; color: #ddd; margin-top: 1px; }
+.imp-badge.red { background: #ff4d4f; color: #fff; }
+.imp-ok { color: #f7ae62; font-size: 12px; margin: 0; }
+.imp-item .imp-name { flex: 1; word-break: break-all; }
+.imp-item .imp-count { color: var(--muted); white-space: nowrap; }
+.imp-line.cyc { background: #ff4d4f !important; height: 3px; }
+.imp-line.dep { background: #f7ae62; height: 3px; }
+.imp-line.user { background: #ff4d4f; height: 3px; opacity: .7; }
+.gbtn-text { gap: 4px; align-items: center; font: inherit; font-size: 11px; }
+@media (max-width: 1100px) { .imp-body { grid-template-columns: 1fr; } .imp-side { max-height: none; } }

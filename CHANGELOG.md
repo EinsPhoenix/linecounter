@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.5.0
+- Import graph: circular imports of any length (Tarjan SCC), always drawn in red; click a cycle to trace its path in red
+- Longest dependency chains with path, click to trace in red, copy path
+- Click a file: transitive dependents in red, dependencies in amber, counts for the whole project
+- Blast radius list, file search, layered layout (importers on top), curved edges for mutual imports
+- Motion modes wiggle / calm / still (setting `linecounter.graphs.motion`), dragged nodes stay in place when calm/still
+- More rants: circles of trust, dependency Jenga, blast radius
+
 ## 1.4.0
 - Filter presets: save / load / delete named presets (excluded files, hidden file types, predefined filters) in `.linecounter/presets.json`
 - Workspace settings in `.linecounter/settings.json` override the VS Code settings (JSON schema, comments allowed, live reload)

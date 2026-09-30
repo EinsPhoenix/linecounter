@@ -56,7 +56,13 @@ Die Seite nutzt ein festes Farbschema aus dunklem Orange und Grau mit SVG-Icons.
 - **Words & connections**
   - Word Cloud der meistgenutzten Bezeichner
   - **Word Web:** ein animierter, wackelnder Force-Graph aus den häufigsten Wörtern und den Dateien, die sie am meisten verwenden
-  - **File connections:** ein Graph, wer wen importiert (JS/TS, Python, CSS/SCSS/Less, C/C++, HTML). Gegenseitige Imports sind hervorgehoben, dazu Listen „Most imported“, „Imports the most“ und „Mutual imports“.
+  - **File connections:** ein Graph, wer wen importiert (JS/TS, Python, CSS/SCSS/Less, C/C++, HTML)
+    - **Circular imports:** Zyklen beliebiger Länge werden erkannt (starke Zusammenhangskomponenten) und im Graphen **dauerhaft rot** gezeichnet. Die Seitenleiste listet jeden Zyklus mit Pfad (`a.ts → b.ts → c.ts → a.ts`). Ein Klick zeichnet ihn rot nach und zoomt hin.
+    - **Dependency chains:** die längsten Importketten. Ein Klick hebt die Kette rot mit Pfad hervor, der Pfad lässt sich kopieren.
+    - **Klick auf eine Datei:** alle Dateien, die (transitiv) davon abhängen, werden **rot**, alle Abhängigkeiten **bernsteinfarben**. Die Statuszeile nennt die Zahlen, auch für das ganze Projekt.
+    - **Biggest blast radius:** die Dateien, von denen am meisten abhängt. Dazu Most imported und Imports the most, außerdem eine Dateisuche.
+    - **Layout:** *Force* oder *Layered*. Layered zeigt Importeure oben und importierte Dateien darunter, Ketten laufen damit von oben nach unten.
+    - **Motion:** *Wiggle*, *Calm* (kommt zur Ruhe) oder *Still* (statisch, ohne Animation). Gezogene Knoten bleiben in Calm und Still dort liegen, wo man sie ablegt. Gegenseitige Imports werden als Bögen gezeichnet.
   - Alle Graphen lassen sich zoomen, verschieben und per Drag bewegen. Hover hebt die Nachbarn hervor. Die Buttons oben rechts pausieren die Animation, schalten das Wackeln ein und aus, schütteln den Graphen durch und setzen den Zoom zurück. Die Einblend-Animation startet, sobald ein Graph ins Bild scrollt.
 - **Ranglisten-Tabelle** aller Dateien: sortierbar nach jeder Spalte, Filter nach Pfad und Sprache. Ein Klick öffnet die Datei.
 - **Project structure** (ganz am Ende): Ordner und Dateien als lebender Force-Graph. Ein Klick auf einen Ordner klappt ihn zu oder auf, ein Klick auf eine Datei öffnet sie. Große Projekte starten teilweise zugeklappt, damit der Graph flüssig bleibt.
@@ -86,6 +92,7 @@ Alle Einstellungen lassen sich auch pro Projekt in **`.linecounter/settings.json
 | `linecounter.rant.commitWords` | `[]` | Begriffe, die in Commit-Messages einen Rant auslösen (leer bedeutet die eingebaute Liste) |
 | `linecounter.excludePatterns` | `[]` | Zusätzliche Glob-Muster zum Ausschließen |
 | `linecounter.defaultFilters` | alle | Vordefinierte Filter, die in einem neuen Workspace aktiv sind |
+| `linecounter.graphs.motion` | `auto` | `auto` (Word Web wackelt, die anderen Graphen sind ruhig), `wiggle`, `calm` oder `still` |
 | `linecounter.maxFileSizeKB` | `2048` | Größere Dateien zählen nur mit ihrer Größe |
 | `linecounter.maxEntries` | `200000` | Maximale Anzahl gescannter Einträge |
 | `linecounter.maxCommits` | `20000` | Maximale Anzahl gelesener Commits pro Repo |

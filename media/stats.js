@@ -258,11 +258,14 @@
     });
   }
 
+  const RED = '#ff4d4f';
+  const RED_SOFT = '#ff8a80';
+  const AMBER = '#f7ae62';
   const graphTools = id => `<span class="graph-tools">
-      <button class="gbtn" data-graph="${id}" data-gact="pause" title="Pause / resume the animation">${icon('pause')}</button>
-      <button class="gbtn" data-graph="${id}" data-gact="wiggle" title="Toggle the wiggle">${icon('wave')}</button>
-      <button class="gbtn" data-graph="${id}" data-gact="shake" title="Shake it">${icon('shake')}</button>
-      <button class="gbtn" data-graph="${id}" data-gact="reset" title="Reset zoom">${icon('target')}</button>
+      <button class="gbtn" data-graph="${id}" data-gact="pause" title="Pause / resume">${icon('pause')}</button>
+      <button class="gbtn gbtn-text" data-graph="${id}" data-gact="motion" title="Motion: wiggle → calm → still">${icon('wave')}<span>${MOTION_LABEL[motionFor(id)]}</span></button>
+      <button class="gbtn" data-graph="${id}" data-gact="shake" title="Re-run the layout">${icon('shake')}</button>
+      <button class="gbtn" data-graph="${id}" data-gact="reset" title="Fit to view">${icon('target')}</button>
     </span>`;
 
   function initWordWeb() {
@@ -277,7 +280,7 @@
     ];
     const links = G.links.map(l => ({ source: G.words.findIndex(w => w.id === l.w), target: G.words.length + l.f, v: l.v }));
     graphs.wordweb = LCGraphs.ForceGraph(el, {
-      nodes, links,
+      nodes, links, motion: motionFor('wordweb'),
       radius: n => (n.kind === 'word' ? 7 + Math.sqrt(n.count / maxC) * 17 : 3 + Math.sqrt(n.f.lines / maxL) * 6),
       color: n => (n.kind === 'word' ? 'var(--s1)' : '#8d8d8d'),
       ring: n => n.kind === 'word',
@@ -305,25 +308,160 @@
     const el = document.getElementById('importgraph');
     const G = D.importGraph;
     if (!el || !window.LCGraphs || !G || !G.nodes.length) return;
-    const cyc = new Set(G.cycles.flatMap(c => [c[2] + '\n' + c[3], c[3] + '\n' + c[2]]));
     const maxIn = Math.max(1, ...G.nodes.map(n => n.in));
     const nodes = G.nodes.map(n => ({ id: n.abs, f: n }));
-    const links = G.links.map(l => ({ source: l.s, target: l.t, cyc: cyc.has(G.nodes[l.s].abs + '\n' + G.nodes[l.t].abs) }));
-    graphs.importgraph = LCGraphs.ForceGraph(el, {
+    const links = G.links.map(l => ({ source: l.s, target: l.t, cyc: l.cyc }));
+    const g = graphs.importgraph = LCGraphs.ForceGraph(el, {
       nodes, links, arrows: true,
+      motion: motionFor('importgraph'),
+      layout: 'force',
+      layer: n => n.f.layer,
       radius: n => 3.5 + Math.sqrt(n.f.in / maxIn) * 13,
       color: n => colorOf(n.f.lang),
+      ringColor: n => (n.f.cycle >= 0 ? RED : null),
       label: n => n.f.path.split('/').pop(),
-      showLabel: (n, k) => n.f.in >= Math.max(3, maxIn * 0.25) || k > 1.7,
-      linkColor: l => (l.cyc ? '#ffb46b' : '#7c7c7c'),
-      linkWidth: l => (l.cyc ? 2 : 0.9),
-      linkAlpha: 0.45,
+      showLabel: (n, k) => n.f.in >= Math.max(3, maxIn * 0.25) || n.f.cycle >= 0 || k > 1.7,
+      linkColor: l => (l.cyc ? RED : '#7c7c7c'),
+      linkWidth: l => (l.cyc ? 2.2 : 0.9),
+      linkAlpha: 0.5,
       distance: () => 45,
       charge: () => -90,
-      onHover: (n, ev) => (n ? showTip(`<b>${esc(n.f.path)}</b><br>imported by ${fmt(n.f.in)} · imports ${fmt(n.f.out)}<br><i>Click: open · Right-click: more</i>`, ev) : hideTip()),
-      onClick: n => vscode.postMessage({ type: 'open', abs: n.f.abs }),
+      onHover: (n, ev) => (n ? showTip(`<b>${esc(n.f.path)}</b><br>imports ${fmt(n.f.out)}${n.f.dependencies != null ? ` (${fmt(n.f.dependencies)} transitively)` : ''} · imported by ${fmt(n.f.in)}${n.f.dependents != null ? ` (${fmt(n.f.dependents)} transitively)` : ''}${n.f.cycle >= 0 ? '<br><b style="color:' + RED + '">part of a circular import</b>' : ''}<br><i>Click: show dependencies · Double-click: open · Right-click: more</i>`, ev) : hideTip()),
+      onClick: n => selectImportNode(n.index),
+      onDblClick: n => vscode.postMessage({ type: 'open', abs: n.f.abs }),
+      onBackground: () => clearImportHighlight(),
       onContext: (n, ev) => openMenu(n.f.abs, ev.clientX, ev.clientY),
     });
+    const input = /** @type {HTMLInputElement} */ (document.getElementById('impFind'));
+    if (input) {
+      input.addEventListener('change', () => {
+        const q = input.value.trim().toLowerCase();
+        if (!q) return clearImportHighlight();
+        const n = g.nodes.find(x => x.f.path.toLowerCase() === q) || g.nodes.find(x => x.f.path.toLowerCase().includes(q));
+        if (n) selectImportNode(n.index, true); else setImpStatus(`No file matching “${esc(input.value)}” in the graph.`);
+      });
+    }
+  }
+
+  function setImpStatus(html) {
+    const el = document.getElementById('impStatus');
+    if (el) el.innerHTML = html;
+    const clr = document.getElementById('impClear');
+    if (clr) clr.disabled = !html;
+  }
+  function clearImportHighlight() {
+    const g = graphs.importgraph;
+    if (g) g.setHighlight(null);
+    document.querySelectorAll('.imp-item.active').forEach(e => e.classList.remove('active'));
+    setImpStatus('');
+  }
+  /** "folder/file" – enough to tell index.ts files apart */
+  const shortPath = p => p.split('/').slice(-2).join('/');
+  const pathHtml = files => files.map(f => `<span class="imp-hop" title="${esc(f.path)}">${esc(shortPath(f.path))}</span>`).join(' <span class="imp-arrow">→</span> ');
+
+  /** Highlights a path (list of files) in red; also marks extra member files of a cycle. */
+  function highlightPath(files, members) {
+    const g = graphs.importgraph;
+    if (!g) return;
+    const nodesHl = new Map();
+    const linksHl = new Map();
+    const idx = files.map(f => g.nodeIndex(f.abs));
+    for (const f of members || []) { const i = g.nodeIndex(f.abs); if (i >= 0) nodesHl.set(i, RED_SOFT); }
+    idx.forEach(i => { if (i >= 0) nodesHl.set(i, RED); });
+    for (let k = 0; k < idx.length - 1; k++) {
+      const l = g.links.find(x => x.source.index === idx[k] && x.target.index === idx[k + 1]);
+      if (l) linksHl.set(l, RED);
+    }
+    if (members) {
+      const set = new Set(members.map(f => g.nodeIndex(f.abs)));
+      for (const l of g.links) if (!linksHl.has(l) && set.has(l.source.index) && set.has(l.target.index)) linksHl.set(l, RED_SOFT);
+    }
+    g.setHighlight({ nodes: nodesHl, links: linksHl, labels: new Set(idx.filter(i => i >= 0)), soft: RED_SOFT }, true);
+  }
+
+  /** Click on a file: its (transitive) dependents in red, dependencies in amber. */
+  function selectImportNode(index, focus) {
+    const g = graphs.importgraph;
+    if (!g) return;
+    const nodesHl = new Map([[index, '#ffffff']]);
+    const linksHl = new Map();
+    const walk = (dirOut, color) => {
+      const seen = new Set([index]);
+      const stack = [index];
+      while (stack.length) {
+        const v = stack.pop();
+        for (const l of g.links) {
+          const from = dirOut ? l.source.index : l.target.index;
+          const to = dirOut ? l.target.index : l.source.index;
+          if (from !== v) continue;
+          if (!linksHl.has(l)) linksHl.set(l, color);
+          if (!seen.has(to)) { seen.add(to); stack.push(to); if (!nodesHl.has(to)) nodesHl.set(to, color); }
+        }
+      }
+      return seen.size - 1;
+    };
+    const deps = walk(true, AMBER);
+    const users = walk(false, RED);
+    // label the selected file and its direct neighbours
+    const labels = new Set([index]);
+    for (const l of g.links) {
+      if (l.source.index === index) labels.add(l.target.index);
+      if (l.target.index === index) labels.add(l.source.index);
+    }
+    g.setHighlight({ nodes: nodesHl, links: linksHl, labels }, !!focus);
+    const n = g.nodes[index].f;
+    const total = (shown, all) => (all != null && all > shown ? ` (${fmt(all)} in the whole project)` : '');
+    setImpStatus(`<b>${esc(n.path)}</b> – depends on <b style="color:${AMBER}">${fmt(deps)}</b> file${deps === 1 ? '' : 's'}${total(deps, n.dependencies)}, <b style="color:${RED}">${fmt(users)}</b> file${users === 1 ? '' : 's'} depend on it${total(users, n.dependents)}${n.cycle >= 0 ? ` · <b style="color:${RED}">in a circular import</b>` : ''}
+      <button class="link" data-open-abs="${esc(n.abs)}">open</button>`);
+  }
+
+  const motionFor = id => {
+    const m = D.graphMotion || 'auto';
+    if (m !== 'auto') return m;
+    return id === 'wordweb' ? 'wiggle' : 'calm';
+  };
+  const MOTIONS = ['wiggle', 'calm', 'still'];
+  const MOTION_LABEL = { wiggle: 'Wiggle', calm: 'Calm', still: 'Still' };
+
+  function importSection() {
+    const G = D.importGraph;
+    if (!G || !G.nodes.length) return '<p class="muted">No imports between the selected files could be resolved (supported: JS/TS, Python, CSS/SCSS/Less, C/C++, HTML).</p>';
+    const list = (title, arr, unit, kind) => `<div class="imp-block"><div class="imp-title">${title}</div>${arr.length ? `<ol class="imp-list">${arr.map(x => `<li class="imp-item" ${kind ? `data-imp-node="${esc(x.abs)}"` : `data-abs="${esc(x.abs)}"`} title="${esc(x.path)}"><span class="imp-name">${esc(x.path)}</span><span class="imp-count">${fmt(x.count)} ${unit}</span></li>`).join('')}</ol>` : '<p class="muted">–</p>'}</div>`;
+    const cycles = G.cycles.length
+      ? `<ol class="imp-list">${G.cycles.map((c, i) => `<li class="imp-item imp-cycle" data-imp-cycle="${i}" title="${esc(c.cycle.map(f => f.path).join(' → '))}">
+          <span class="imp-badge red">${c.size} files</span><span class="imp-path">${pathHtml(c.cycle)}</span></li>`).join('')}</ol>`
+      : '<p class="imp-ok">No circular imports. Clean architecture, or just lucky.</p>';
+    const chains = G.chains.length
+      ? `<ol class="imp-list">${G.chains.map((c, i) => `<li class="imp-item imp-chain" data-imp-chain="${i}" title="${esc(c.files.map(f => f.path).join(' → '))}">
+          <span class="imp-badge">${c.length} deep</span><span class="imp-path">${pathHtml(c.files)}</span></li>`).join('')}</ol>`
+      : '<p class="muted">No chains deeper than 2 files.</p>';
+    return `<div class="imp-toolbar">
+        <span class="seg" role="group" aria-label="Layout"><span class="seg-label">Layout</span>
+          <button class="seg-btn on" data-imp-layout="force">Force</button><button class="seg-btn" data-imp-layout="layered" title="Importers on top, imported files below">Layered</button></span>
+        <span class="seg" role="group" aria-label="Motion"><span class="seg-label">Motion</span>
+          ${MOTIONS.map(m => `<button class="seg-btn ${motionFor('importgraph') === m ? 'on' : ''}" data-imp-motion="${m}">${MOTION_LABEL[m]}</button>`).join('')}</span>
+        <input id="impFind" type="text" list="impFiles" placeholder="Find a file in the graph…" spellcheck="false">
+        <datalist id="impFiles">${G.nodes.map(n => `<option value="${esc(n.path)}">`).join('')}</datalist>
+        <button class="btn" id="impClear" disabled>${icon('close')} Clear highlight</button>
+      </div>
+      <div class="imp-summary">
+        <span class="imp-chip ${G.cycleCount ? 'red' : 'ok'}">${fmt(G.cycleCount)} circular import${G.cycleCount === 1 ? '' : 's'}${G.cycleCount ? ` · ${fmt(G.filesInCycles)} files involved` : ''}</span>
+        <span class="imp-chip">longest chain: ${fmt(G.longestChain)} files</span>
+        <span class="imp-chip">${fmt(G.maxLayer + 1)} dependency layers</span>
+        <span class="imp-chip">${fmt(G.edgeCount)} imports</span>
+      </div>
+      <div id="impStatus" class="imp-status"></div>
+      <div class="imp-body">
+        <div id="importgraph" class="graph imp-graph"></div>
+        <aside class="imp-side">
+          <div class="imp-block"><div class="imp-title red">Circular imports <span class="muted">click to trace</span></div>${cycles}</div>
+          <div class="imp-block"><div class="imp-title">Longest dependency chains <span class="muted">click to trace</span></div>${chains}</div>
+          ${list('Biggest blast radius <span class="muted">files that break if it breaks</span>', G.blastRadius || [], 'dependents', true)}
+          ${list('Most imported', G.mostImported, '×', true)}
+          ${list('Imports the most', G.mostImporting, 'imports', true)}
+        </aside>
+      </div>
+      <div class="imp-legend"><span><i class="imp-line"></i> import (arrow = direction)</span><span><i class="imp-line cyc"></i> circular import</span><span><i class="imp-line dep"></i> depends on (selection)</span><span><i class="imp-line user"></i> depended on by (selection)</span><span class="muted">node size = how often a file is imported · click a file to trace it, double-click to open</span></div>`;
   }
 
   // ---------- project structure graph ----------
@@ -388,7 +526,7 @@
     };
     updateLabels(nodes);
     graphs.structure = LCGraphs.ForceGraph(el, {
-      nodes, links,
+      nodes, links, motion: motionFor('structure'),
       radius: n => (n.t.dir ? (n.t === structTree ? 16 : 4 + Math.min(16, Math.sqrt(n.t.files / maxFiles) * 30)) : 2.5 + Math.min(5, Math.sqrt(n.t.f.lines) / 12)),
       color: n => (n.t === structTree ? 'var(--s1)' : n.t.dir ? (structCollapsed.has(n.id) ? '#b9521a' : '#5f5f5f') : colorOf(n.t.f.lang)),
       ring: n => n.t.dir,
@@ -735,10 +873,17 @@
     const G = D.importGraph;
     const byAbs = abs => D.table.find(f => f.abs === abs);
     if (G) {
-      for (const c of G.cycles.slice(0, 3)) {
-        const f = byAbs(c[2]);
-        if (f) out.push(['🔁', f, `<b>${esc(c[0].split('/').pop())}</b> and <b>${esc(c[1].split('/').pop())}</b> import each other. A toxic relationship in two files.`]);
+      for (const c of G.cycles.slice(0, 4)) {
+        const f = byAbs(c.cycle[0].abs);
+        const names = c.cycle.map(x => `<b>${esc(shortPath(x.path))}</b>`).join(' → ');
+        if (f) out.push(['🔁', f, c.size === 2
+          ? `${names}. Two files importing each other – a toxic relationship.`
+          : `${names}. A ${c.size}-file circle of trust. Nobody knows who started it.`]);
       }
+      const ch = G.chains[0];
+      if (ch && ch.length >= 6 && byAbs(ch.files[0].abs)) out.push(['⛓️', byAbs(ch.files[0].abs), `A dependency chain ${ch.length} files deep: ${ch.files.map(x => `<b>${esc(x.path.split('/').pop())}</b>`).join(' → ')}. Pull one thread and the sweater unravels.`]);
+      const br = (G.blastRadius || [])[0];
+      if (br && br.count >= 20 && byAbs(br.abs)) out.push(['💣', byAbs(br.abs), `If <b>${esc(br.path.split('/').pop())}</b> breaks, ${fmt(br.count)} files go down with it. Handle with care.`]);
       const mag = G.mostImported[0];
       if (mag && mag.count >= 8 && byAbs(mag.abs)) out.push(['🧲', byAbs(mag.abs), `<b>${esc(mag.path.split('/').pop())}</b> is imported by ${fmt(mag.count)} files. If it breaks, everything breaks. Sleep well.`]);
       const oct = G.mostImporting[0];
@@ -846,7 +991,8 @@
     if (t.fortyTwo >= 5) out.push(['🌌', `The number 42 appears ${fmt(t.fortyTwo)} times. Someone knows the answer, but not the question.`]);
     if (t.wtf >= 5) out.push(['🤯', `“wtf”, “magic” or “ugly” written ${fmt(t.wtf)} times. The code is trying to tell you something.`]);
     const G = D.importGraph;
-    if (G && G.cycleCount) out.push(['🔁', `${fmt(G.cycleCount)} pair${G.cycleCount === 1 ? '' : 's'} of files import each other. Codependency is not healthy.`]);
+    if (G && G.cycleCount) out.push(['🔁', `${fmt(G.cycleCount)} circular import${G.cycleCount === 1 ? '' : 's'} involving ${fmt(G.filesInCycles)} files. Codependency is not healthy.`]);
+    if (G && G.longestChain >= 8) out.push(['⛓️', `The longest import chain is ${fmt(G.longestChain)} files deep. Dependency Jenga, anyone?`]);
     if (G && G.mostImported[0] && G.mostImported[0].count >= 15) out.push(['🧲', `${esc(G.mostImported[0].path.split('/').pop())} is imported by ${fmt(G.mostImported[0].count)} files. Please never break it. No pressure.`]);
     for (const r of D.repos || []) {
       const top = r.authors[0];
@@ -999,19 +1145,6 @@
   }
 
   // ---------- page ----------
-  function importSection() {
-    const G = D.importGraph;
-    if (!G || !G.nodes.length) return '<p class="muted">No imports between the selected files could be resolved (supported: JS/TS, Python, CSS/SCSS/Less, C/C++, HTML).</p>';
-    const list = (title, arr, unit) => `<div class="imp-col"><div class="imp-title">${title}</div>${arr.length ? `<ol class="imp-list">${arr.map(x => `<li data-abs="${esc(x.abs)}" title="Open ${esc(x.path)}"><span class="imp-name">${esc(x.path)}</span><span class="imp-count">${fmt(x.count)} ${unit}</span></li>`).join('')}</ol>` : '<p class="muted">–</p>'}</div>`;
-    return `<div id="importgraph" class="graph"></div>
-      <div class="imp-legend"><span><i class="imp-line"></i> import</span><span><i class="imp-line cyc"></i> mutual import (A ⇄ B)</span><span class="muted">node size = how often a file is imported</span></div>
-      <div class="imp-cols">
-        ${list('Most imported', G.mostImported, '×')}
-        ${list('Imports the most', G.mostImporting, 'imports')}
-        <div class="imp-col"><div class="imp-title">Mutual imports</div>${G.cycles.length ? `<ol class="imp-list">${G.cycles.slice(0, 5).map(c => `<li data-abs="${esc(c[2])}"><span class="imp-name">${esc(c[0])} ⇄ ${esc(c[1])}</span></li>`).join('')}</ol>` : '<p class="muted">None – nice.</p>'}</div>
-      </div>`;
-  }
-
   function render() {
     destroyGraphs();
     assignColors();
@@ -1047,7 +1180,7 @@
           ${card('Word cloud of names in your code', identifierCloud())}
           ${card('Word web – most used words and the files that use them', D.wordGraph && D.wordGraph.words.length ? '<div id="wordweb" class="graph"></div>' : '<p class="muted">No identifiers found.</p>', { sub: 'drag, zoom, hover', tools: graphTools('wordweb') })}
         </div>
-        ${card('File connections – who imports whom', importSection(), { sub: D.importGraph ? `${fmt(D.importGraph.edgeCount)} imports between ${fmt(D.importGraph.nodes.length)} files${D.importGraph.truncated ? ' (most connected shown)' : ''}` : '', tools: D.importGraph && D.importGraph.nodes.length ? graphTools('importgraph') : '' })}
+        ${card('File connections – who imports whom', importSection(), { sub: D.importGraph ? `${fmt(D.importGraph.edgeCount)} imports between ${fmt(D.importGraph.nodes.length)} files${D.importGraph.truncated ? ' (most connected shown)' : ''}` : '', tools: D.importGraph && D.importGraph.nodes.length ? `<span class="graph-tools"><button class="gbtn" data-graph="importgraph" data-gact="pause" title="Pause / resume">${icon('pause')}</button><button class="gbtn" data-graph="importgraph" data-gact="shake" title="Re-run the layout">${icon('shake')}</button><button class="gbtn" data-graph="importgraph" data-gact="reset" title="Fit to view">${icon('target')}</button></span>` : '' })}
         <h2 id="s-rank">File ranking</h2>${tableSection()}
         <h2 id="s-struct">Project structure</h2>
         ${card('Folders and files as a living graph', '<div id="structure" class="graph graph-tall"></div>', { sub: 'click a folder to collapse / expand · click a file to open it', tools: graphTools('structure') })}
@@ -1082,9 +1215,60 @@
       const a = /** @type {HTMLElement} */ (gb).dataset.gact;
       if (!g) return;
       if (a === 'pause') { const on = g.toggleRunning(); gb.innerHTML = icon(on ? 'pause' : 'play'); gb.classList.toggle('off', !on); }
-      else if (a === 'wiggle') gb.classList.toggle('off', !g.toggleWiggle());
+      else if (a === 'motion') {
+        const next = MOTIONS[(MOTIONS.indexOf(g.motion) + 1) % MOTIONS.length];
+        g.setMotion(next);
+        const lbl = gb.querySelector('span');
+        if (lbl) lbl.textContent = MOTION_LABEL[next];
+      }
       else if (a === 'shake') g.reheat();
       else if (a === 'reset') g.resetView();
+      return;
+    }
+    const impLayout = t.closest('[data-imp-layout]');
+    if (impLayout && graphs.importgraph) {
+      graphs.importgraph.setLayout(/** @type {HTMLElement} */ (impLayout).dataset.impLayout);
+      impLayout.parentElement.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('on', b === impLayout));
+      return;
+    }
+    const impMotion = t.closest('[data-imp-motion]');
+    if (impMotion && graphs.importgraph) {
+      graphs.importgraph.setMotion(/** @type {HTMLElement} */ (impMotion).dataset.impMotion);
+      impMotion.parentElement.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('on', b === impMotion));
+      return;
+    }
+    const impCycle = t.closest('[data-imp-cycle]');
+    const impChain = t.closest('[data-imp-chain]');
+    if ((impCycle || impChain) && graphs.importgraph) {
+      const G = D.importGraph;
+      document.querySelectorAll('.imp-item.active').forEach(e => e.classList.remove('active'));
+      const item = /** @type {HTMLElement} */ (impCycle || impChain);
+      item.classList.add('active');
+      if (impCycle) {
+        const c = G.cycles[Number(item.dataset.impCycle)];
+        highlightPath(c.cycle, c.files);
+        setImpStatus(`<b style="color:${RED}">Circular import (${c.size} files):</b> ${pathHtml(c.cycle)} <button class="link" data-copy-text="${esc(c.cycle.map(f => f.path).join(' -> '))}">copy</button>`);
+      } else {
+        const c = G.chains[Number(item.dataset.impChain)];
+        highlightPath(c.files);
+        setImpStatus(`<b style="color:${RED}">Dependency chain (${c.length} files):</b> ${pathHtml(c.files)} <button class="link" data-copy-text="${esc(c.files.map(f => f.path).join(' -> '))}">copy</button>`);
+      }
+      return;
+    }
+    const impNode = t.closest('[data-imp-node]');
+    if (impNode && graphs.importgraph) {
+      const i = graphs.importgraph.nodeIndex(/** @type {HTMLElement} */ (impNode).dataset.impNode);
+      if (i >= 0) selectImportNode(i, true);
+      return;
+    }
+    if (t.id === 'impClear' || t.closest('#impClear')) { clearImportHighlight(); const f = /** @type {HTMLInputElement} */ (document.getElementById('impFind')); if (f) f.value = ''; return; }
+    const openAbs = t.closest('[data-open-abs]');
+    if (openAbs) { vscode.postMessage({ type: 'open', abs: /** @type {HTMLElement} */ (openAbs).dataset.openAbs }); return; }
+    const copyText = t.closest('[data-copy-text]');
+    if (copyText) {
+      const text = /** @type {HTMLElement} */ (copyText).dataset.copyText;
+      vscode.postMessage({ type: 'copy', text });
+      showToast(`${icon('copy')} Copied path`);
       return;
     }
     const fsBtn = t.closest('[data-fs]');

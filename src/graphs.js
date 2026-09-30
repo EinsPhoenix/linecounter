@@ -102,6 +102,7 @@ function buildImportGraph(files, opts = {}) {
     return tryList(spec, JS_EXT);
   };
 
+  // ---- edges over all files ----
   const edges = new Map();
   for (const f of files) {
     if (!f.deps) continue;
@@ -111,32 +112,156 @@ function buildImportGraph(files, opts = {}) {
       edges.set(f.abs + '\n' + t.abs, [f, t]);
     }
   }
-  const degree = new Map();
-  const inDeg = new Map();
-  const outDeg = new Map();
-  for (const [a, b] of edges.values()) {
-    degree.set(a, (degree.get(a) || 0) + 1);
-    degree.set(b, (degree.get(b) || 0) + 1);
-    outDeg.set(a, (outDeg.get(a) || 0) + 1);
-    inDeg.set(b, (inDeg.get(b) || 0) + 1);
+  return analyzeDependencies([...edges.values()], maxNodes);
+}
+
+/**
+ * Graph analysis on file -> file import edges:
+ * circular imports (strongly connected components), longest dependency chains, layers, blast radius.
+ */
+function analyzeDependencies(edgeList, maxNodes) {
+  const all = [];
+  const id = new Map();
+  const node = f => { if (!id.has(f)) { id.set(f, all.length); all.push(f); } return id.get(f); };
+  const out = [], inn = [];
+  const E = edgeList.map(([a, b]) => [node(a), node(b)]);
+  for (let i = 0; i < all.length; i++) { out.push([]); inn.push([]); }
+  for (const [a, b] of E) { out[a].push(b); inn[b].push(a); }
+  const N = all.length;
+
+  // Tarjan SCC (iterative)
+  const index = new Int32Array(N).fill(-1), low = new Int32Array(N), onStack = new Uint8Array(N);
+  const comp = new Int32Array(N).fill(-1);
+  const stack = [];
+  let idx = 0, compCount = 0;
+  for (let s = 0; s < N; s++) {
+    if (index[s] !== -1) continue;
+    const work = [[s, 0]];
+    index[s] = low[s] = idx++; stack.push(s); onStack[s] = 1;
+    while (work.length) {
+      const top = work[work.length - 1];
+      const v = top[0];
+      if (top[1] < out[v].length) {
+        const w = out[v][top[1]++];
+        if (index[w] === -1) {
+          index[w] = low[w] = idx++; stack.push(w); onStack[w] = 1;
+          work.push([w, 0]);
+        } else if (onStack[w]) low[v] = Math.min(low[v], index[w]);
+      } else {
+        work.pop();
+        if (work.length) { const u = work[work.length - 1][0]; low[u] = Math.min(low[u], low[v]); }
+        if (low[v] === index[v]) {
+          let w;
+          do { w = stack.pop(); onStack[w] = 0; comp[w] = compCount; } while (w !== v);
+          compCount++;
+        }
+      }
+    }
   }
-  const chosen = [...degree.entries()].sort((a, b) => b[1] - a[1]).slice(0, maxNodes).map(e => e[0]);
-  const idx = new Map(chosen.map((f, i) => [f, i]));
-  const nodes = chosen.map(f => ({ abs: f.abs, path: f.path, rootName: f.rootName, lang: f.lang, lines: f.lines, in: inDeg.get(f) || 0, out: outDeg.get(f) || 0 }));
+  const members = Array.from({ length: compCount }, () => []);
+  for (let v = 0; v < N; v++) members[comp[v]].push(v);
+  const cyclicComps = members.map((m, c) => ({ c, m })).filter(x => x.m.length > 1).sort((a, b) => b.m.length - a.m.length);
+
+  // one readable cycle path per strongly connected component (BFS back to the start node)
+  const cyclePath = (m, c) => {
+    const start = m.reduce((best, v) => (inn[v].length + out[v].length > inn[best].length + out[best].length ? v : best), m[0]);
+    const prev = new Map([[start, -1]]);
+    const q = [start];
+    while (q.length) {
+      const v = q.shift();
+      for (const w of out[v]) {
+        if (comp[w] !== c) continue;
+        if (w === start) {
+          const path = [start];
+          for (let x = v; x !== start; x = prev.get(x)) path.splice(1, 0, x);
+          path.push(start);
+          return path;
+        }
+        if (!prev.has(w)) { prev.set(w, v); q.push(w); }
+      }
+    }
+    return [start, start];
+  };
+  const ref = v => ({ path: all[v].path, abs: all[v].abs });
+  const cycles = cyclicComps.slice(0, 50).map(({ c, m }) => ({
+    size: m.length,
+    files: m.map(ref),
+    cycle: cyclePath(m, c).map(ref),
+  }));
+
+  // condensation DAG -> layers (longest path from sources) and longest chains
+  const cOut = Array.from({ length: compCount }, () => new Set());
+  const cIn = new Int32Array(compCount);
+  for (const [a, b] of E) {
+    const ca = comp[a], cb = comp[b];
+    if (ca !== cb && !cOut[ca].has(cb)) { cOut[ca].add(cb); cIn[cb]++; }
+  }
+  const order = [];
+  const indeg = Int32Array.from(cIn);
+  const q = [];
+  for (let c = 0; c < compCount; c++) if (!indeg[c]) q.push(c);
+  while (q.length) { const c = q.shift(); order.push(c); for (const d of cOut[c]) if (--indeg[d] === 0) q.push(d); }
+  // layer = distance from importers ("entry points") -> used for the layered layout
+  const layer = new Int32Array(compCount);
+  for (const c of order) for (const d of cOut[c]) layer[d] = Math.max(layer[d], layer[c] + 1);
+  // longest chain ending in each component
+  const best = new Int32Array(compCount).fill(1), from = new Int32Array(compCount).fill(-1);
+  for (const c of order) for (const d of cOut[c]) if (best[c] + 1 > best[d]) { best[d] = best[c] + 1; from[d] = c; }
+  const rep = members.map(m => m.reduce((b, v) => (inn[v].length > inn[b].length ? v : b), m[0]));
+  const ends = [...Array(compCount).keys()].filter(c => best[c] >= 3).sort((a, b) => best[b] - best[a]);
+  const chains = [];
+  const usedEnds = new Set();
+  for (const c of ends) {
+    if (chains.length >= 8) break;
+    const path = [];
+    for (let x = c; x !== -1; x = from[x]) path.unshift(x);
+    const key = path[0];
+    if (usedEnds.has(key) && chains.length >= 3) continue; // prefer chains from different entry points
+    usedEnds.add(key);
+    chains.push({ length: path.length, files: path.map(x => ref(rep[x])) });
+  }
+
+  // transitive dependents ("blast radius") and dependencies per file
+  const reach = (start, adj) => {
+    const seen = new Uint8Array(N); seen[start] = 1;
+    const st = [start]; let n = 0;
+    while (st.length) { const v = st.pop(); for (const w of adj[v]) if (!seen[w]) { seen[w] = 1; n++; st.push(w); } }
+    return n;
+  };
+
+  // ---- choose the nodes to draw: cycles and chains first, then the most connected files ----
+  const degree = v => out[v].length + inn[v].length;
+  const chosen = [];
+  const chosenSet = new Set();
+  const add = v => { if (!chosenSet.has(v) && chosen.length < maxNodes) { chosenSet.add(v); chosen.push(v); } };
+  for (const { m } of cyclicComps) for (const v of m) add(v);
+  for (const ch of chains) for (const f of ch.files) add(id.get(all.find(x => x.abs === f.abs)));
+  [...Array(N).keys()].sort((a, b) => degree(b) - degree(a)).forEach(add);
+  const pos = new Map(chosen.map((v, i) => [v, i]));
+  const inCycle = v => members[comp[v]].length > 1;
+  const nodes = chosen.map(v => {
+    const f = all[v];
+    return {
+      abs: f.abs, path: f.path, rootName: f.rootName, lang: f.lang, lines: f.lines,
+      in: inn[v].length, out: out[v].length, layer: layer[comp[v]],
+      cycle: inCycle(v) ? comp[v] : -1,
+      dependents: N <= 4000 ? reach(v, inn) : null,
+      dependencies: N <= 4000 ? reach(v, out) : null,
+    };
+  });
   const links = [];
-  for (const [a, b] of edges.values()) {
-    if (idx.has(a) && idx.has(b)) links.push({ s: idx.get(a), t: idx.get(b) });
+  for (const [a, b] of E) {
+    if (pos.has(a) && pos.has(b)) links.push({ s: pos.get(a), t: pos.get(b), cyc: comp[a] === comp[b] });
   }
-  // mutual imports (A -> B and B -> A)
-  const cycles = [];
-  for (const [a, b] of edges.values()) {
-    if (a.abs < b.abs && edges.has(b.abs + '\n' + a.abs)) cycles.push([a.path, b.path, a.abs, b.abs]);
-  }
-  const top = (m, n) => [...m.entries()].sort((x, y) => y[1] - x[1]).slice(0, n).map(([f, c]) => ({ path: f.path, abs: f.abs, count: c }));
+  const top = (arr, n) => arr.slice().sort((x, y) => y.count - x.count).slice(0, n);
+  const counts = (adj) => all.map((f, v) => ({ path: f.path, abs: f.abs, count: adj[v].length })).filter(x => x.count);
+  const blast = nodes.filter(n => n.dependents).map(n => ({ path: n.path, abs: n.abs, count: n.dependents }));
   return {
-    nodes, links, edgeCount: edges.size, truncated: degree.size > maxNodes,
-    mostImported: top(inDeg, 5), mostImporting: top(outDeg, 5), cycles: cycles.slice(0, 20), cycleCount: cycles.length,
+    nodes, links, edgeCount: E.length, truncated: N > maxNodes,
+    mostImported: top(counts(inn), 5), mostImporting: top(counts(out), 5), blastRadius: top(blast, 5),
+    cycles, cycleCount: cyclicComps.length, filesInCycles: cyclicComps.reduce((s, x) => s + x.m.length, 0),
+    chains, longestChain: chains.length ? chains[0].length : 0, maxLayer: Math.max(0, ...nodes.map(n => n.layer)),
   };
 }
 
-module.exports = { buildWordGraph, buildImportGraph };
+module.exports = { buildWordGraph, buildImportGraph, analyzeDependencies };
