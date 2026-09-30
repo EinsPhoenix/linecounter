@@ -221,6 +221,40 @@
         "custom"
       ],
       "description": "Predefined filters that are enabled in a new workspace (unless a preset from .linecounter/presets.json is active)."
+    },
+    "graphs.motion": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "wiggle",
+        "calm",
+        "still"
+      ],
+      "enumDescriptions": [
+        "Word web wiggles, import and structure graphs are calm",
+        "Organic wobble on all graphs",
+        "Graphs settle and then stop moving",
+        "No animation: the layout is computed once and drawn static"
+      ],
+      "default": "auto",
+      "description": "How much the graphs move."
+    },
+    "linecounter.graphs.motion": {
+      "type": "string",
+      "enum": [
+        "auto",
+        "wiggle",
+        "calm",
+        "still"
+      ],
+      "enumDescriptions": [
+        "Word web wiggles, import and structure graphs are calm",
+        "Organic wobble on all graphs",
+        "Graphs settle and then stop moving",
+        "No animation: the layout is computed once and drawn static"
+      ],
+      "default": "auto",
+      "description": "How much the graphs move."
     }
   },
   "additionalProperties": true

@@ -2,7 +2,7 @@
   "name": "linecounter",
   "displayName": "Line Counter & Code Statistics",
   "description": "Browse your workspace as a filterable tree, exclude files and folders with a click and generate full-screen code statistics with charts, git insights, fun facts and a file ranking.",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "publisher": "einsphoenix",
   "icon": "media/icon.png",
   "repository": {
@@ -230,6 +230,23 @@
             "custom"
           ],
           "description": "Predefined filters that are enabled in a new workspace (unless a preset from .linecounter/presets.json is active)."
+        },
+        "linecounter.graphs.motion": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "wiggle",
+            "calm",
+            "still"
+          ],
+          "enumDescriptions": [
+            "Word web wiggles, import and structure graphs are calm",
+            "Organic wobble on all graphs",
+            "Graphs settle and then stop moving",
+            "No animation: the layout is computed once and drawn static"
+          ],
+          "default": "auto",
+          "description": "How much the graphs move."
         }
       }
     },
@@ -246,7 +263,7 @@
   },
   "scripts": {
     "package": "vsce package --skip-license --out linecounter.vsix",
-    "test": "node test/smoke.js",
+    "test": "node test/smoke.js && node test/graphs.test.js",
     "release": "node scripts/release.js"
   },
   "devDependencies": {

@@ -41,6 +41,7 @@ async function computeStatistics(config, roots, selection) {
     return aggregate(results, {
       workspace: vscode.workspace.name || roots.map(r => r.name).join(', '),
       repos,
+      graphMotion: config.get('graphs.motion', 'auto'),
       rant: {
         enabled: config.get('rant.enabled', true),
         maxLines: Math.max(1, config.get('rant.maxFileLines', 500)),
