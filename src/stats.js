@@ -70,36 +70,16 @@ function aggregate(files, meta) {
     ages[ageEdges.findIndex(e => days <= e)].count++;
   }
 
-  const by = (arr, fn) => arr.reduce((m, f) => (!m || fn(f) > fn(m) ? f : m), null);
-  const ref = f => f && { path: f.path, abs: f.abs, rootName: f.rootName, lines: f.lines, size: f.size, maxLine: f.maxLine, maxLineNo: f.maxLineNo };
-  const nonEmpty = text.filter(f => f.lines > 0);
-
-  const records = {
-    longestFile: ref(by(text, f => f.lines)),
-    biggestFile: ref(by(files, f => f.size)),
-    longestLine: ref(by(text, f => f.maxLine)),
-    smallestFile: ref(by(nonEmpty, f => -f.lines)),
-    deepestFile: ref(by(files, f => f.depth)),
-    longestName: ref(by(files, f => f.name.length)),
-    mostTodos: ref(by(text.filter(f => f.todo + f.fixme + f.hack > 0), f => f.todo + f.fixme + f.hack)),
-    mostCommented: ref(by(text.filter(f => f.lines >= 20), f => f.comment / f.lines)),
-    newestFile: ref(by(files, f => f.mtime)),
-    oldestFile: ref(by(files, f => -f.mtime)),
-  };
-  if (records.deepestFile) records.deepestFile.depth = by(files, f => f.depth).depth;
-  if (records.longestName) records.longestName.nameLen = by(files, f => f.name.length).name.length;
-  if (records.mostTodos) { const f = by(text.filter(f => f.todo + f.fixme + f.hack > 0), f => f.todo + f.fixme + f.hack); records.mostTodos.count = f.todo + f.fixme + f.hack; }
-  if (records.mostCommented) { const f = by(text.filter(f => f.lines >= 20), f => f.comment / f.lines); records.mostCommented.ratio = f.comment / f.lines; }
-
   const table = files.map(f => ({
     path: f.path, abs: f.abs, rootName: f.rootName, lang: f.binary ? 'Binary' : f.lang, ext: f.ext,
     lines: f.lines, code: f.code, comment: f.comment, blank: f.blank, size: f.size,
-    maxLine: f.maxLine, todo: f.todo + f.fixme + f.hack, binary: f.binary, skipped: f.skipped, mtime: f.mtime,
+    maxLine: f.maxLine, maxLineNo: f.maxLineNo, todo: f.todo + f.fixme + f.hack, binary: f.binary, skipped: f.skipped, mtime: f.mtime,
+    chars: f.chars, trailing: f.trailing, debug: f.debugPrints, emojis: f.emojis, funcs: f.funcs, wtf: f.wtf,
   }));
 
   return {
     generated: now, ...meta, multiRoot,
-    totals, languages, extensions, folders, histogram, identifiers, ages, records, table,
+    totals, languages, extensions, folders, histogram, identifiers, ages, table,
   };
 }
 

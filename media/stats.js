@@ -358,25 +358,72 @@
     </div>`;
   }
 
+  // ---------- hall of fame ----------
+  const NO_COMMENT_LANGS = new Set(['JSON', 'Markdown', 'Text', 'CSV', 'Other', 'Binary', 'reStructuredText', 'Jupyter Notebook']);
+  const depthOf = f => f.path.split('/').length - 1;
+  const nameOf = f => f.path.split('/').pop();
+  const ratio = (a, b) => (b ? a / b : 0);
+  const FAME = [
+    { e: '🏔️', title: 'Longest file', sub: 'Mount Everest of your code base', ok: f => !f.binary && f.lines > 0, key: f => f.lines, d: f => `${fmt(f.lines)} lines` },
+    { e: '🐘', title: 'Heaviest file', sub: 'Needs a diet', ok: () => true, key: f => f.size, d: f => bytes(f.size) },
+    { e: '📏', title: 'Longest line', sub: 'Horizontal scrolling champion', ok: f => f.maxLine > 0, key: f => f.maxLine, d: f => `${fmt(f.maxLine)} chars in line ${f.maxLineNo}`, line: f => f.maxLineNo },
+    { e: '🐜', title: 'Tiniest file', sub: 'Small but proud', ok: f => !f.binary && f.lines > 0, key: f => -f.lines, d: f => `${fmt(f.lines)} line${f.lines === 1 ? '' : 's'}` },
+    { e: '🕳️', title: 'Deepest nested', sub: 'Folder spelunking required', ok: () => true, key: depthOf, d: f => `${depthOf(f)} folders deep` },
+    { e: '🐍', title: 'Longest file name', sub: 'Descriptive. Very descriptive.', ok: () => true, key: f => nameOf(f).length, d: f => `${nameOf(f).length} characters` },
+    { e: '📝', title: 'TODO collector', sub: 'Promises, promises…', ok: f => f.todo > 0, key: f => f.todo, d: f => `${fmt(f.todo)} TODO / FIXME / HACK` },
+    { e: '📖', title: 'Best documented', sub: 'Someone actually wrote comments', ok: f => f.lines >= 20 && f.comment > 0, key: f => ratio(f.comment, f.lines), d: f => `${(ratio(f.comment, f.lines) * 100).toFixed(0)}% comments` },
+    { e: '🤐', title: 'Silent treatment', sub: 'Biggest file without a single comment', ok: f => f.comment === 0 && f.code >= 30 && !NO_COMMENT_LANGS.has(f.lang), key: f => f.code, d: f => `${fmt(f.code)} lines of code, 0 comments` },
+    { e: '🏭', title: 'Function factory', sub: 'Mass production of functions', ok: f => f.funcs > 0, key: f => f.funcs, d: f => `~${fmt(f.funcs)} functions` },
+    { e: '🐛', title: 'Debug print champion', sub: 'console.log driven development', ok: f => f.debug > 0, key: f => f.debug, d: f => `${fmt(f.debug)} debug prints` },
+    { e: '🌬️', title: 'Airiest file', sub: 'Mostly empty lines', ok: f => !f.binary && f.lines >= 20, key: f => ratio(f.blank, f.lines), d: f => `${(ratio(f.blank, f.lines) * 100).toFixed(0)}% blank lines` },
+    { e: '🧱', title: 'Densest file', sub: 'Not a single breath taken', ok: f => !f.binary && f.lines >= 50 && !NO_COMMENT_LANGS.has(f.lang), key: f => -ratio(f.blank, f.lines), d: f => `only ${(ratio(f.blank, f.lines) * 100).toFixed(1)}% blank lines` },
+    { e: '📐', title: 'Widest code', sub: 'Highest average line length', ok: f => !f.binary && f.lines >= 20 && !NO_COMMENT_LANGS.has(f.lang) && f.lang !== 'Gitignore & Co', key: f => ratio(f.chars, f.lines), d: f => `Ø ${ratio(f.chars, f.lines).toFixed(0)} chars per line` },
+    { e: '🧹', title: 'Whitespace hoarder', sub: 'Trailing spaces everywhere', ok: f => f.trailing > 0, key: f => f.trailing, d: f => `${fmt(f.trailing)} lines with trailing whitespace` },
+    { e: '😀', title: 'Emoji artist', sub: 'Code with feelings', ok: f => f.emojis > 0, key: f => f.emojis, d: f => `${fmt(f.emojis)} emojis` },
+    { e: '🆕', title: 'Freshest file', sub: 'Still warm', ok: () => true, key: f => f.mtime, d: f => `changed ${date(f.mtime)}` },
+    { e: '🦖', title: 'Fossil', sub: 'Untouched the longest', ok: () => true, key: f => -f.mtime, d: f => `last changed ${date(f.mtime)}` },
+  ];
+  const MEDALS = ['🥇', '🥈', '🥉'];
+
+  function podium(cat) {
+    const list = D.table.filter(cat.ok);
+    // partial selection of the top 3 (the table can be large)
+    const top = [];
+    for (const f of list) {
+      const k = cat.key(f);
+      if (top.length < 3 || k > top[top.length - 1].k) {
+        top.push({ f, k });
+        top.sort((a, b) => b.k - a.k);
+        if (top.length > 3) top.pop();
+      }
+    }
+    return top.map(t => t.f);
+  }
+
   function hallOfFame() {
-    const r = D.records;
-    const items = [
-      ['lines', 'Longest file', r.longestFile, r.longestFile && `${fmt(r.longestFile.lines)} lines`],
-      ['weight', 'Heaviest file', r.biggestFile, r.biggestFile && bytes(r.biggestFile.size)],
-      ['ruler', 'Longest line', r.longestLine, r.longestLine && `${fmt(r.longestLine.maxLine)} chars in line ${r.longestLine.maxLineNo}`, r.longestLine && r.longestLine.maxLineNo],
-      ['dot', 'Tiniest file', r.smallestFile, r.smallestFile && `${fmt(r.smallestFile.lines)} line${r.smallestFile.lines === 1 ? '' : 's'}`],
-      ['layers', 'Deepest nested', r.deepestFile, r.deepestFile && `${r.deepestFile.depth} folders deep`],
-      ['type', 'Longest file name', r.longestName, r.longestName && `${r.longestName.nameLen} characters`],
-      ['todo', 'Most TODOs', r.mostTodos, r.mostTodos && `${r.mostTodos.count} TODO / FIXME / HACK`],
-      ['book', 'Best commented', r.mostCommented, r.mostCommented && `${(r.mostCommented.ratio * 100).toFixed(0)}% comments`],
-      ['clock', 'Most recently changed', r.newestFile, r.newestFile && date(r.newestFile.mtime ?? D.table.find(f => f.abs === r.newestFile.abs)?.mtime)],
-      ['archive', 'Untouched the longest', r.oldestFile, r.oldestFile && date(D.table.find(f => f.abs === r.oldestFile.abs)?.mtime)],
-    ].filter(i => i[2]);
-    return `<div class="fame">${items.map(([ic, title, f, detail, line]) => `
-      <div class="fame-item"><span class="fame-icon">${icon(ic)}</span><div>
-        <div class="fame-title">${title}</div>
-        <div class="fame-file">${fileLink(f, f.path, line)}</div>
-        <div class="fame-detail">${esc(detail)}</div></div></div>`).join('')}</div>`;
+    const boards = FAME.map(c => ({ c, top: podium(c) })).filter(b => b.top.length);
+    // Most decorated file: 3 points for gold, 2 for silver, 1 for bronze
+    const score = new Map();
+    for (const b of boards) b.top.forEach((f, i) => {
+      const s = score.get(f.abs) || { f, pts: 0, gold: 0, cats: [] };
+      s.pts += 3 - i; if (i === 0) { s.gold++; s.cats.push(b.c.e); }
+      score.set(f.abs, s);
+    });
+    const champ = [...score.values()].sort((a, b) => b.pts - a.pts || b.gold - a.gold)[0];
+    const hero = champ ? `<div class="fame-hero" data-abs="${esc(champ.f.abs)}" title="Open ${esc(champ.f.path)}">
+        <span class="fame-hero-emoji">🏆</span>
+        <div><div class="fame-hero-label">Most decorated file</div>
+          <div class="fame-hero-file">${esc(champ.f.path)}</div>
+          <div class="fame-hero-detail">${champ.gold} gold medal${champ.gold === 1 ? '' : 's'} ${champ.cats.join(' ')} · ${champ.pts} points across ${boards.length} categories</div></div>
+      </div>` : '';
+    return hero + `<div class="fame">${boards.map(({ c, top }) => `
+      <div class="fame-item">
+        <div class="fame-head"><span class="fame-emoji">${c.e}</span><div><div class="fame-title">${c.title}</div><div class="fame-sub">${esc(c.sub)}</div></div></div>
+        <ol class="podium">${top.map((f, i) => `
+          <li class="${i === 0 ? 'gold' : ''}"><span class="medal">${MEDALS[i]}</span>
+            <div class="podium-body">${fileLink(f, i === 0 ? f.path : nameOf(f), c.line && c.line(f))}
+            <span class="fame-detail">${esc(c.d(f))}</span></div></li>`).join('')}</ol>
+      </div>`).join('')}</div>`;
   }
 
   function funSection() {
@@ -427,56 +474,97 @@
 
   // ---------- code rant ----------
   const LONG_RANTS = [
-    '<b>{n}</b> has {l} lines. That is not a file, that is a novel. Split it up.',
-    '{l} lines? <b>{n}</b> is {x}× over the {m}-line limit. Somewhere the single-responsibility principle is crying.',
-    'Scrolling through <b>{n}</b> counts as cardio.',
-    '<b>{n}</b> is where functions go to never be refactored again.',
-    'Nobody has read <b>{n}</b> top to bottom since it passed {m} lines. Nobody.',
-    '<b>{n}</b> wants to be three files when it grows up.',
-    'Git blame on <b>{n}</b> is basically a family tree at this point.',
-    'If <b>{n}</b> were a book it would need a table of contents. And an index.',
-    '<b>{n}</b>: {l} lines of “I will clean this up later”.',
-    'Your IDE’s minimap for <b>{n}</b> needs its own minimap.',
+    '<b>{n}</b> has {l} lines. That is not a file, that is a novel. 📚 Split it up.',
+    '{l} lines? <b>{n}</b> is {x}× over the {m}-line limit. Somewhere the single-responsibility principle is crying. 😢',
+    'Scrolling through <b>{n}</b> counts as cardio. 🏃',
+    '<b>{n}</b> is where functions go to never be refactored again. 🪦',
+    'Nobody has read <b>{n}</b> top to bottom since it passed {m} lines. Nobody. 👀',
+    '<b>{n}</b> wants to be three files when it grows up. 🌱',
+    'Git blame on <b>{n}</b> is basically a family tree at this point. 🌳',
+    'If <b>{n}</b> were a book it would need a table of contents. And an index. 📖',
+    '<b>{n}</b>: {l} lines of “I will clean this up later”. 🧹',
+    'Your IDE’s minimap for <b>{n}</b> needs its own minimap. 🗺️',
+    '<b>{n}</b> has more lines than some operating systems had in the 70s. 🖥️',
+    'Opening <b>{n}</b> makes the laptop fan spin up. 🌀',
+    '<b>{n}</b> is {x}× the limit. This is how legacy code is born. 👶',
+    'Code review for <b>{n}</b>: “LGTM” – said nobody who actually read it. 🙈',
   ];
   const BLANK_RANTS = [
-    '<b>{n}</b> is {p}% empty lines. Is this code or a poem?',
-    '{p}% whitespace in <b>{n}</b>. Your scroll wheel files a complaint.',
-    '<b>{n}</b> contains more air than a bag of chips ({p}% blank).',
-    '<b>{n}</b>: {p}% blank lines. Minimalism is nice, but this is just emptiness.',
-    'Mind the gap – <b>{n}</b> is {p}% blank lines.',
-    '<b>{n}</b> is being paid by the line, isn’t it? {p}% of them are empty.',
-    'Somebody leaned on the Enter key in <b>{n}</b>. {p}% blank.',
+    '<b>{n}</b> is {p}% empty lines. Is this code or a poem? 📜',
+    '{p}% whitespace in <b>{n}</b>. Your scroll wheel files a complaint. 🖱️',
+    '<b>{n}</b> contains more air than a bag of chips ({p}% blank). 🥔',
+    '<b>{n}</b>: {p}% blank lines. Minimalism is nice, but this is just emptiness. 🫥',
+    'Mind the gap – <b>{n}</b> is {p}% blank lines. 🚇',
+    '<b>{n}</b> is being paid by the line, isn’t it? {p}% of them are empty. 💸',
+    'Somebody leaned on the Enter key in <b>{n}</b>. {p}% blank. ⏎',
+    '<b>{n}</b> could lose {r} blank lines and nobody would notice. 🤫',
+    'Social distancing between the lines of <b>{n}</b> ({p}% blank). 😷',
+    '<b>{n}</b> – {p}% blank. Even the code needs space from this code. 🌌',
   ];
+  const LONG_LEVELS = [[1.5, '🙄', 'Mild'], [2.5, '😤', 'Spicy'], [5, '🤬', 'Furious'], [Infinity, '💀', 'Nuclear']];
+  const BLANK_LEVELS = [[1.5, '🫧', 'Breezy'], [2.5, '🌬️', 'Drafty'], [4, '🏜️', 'Desert'], [Infinity, '🕳️', 'Void']];
+  const MOODS = [[0, '😇', 'Zen', 'Nothing to rant about. Suspicious. Very suspicious.'], [15, '🙂', 'Mildly annoyed', 'A few things here and there. The ranter is sipping tea.'],
+    [35, '😒', 'Grumpy', 'The ranter put down the tea.'], [60, '😤', 'Fuming', 'Steam is coming out of the ranter’s ears.'],
+    [85, '🤬', 'Livid', 'The ranter has opened a second monitor just to complain.'], [Infinity, '🌋', 'Volcanic', 'Evacuate the repository.']];
   const hash = str => { let h = 0; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) | 0; return Math.abs(h); };
   const fill = (tpl, vals) => tpl.replace(/\{(\w)\}/g, (_, k) => vals[k]);
   const rantCfg = () => D.rant || { enabled: false };
   const isTooLong = f => rantCfg().enabled && !f.binary && f.lines > rantCfg().maxLines;
   const blankPct = f => (f.lines ? (f.blank / f.lines) * 100 : 0);
   const isTooAiry = f => rantCfg().enabled && !f.binary && f.lines >= 10 && blankPct(f) > rantCfg().maxBlankPercent;
+  const level = (levels, v) => levels.findIndex(l => v <= l[0]);
+  const longLevel = f => level(LONG_LEVELS, f.lines / rantCfg().maxLines);
+  const blankLevel = f => level(BLANK_LEVELS, rantCfg().maxBlankPercent ? blankPct(f) / rantCfg().maxBlankPercent : Infinity);
+  const extraBlank = f => Math.max(0, Math.ceil(f.blank - (rantCfg().maxBlankPercent / 100) * f.lines));
   const rantShowAll = { long: false, blank: false };
+  const rantLevelFilter = { long: -1, blank: -1 };
 
   function rantList(kind) {
     const cfg = rantCfg();
     const long = kind === 'long';
-    const files = D.table.filter(long ? isTooLong : isTooAiry)
+    const levels = long ? LONG_LEVELS : BLANK_LEVELS;
+    const lvOf = long ? longLevel : blankLevel;
+    const all = D.table.filter(long ? isTooLong : isTooAiry)
       .sort((a, b) => (long ? b.lines - a.lines : blankPct(b) - blankPct(a)));
-    if (!files.length) {
-      return `<p class="muted">${long ? `No file is longer than ${fmt(cfg.maxLines)} lines. Respect.` : `No file has more than ${cfg.maxBlankPercent}% blank lines. Tight.`}</p>`;
+    if (!all.length) {
+      return `<p class="rant-empty">${long ? `😌 No file is longer than ${fmt(cfg.maxLines)} lines. Respect.` : `😌 No file has more than ${cfg.maxBlankPercent}% blank lines. Tight.`}</p>`;
     }
-    const shown = rantShowAll[kind] ? files : files.slice(0, 20);
+    const counts = levels.map((_, i) => all.filter(f => lvOf(f) === i).length);
+    const chips = `<div class="rant-chips">
+      <button class="rant-chip ${rantLevelFilter[kind] === -1 ? 'on' : ''}" data-rant-lv="${kind}:-1">All ${fmt(all.length)}</button>
+      ${levels.map((l, i) => counts[i] ? `<button class="rant-chip lv${i + 1} ${rantLevelFilter[kind] === i ? 'on' : ''}" data-rant-lv="${kind}:${i}">${l[1]} ${l[2]} ${fmt(counts[i])}</button>` : '').join('')}
+    </div>`;
+    const files = rantLevelFilter[kind] === -1 ? all : all.filter(f => lvOf(f) === rantLevelFilter[kind]);
+    const shown = rantShowAll[kind] ? files : files.slice(0, 15);
+    const tpls = long ? LONG_RANTS : BLANK_RANTS;
     const items = shown.map(f => {
-      const name = esc(f.path.split('/').pop());
-      const tpl = (long ? LONG_RANTS : BLANK_RANTS)[hash(f.path) % (long ? LONG_RANTS.length : BLANK_RANTS.length)];
-      const text = fill(tpl, { n: name, l: fmt(f.lines), m: fmt(cfg.maxLines), x: (f.lines / cfg.maxLines).toFixed(1), p: blankPct(f).toFixed(0) });
+      const lv = lvOf(f);
+      const text = fill(tpls[hash(f.path) % tpls.length], {
+        n: esc(nameOf(f)), l: fmt(f.lines), m: fmt(cfg.maxLines), x: (f.lines / cfg.maxLines).toFixed(1), p: blankPct(f).toFixed(0), r: fmt(extraBlank(f)),
+      });
       const badge = long ? `${fmt(f.lines)} lines` : `${blankPct(f).toFixed(1)}% blank`;
-      return `<li class="rant-item" data-abs="${esc(f.abs)}" title="Open ${esc(f.path)}">
-        <span class="rant-badge">${badge}</span>
+      return `<li class="rant-item" data-abs="${esc(f.abs)}" title="Open ${esc(f.path)} – ${levels[lv][2]}">
+        <span class="rant-emoji" title="${levels[lv][2]}">${levels[lv][1]}</span>
+        <span class="rant-badge lv${lv + 1}">${badge}</span>
         <div><div class="rant-text">${text}</div><div class="rant-path">${esc(f.path)}</div></div></li>`;
     }).join('');
-    const more = files.length > shown.length
-      ? `<button class="btn" data-rant-all="${kind}">Show all ${fmt(files.length)}</button>` : '';
-    return `<p class="muted rant-count">${fmt(files.length)} file${files.length === 1 ? '' : 's'} ${long ? `longer than ${fmt(cfg.maxLines)} lines` : `with more than ${cfg.maxBlankPercent}% blank lines (files with 10+ lines)`}</p>
-      <ul class="rant-list">${items}</ul>${more}`;
+    const more = files.length > shown.length ? `<button class="btn" data-rant-all="${kind}">Show all ${fmt(files.length)}</button>` : '';
+    return chips + `<ul class="rant-list">${items}</ul>${more}`;
+  }
+
+  function bonusRants() {
+    const text = D.table.filter(f => !f.binary);
+    const pick = (arr, key, n) => arr.sort((a, b) => key(b) - key(a)).slice(0, n);
+    const out = [];
+    for (const f of pick(text.filter(f => f.maxLine > 200), f => f.maxLine, 3)) out.push(['📏', f, `Line ${f.maxLineNo} of <b>${esc(nameOf(f))}</b> is ${fmt(f.maxLine)} characters long. Horizontal scrolling is not a feature.`, f.maxLineNo]);
+    for (const f of pick(text.filter(f => f.debug >= 10), f => f.debug, 2)) out.push(['🐛', f, `<b>${esc(nameOf(f))}</b> has ${fmt(f.debug)} debug prints. Is this production or a crime scene?`]);
+    for (const f of pick(text.filter(f => f.todo >= 5), f => f.todo, 2)) out.push(['📝', f, `${fmt(f.todo)} TODOs in <b>${esc(nameOf(f))}</b>. That is not a file, that is a wish list.`]);
+    for (const f of pick(text.filter(f => f.comment === 0 && f.code >= 200 && !NO_COMMENT_LANGS.has(f.lang)), f => f.code, 2)) out.push(['🤐', f, `${fmt(f.code)} lines of code in <b>${esc(nameOf(f))}</b> and not one comment. Good luck, future you.`]);
+    for (const f of pick(text.filter(f => f.trailing >= 20), f => f.trailing, 2)) out.push(['🧹', f, `<b>${esc(nameOf(f))}</b> hides ${fmt(f.trailing)} lines with trailing whitespace. Invisible mess is still mess.`]);
+    for (const f of pick(text.filter(f => f.wtf >= 3), f => f.wtf, 2)) out.push(['🤯', f, `<b>${esc(nameOf(f))}</b> mentions “wtf / magic / ugly” ${fmt(f.wtf)} times. The code is talking to you.`]);
+    if (!out.length) return '<p class="rant-empty">😌 No bonus material. Your code is suspiciously well-behaved.</p>';
+    return `<ul class="rant-list">${out.map(([e, f, t, line]) => `<li class="rant-item" data-abs="${esc(f.abs)}" ${line ? `data-line="${line}"` : ''} title="Open ${esc(f.path)}">
+      <span class="rant-emoji">${e}</span><div><div class="rant-text">${t}</div><div class="rant-path">${esc(f.path)}</div></div></li>`).join('')}</ul>`;
   }
 
   function rantSection() {
@@ -484,19 +572,44 @@
     if (!cfg.enabled) return '';
     const t = D.totals;
     const projBlank = pct(t.blank, t.lines);
-    const longCount = D.table.filter(isTooLong).length;
-    const airyCount = D.table.filter(isTooAiry).length;
-    let headline;
-    if (!longCount && !airyCount && projBlank <= cfg.maxBlankPercent) headline = 'Nothing to rant about. Suspicious. Very suspicious.';
-    else if (projBlank > cfg.maxBlankPercent) headline = `Across the whole project ${projBlank.toFixed(1)}% of all lines are blank – that is ${fmt(t.blank)} lines of pure nothing. The limit is ${cfg.maxBlankPercent}%.`;
-    else headline = `${fmt(longCount)} oversized and ${fmt(airyCount)} overly airy file${longCount + airyCount === 1 ? '' : 's'}. Let’s talk about it.`;
+    const longs = D.table.filter(isTooLong);
+    const airy = D.table.filter(isTooAiry);
+    const candidates = Math.max(1, D.table.filter(f => !f.binary && f.lines >= 10).length);
+    // score: offenders weighted by severity (1..4), relative to the number of real files
+    const weight = longs.reduce((s, f) => s + longLevel(f) + 1, 0) + airy.reduce((s, f) => s + blankLevel(f) + 1, 0) * 0.6;
+    // 0 = no offenders, 100 = half of all files at the worst level in both categories
+    let score = Math.min(100, Math.round((weight / (6.4 * candidates)) * 200));
+    if (projBlank > cfg.maxBlankPercent) score = Math.min(100, score + 10);
+    const mood = MOODS.find(m => score <= m[0]);
+    const worst = longs.sort((a, b) => b.lines - a.lines)[0];
+    const overLines = longs.reduce((s, f) => s + f.lines - cfg.maxLines, 0);
+    const removable = airy.reduce((s, f) => s + extraBlank(f), 0);
+    const projLine = projBlank > cfg.maxBlankPercent
+      ? `🏝️ Across the whole project ${projBlank.toFixed(1)}% of all lines are blank – ${fmt(t.blank)} lines of pure nothing (limit ${cfg.maxBlankPercent}%).`
+      : `✅ Project-wide only ${projBlank.toFixed(1)}% blank lines – within the ${cfg.maxBlankPercent}% limit.`;
     return `<h2 id="s-rant">Code Rant</h2>
-      <div class="rant-head">${icon('megaphone', 'rant-ic')}<div><div class="rant-headline">${esc(headline)}</div>
-        <div class="muted">Limits: ${fmt(cfg.maxLines)} lines per file, ${cfg.maxBlankPercent}% blank lines – change them in the settings (linecounter.rant.*).</div></div></div>
+      <div class="rant-head">
+        <div class="rant-mood"><span class="rant-mood-emoji">${mood[1]}</span><span class="rant-mood-label">${mood[2]}</span></div>
+        <div class="rant-meter-wrap">
+          <div class="rant-headline">Rant-o-Meter: ${score}/100 – ${esc(mood[3])}</div>
+          <div class="rant-meter"><span class="rant-meter-fill" style="width:${score}%"></span><span class="rant-meter-mark" style="left:${score}%"></span></div>
+          <div class="rant-meter-scale">${MOODS.map(m => `<span>${m[1]}</span>`).join('')}</div>
+          <div class="muted rant-proj">${esc(projLine)}</div>
+        </div>
+      </div>
+      <div class="rant-stats">
+        <div class="rant-stat"><span class="rant-stat-emoji">📚</span><div><b>${fmt(longs.length)}</b> file${longs.length === 1 ? '' : 's'} over ${fmt(cfg.maxLines)} lines</div></div>
+        <div class="rant-stat"><span class="rant-stat-emoji">✂️</span><div><b>${fmt(overLines)}</b> lines above the limit in total</div></div>
+        <div class="rant-stat"><span class="rant-stat-emoji">🫧</span><div><b>${fmt(airy.length)}</b> file${airy.length === 1 ? '' : 's'} over ${cfg.maxBlankPercent}% blank</div></div>
+        <div class="rant-stat"><span class="rant-stat-emoji">🗑️</span><div><b>${fmt(removable)}</b> blank lines could go</div></div>
+        ${worst ? `<div class="rant-stat clickable" data-abs="${esc(worst.abs)}" title="Open ${esc(worst.path)}"><span class="rant-stat-emoji">👑</span><div>Worst offender: <b>${esc(nameOf(worst))}</b> (${(worst.lines / cfg.maxLines).toFixed(1)}×)</div></div>` : ''}
+      </div>
       <div class="grid-2">
-        ${card(`Too long – over ${fmt(cfg.maxLines)} lines`, `<div id="rant-long">${rantList('long')}</div>`)}
-        ${card(`Too much air – over ${cfg.maxBlankPercent}% blank`, `<div id="rant-blank">${rantList('blank')}</div>`)}
-      </div>`;
+        ${card(`📚 Too long – over ${fmt(cfg.maxLines)} lines`, `<div id="rant-long">${rantList('long')}</div>`)}
+        ${card(`🫧 Too much air – over ${cfg.maxBlankPercent}% blank`, `<div id="rant-blank">${rantList('blank')}</div>`, { sub: 'files with 10+ lines' })}
+      </div>
+      ${card('🎁 Bonus rants', bonusRants(), { sub: 'Things nobody asked about' })}
+      <p class="muted rant-note">Limits come from the settings <code>linecounter.rant.maxFileLines</code> and <code>linecounter.rant.maxBlankPercent</code>.</p>`;
   }
 
   function identifierCloud() {
@@ -661,6 +774,14 @@
     }
     const fsBtn = t.closest('[data-fs]');
     if (fsBtn) { toggleCardFullscreen(/** @type {HTMLElement} */ (fsBtn.closest('.card'))); return; }
+    const rantLv = t.closest('[data-rant-lv]');
+    if (rantLv) {
+      const [kind, lv] = /** @type {HTMLElement} */ (rantLv).dataset.rantLv.split(':');
+      rantLevelFilter[kind] = Number(lv);
+      rantShowAll[kind] = false;
+      document.getElementById('rant-' + kind).innerHTML = rantList(kind);
+      return;
+    }
     const rantAll = t.closest('[data-rant-all]');
     if (rantAll) {
       const kind = /** @type {HTMLElement} */ (rantAll).dataset.rantAll;
