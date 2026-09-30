@@ -185,7 +185,11 @@ async function createStatistics(context, roots, selection) {
     for (const repoPath of candidates) {
       const prefix = repoPath.endsWith(path.sep) ? repoPath : repoPath + path.sep;
       if (!results.some(f => f.abs.startsWith(prefix))) continue; // repo not part of the selection
-      const stats = await git.repoStats(repoPath, maxCommits);
+      const stats = await git.repoStats(repoPath, maxCommits, {
+        minLength: cfg.get('rant.commitMinLength', 10),
+        maxLength: cfg.get('rant.commitMaxLength', 72),
+        words: cfg.get('rant.commitWords', []),
+      });
       if (stats) {
         stats.fileCount = results.filter(f => f.abs.startsWith(prefix)).length;
         repos.push(stats);

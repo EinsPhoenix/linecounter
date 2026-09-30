@@ -1,5 +1,7 @@
 'use strict';
 
+const { buildWordGraph, buildImportGraph } = require('./graphs');
+
 /** Aggregates per-file analysis results into the data model shown on the statistics page. */
 function aggregate(files, meta) {
   const text = files.filter(f => !f.binary && !f.skipped);
@@ -80,6 +82,7 @@ function aggregate(files, meta) {
   return {
     generated: now, ...meta, multiRoot,
     totals, languages, extensions, folders, histogram, identifiers, ages, table,
+    wordGraph: buildWordGraph(text), importGraph: buildImportGraph(text),
   };
 }
 

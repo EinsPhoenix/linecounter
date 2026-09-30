@@ -60,6 +60,8 @@ class StatsPanel {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="${w.asWebviewUri(vscode.Uri.joinPath(media, 'stats.css'))}"><title>Code Statistics</title></head>
 <body><div id="app"><div class="loading">Crunching numbers…</div></div><div id="tooltip" role="tooltip"></div>
+<script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'vendor', 'd3.min.js'))}"></script>
+<script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'graphs.js'))}"></script>
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'stats.js'))}"></script></body></html>`;
 
     w.onDidReceiveMessage(msg => this.onMessage(msg), null, context.subscriptions);
