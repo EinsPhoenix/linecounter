@@ -48,11 +48,13 @@
         vulnTile,
         { label: 'Unused packages', value: fmt(unused), sub: `${fmt(undeclared)} imported but not declared` },
       ])}
-      <div class="grid-3">
-        ${card('License categories', donut(cats, fmt(P.length), 'packages'))}
-        ${card('Licenses', hbars(topLic.map(([l, c]) => ({ label: l, value: c, color: CAT[(P.find(p => p.license === l) || {}).category || 'unknown'].color, attrs: `data-dep-lic="${esc(l)}"`, tip: `<b>${esc(l)}</b><br>${fmt(c)} packages<br><i>click to list them</i>` }))), { sub: 'click a bar to list the packages' })}
-        ${card('Unused & undeclared', usageHtml(ui, R))}
-      </div>
+      ${card('License overview', `
+        <div class="dep-catbar">${cats.map(c => `<span class="dep-catseg clickable" ${c.attrs} style="flex:${c.value};background:${c.color}" ${ui.tipAttr(`<b>${esc(c.label)}</b><br>${fmt(c.value)} packages<br><i>click to list them</i>`)}>${c.value / P.length > 0.07 ? `${esc(c.label)} · ${fmt(c.value)}` : ''}</span>`).join('')}</div>
+        <div class="dep-lic-grid">
+          <div class="dep-lic-donut">${donut(cats, fmt(P.length), 'packages')}</div>
+          <div class="dep-lic-bars">${hbars(topLic.map(([l, c]) => ({ label: l, value: c, color: CAT[(P.find(p => p.license === l) || {}).category || 'unknown'].color, attrs: `data-dep-lic="${esc(l)}"`, tip: `<b>${esc(l)}</b><br>${fmt(c)} packages<br><i>click to list them</i>` })))}</div>
+        </div>`, { sub: 'click a category or license to list its packages' })}
+      ${card('Dependency hygiene – unused & undeclared', usageHtml(ui, R), { sub: 'click a package to jump to its declaration · click a file to open it' })}
       ${card(`${icon('alert')} Vulnerabilities <span class="muted">via OSV.dev</span>`, `<div id="dep-vulns">${vulnsHtml(ui, R)}</div>`, { sub: R.vulns.enabled && !R.vulns.error ? `${fmt(R.vulns.checked)} packages checked`: '', tools: R.vulns.enabled ? `<button class="btn" data-dep-pdf="vulns">${icon('pages')} Vulnerability PDF</button>` : '' })}
       ${card('License report', `<div class="table-tools dep-tools">
           <select id="depStatus">
@@ -75,13 +77,27 @@
   function usageHtml(ui, R) {
     const { esc, fmt } = ui;
     const blocks = R.usage.filter(u => u.unused.length || u.undeclared.length);
-    if (!blocks.length) return '<p class="muted">Every declared package is imported somewhere, and every import is declared. Nice.</p>';
-    return blocks.map(u => `<div class="dep-usage">
-      <div class="dep-usage-head"><span class="dep-eco ${u.ecosystem === 'npm' ? 'npm' : 'py'}">${u.ecosystem}</span> ${esc(u.file)}</div>
-      ${u.unused.length ? `<div class="dep-usage-title">Possibly unused (${fmt(u.unused.length)})</div><ul class="dep-list">${u.unused.map(x => `<li><a href="#" class="file dep-pkg" data-abs="${esc(u.abs)}" ${x.line ? `data-line="${x.line}"` : ''} title="Open the declaration in ${esc(u.file)}">${esc(x.name)}</a> <span class="dep-tag ${x.type}">${esc(x.type)}</span> <span class="muted">${esc(x.hint)}</span></li>`).join('')}</ul>` : ''}
-      ${u.undeclared.length ? `<div class="dep-usage-title">Imported but not declared (${fmt(u.undeclared.length)}) <a href="#" class="file" data-abs="${esc(u.abs)}" title="Open ${esc(u.file)} to declare them">open ${esc(u.file.split('/').pop())}</a></div><ul class="dep-list">${u.undeclared.map(x => `<li><b>${esc(x.name)}</b>${x.dist && x.dist !== x.name ? ` <span class="muted">(${esc(x.dist)})</span>` : ''}${x.installed ? ' <span class="muted">· installed transitively</span>' : ''}
-        <div class="dep-files">${x.files.map(f => `<a href="#" class="file" data-abs="${esc(f.abs)}" title="Open ${esc(f.path)}">${esc(f.path)}</a>`).join('')}</div></li>`).join('')}</ul>` : ''}
-    </div>`).join('');
+    if (!blocks.length) return '<p class="dep-okmsg">Every declared package is imported somewhere, and every import is declared. Nice.</p>';
+    const pkgLink = (u, x) => `<a href="#" class="file dep-pkg" data-abs="${esc(u.abs)}" ${x.line ? `data-line="${x.line}"` : ''} title="Open the declaration in ${esc(u.file)}${x.line ? ':' + x.line : ''}">${esc(x.name)}</a>`;
+    const row = (u, x) => `<li class="dep-row"><span class="dep-row-main">${pkgLink(u, x)} <span class="dep-tag ${x.type}">${esc(x.type)}</span></span><span class="dep-row-hint">${esc(x.hint)}</span></li>`;
+    return `<div class="dep-hygiene">${blocks.map(u => {
+      const real = u.unused.filter(x => x.type !== 'tool');
+      const tools = u.unused.filter(x => x.type === 'tool');
+      return `<div class="dep-hyg-card">
+        <div class="dep-hyg-head">
+          <span class="dep-eco ${u.ecosystem === 'npm' ? 'npm' : 'py'}">${u.ecosystem}</span>
+          <a href="#" class="file dep-hyg-file" data-abs="${esc(u.abs)}" title="Open ${esc(u.file)}">${esc(u.file)}</a>
+          <span class="dep-hyg-chips">${real.length ? `<span class="dep-chip warn">${fmt(real.length)} unused</span>` : ''}${u.undeclared.length ? `<span class="dep-chip bad">${fmt(u.undeclared.length)} undeclared</span>` : ''}${tools.length ? `<span class="dep-chip">${fmt(tools.length)} CLI tools</span>` : ''}</span>
+        </div>
+        ${real.length ? `<div class="dep-hyg-sec"><div class="dep-hyg-title">Declared but never imported <span class="muted">– remove them or check your configs</span></div><ul class="dep-rows">${real.map(x => row(u, x)).join('')}</ul></div>` : ''}
+        ${u.undeclared.length ? `<div class="dep-hyg-sec"><div class="dep-hyg-title">Imported but not declared <span class="muted">– add them to</span> <a href="#" class="file" data-abs="${esc(u.abs)}">${esc(u.file.split('/').pop())}</a></div>
+          <ul class="dep-rows">${u.undeclared.map(x => `<li class="dep-row undecl">
+            <details><summary><span class="dep-row-main"><b>${esc(x.name)}</b>${x.dist && x.dist !== x.name ? ` <span class="muted">(${esc(x.dist)})</span>` : ''}${x.installed ? ' <span class="dep-tag trans">installed transitively</span>' : ' <span class="dep-tag missing">not installed</span>'}</span>
+              <span class="dep-row-hint">used in ${fmt(x.files.length)} file${x.files.length === 1 ? '' : 's'} ▾</span></summary>
+              <div class="dep-files">${x.files.map(f => `<a href="#" class="file" data-abs="${esc(f.abs)}" title="Open ${esc(f.path)}">${esc(f.path)}</a>`).join('')}</div></details></li>`).join('')}</ul></div>` : ''}
+        ${tools.length ? `<details class="dep-hyg-tools"><summary>${fmt(tools.length)} command-line tool${tools.length === 1 ? '' : 's'} – not imported, probably fine</summary><ul class="dep-rows">${tools.map(x => row(u, x)).join('')}</ul></details>` : ''}
+      </div>`;
+    }).join('')}</div>`;
   }
 
   function vulnsHtml(ui, R) {

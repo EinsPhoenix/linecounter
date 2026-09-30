@@ -149,7 +149,7 @@
       const s = a0 + gap / 2, e = Math.max(s + 0.001, a1 - gap / 2);
       a0 = a1;
       if (frac >= 0.9999) {
-        return `<circle cx="${C}" cy="${C}" r="${(R + r) / 2}" fill="none" style="stroke:${it.color}" stroke-width="${R - r}" class="hit" ${it.attrs || ''} ${tipAttr(`<b>${esc(it.label)}</b><br>${fmt(it.value)} (100%)`)}/>`;
+        return `<circle cx="${C}" cy="${C}" r="${(R + r) / 2}" fill="none" style="stroke:${it.color};stroke-width:${R - r}px" class="hit" ${it.attrs || ''} ${tipAttr(`<b>${esc(it.label)}</b><br>${fmt(it.value)} (100%)`)}/>`;
       }
       const large = e - s > Math.PI ? 1 : 0;
       const p = (rad, ang) => `${(C + rad * Math.cos(ang)).toFixed(2)} ${(C + rad * Math.sin(ang)).toFixed(2)}`;

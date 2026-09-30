@@ -70,20 +70,32 @@ Die Seite nutzt ein festes Farbschema aus dunklem Orange und Grau mit SVG-Icons.
     - **Layout:** *Force* oder *Layered*. Layered zeigt Importeure oben und importierte Dateien darunter, Ketten laufen damit von oben nach unten.
     - **Bibliotheken als Knoten:** In der Sidebar gibt es unter den Filtern den Schalter *Show libraries as graph nodes*. Externe npm- und Python-Pakete werden dann zu Knoten im Graphen: Quadrate, und Pakete mit bekannten Schwachstellen als rote Totenköpfe. Tooltip mit Version, Lizenz und Schwachstellen. Sie zählen in keiner Statistik.
     - **3D Train (Dependency Express):**
-      - **Welt:** Dateien sind Planeten (Größe nach Importen, Ringe für Hubs, roter Schein bei Zyklen), Bibliotheken sind Metallwürfel, verwundbare Pakete sind Totenköpfe, und Dateien, die verwundbare Pakete importieren, bekommen einen Totenkopf-Mond. Jede Beziehung ist ein durchgehendes Gleis (Bézier-Kurve), das mitten durch die Planeten läuft. Dort kreuzen sich die Gleise, und Tunnelportale markieren die Weichen. Zyklen haben rote Schienen. Die Planeten stehen mit großem Abstand und überlappen nicht.
+      - **Welt:** Dateien sind Planeten (Größe nach Importen, roter Schein bei Zyklen), Bibliotheken sind Metallwürfel, verwundbare Pakete sind Totenköpfe, und Dateien, die verwundbare Pakete importieren, bekommen einen Totenkopf-Mond. Die Planeten stehen mit großem Abstand und überlappen nicht.
+      - **Gleise:** Jede Beziehung ist ein durchgehendes Gleis (Bézier-Kurve). Es läuft **über** die Planeten: Jede Beziehung verlässt den Planeten auf der oberen Hälfte in Richtung Ziel, und oben am Pol treffen sich alle Gleise auf einer **Drehscheibe**. Dort kreuzen sie sich, und dort wechselt der Zug die Beziehung. Zyklen haben rote Schienen, Funktionsaufrufe bernsteinfarbene.
+      - **Zug:** eine Magnetschwebebahn mit Cockpit-Kuppel, Leuchtstreifen, Schwebe-Pads, Triebwerksglühen und Ionenspur. Auf den Planeten richtet sich der Zug zur Oberfläche aus.
+      - **Funktionen (ƒ Functions):** Schaltest du im Graphen oder in der Zug-Top-Bar die Funktionen ein, werden Funktionen zu kristallförmigen Monden mit eigenen Gleisen (Datei → Funktion, Aufrufer → aufgerufene Funktion). So fährst du Dateien und Funktionen entlang. Im Chain-Modus gibt es zusätzlich die Route *Longest call chain*.
       - **Beschriftungen** erscheinen nur für Objekte in der Nähe, für das, was die Kamera anschaut, und für die Stationen der Strecke.
       - **Chain:** Der Zug fährt eine Kette oder eine Ringlinie (zirkulärer Import) mit Stationen ab. Das Fahrziel ist wählbar.
       - **Free roam:** Du startest an der ausgewählten Datei oder klickst auf einem Planeten *Free roam from here*.
       - **Manuell:** **W** fährt. Der Zug hält am Portal einer Weiche. Dort wählst du die Beziehung mit **A**/**D** und musst **W** loslassen und erneut drücken. Mit *Auto-choose: on* nimmt der Zug stattdessen ohne Halt die geradeste Fortsetzung. Gibt es nur eine Fortsetzung, geht es ohne Auswahl geradeaus. Übergänge zwischen zwei Beziehungen sind weiche Bézier-Kurven durch den Planeten.
       - **S dreht um:** Der Zug hebt kurz ab, dreht sich mit allen Waggons und der Kamera um 180° und setzt auf dem Gegengleis wieder auf. Im Chain-Modus bleibt der Zug auf der Kette.
       - **Auto:** konstante Geschwindigkeit. Im Free Roam wählt der Zug an Kreuzungen zufällig eine Beziehung und nimmt bevorzugt nicht den Weg, auf dem er gekommen ist. In Sackgassen dreht er um. Der Regler **Stop** stellt die Haltezeit an jedem Planeten ein (0–5 s). Bei 0 fährt der Zug ohne Bremsen durch.
-      - **Fly (X):** Der Zug löst sich von den Gleisen. **W** gibt Schub, **S** bremst, **A**/**D** lenken, **R**/**F** steigen oder sinken. **E** rastet auf der nächstgelegenen Beziehung wieder ein; der Zug gleitet dabei auf einer Kurve zurück auf das Gleis.
+      - **Fly (X):** Der Zug löst sich von den Gleisen. **W** gibt Schub, **S** bremst, **A**/**D** lenken, **Q**/**E** steigen oder sinken. **R** rastet auf der nächstgelegenen Beziehung wieder ein; der Zug gleitet dabei auf einer Kurve zurück auf das Gleis.
+      - **Tasten** lassen sich mit `linecounter.train.keys` ändern (z. B. `{ "up": "r", "down": "f", "snap": "e" }`).
       - **Kameras:** Chase, Cab (Führerstand, dreht sich mit dem Zug statt mit der Welt) und Free cam. **C** wechselt, Ziehen mit der Maus schaut umher, das Mausrad zoomt, ↑/↓ ändert die Geschwindigkeit, Leertaste pausiert, **Esc** beendet.
     - **Motion:** *Wiggle*, *Calm* (kommt zur Ruhe) oder *Still* (statisch, ohne Animation). Gezogene Knoten bleiben in Calm und Still dort liegen, wo man sie ablegt. Gegenseitige Imports werden als Bögen gezeichnet.
   - Alle Graphen lassen sich zoomen, verschieben und per Drag bewegen. Hover hebt die Nachbarn hervor. Die Buttons oben rechts pausieren die Animation, schalten das Wackeln ein und aus, schütteln den Graphen durch und setzen den Zoom zurück. Die Einblend-Animation startet, sobald ein Graph ins Bild scrollt.
+    - **ƒ Functions:** Funktionen als Rauten im Graphen, verbunden mit ihrer Datei und mit den Funktionen, die sie aufrufen (nur entlang echter Imports). Doppelklick öffnet die Funktion an ihrer Zeile.
+- **Code health**
+  - Note (A–F) und Score als Tacho, dazu Funktionen, zu komplexe und zu lange Funktionen, Anteil duplizierten Codes und gefundene Secrets
+  - **Komplexität pro Funktion** (zyklomatisch, verschachtelte Funktionen zählen separat) für JS/TS, Python, Go, Rust, Java, C#, C/C++, Kotlin, Swift, PHP, Ruby und Lua. Diagramme zur Verteilung, zur Funktionslänge und zu Hotspot-Dateien.
+  - Tabelle *Most complex*, *Longest*, *Too many parameters* mit Filter. Ein Klick springt direkt zur Funktion.
+  - **Duplizierter Code:** Blöcke ab 6 identischen (normalisierten) Zeilen mit beiden Fundstellen zum Anklicken
+  - **Secrets-Scanner:** AWS-, GitHub-, GitLab-, Slack-, Stripe-, Google-, OpenAI-, Anthropic-, npm- und SendGrid-Keys, Private Keys, JWTs, Connection-Strings mit Passwort und hart codierte Passwörter (mit Entropie-Prüfung). Werte werden maskiert.
+  - Passende Rants im Code Rant, dazu ein **Code-Health-PDF** und ein **Secrets-PDF**
 - **Ranglisten-Tabelle** aller Dateien: sortierbar nach jeder Spalte, Filter nach Pfad und Sprache. Ein Klick öffnet die Datei.
 - **Project structure** (ganz am Ende): Ordner und Dateien als lebender Force-Graph. Ein Klick auf einen Ordner klappt ihn zu oder auf, ein Klick auf eine Datei öffnet sie. Große Projekte starten teilweise zugeklappt, damit der Graph flüssig bleibt.
-- **PDF-Export:** Du wählst die Abschnitte, Papierformat (A4 oder Letter), dunkles oder helles druckfreundliches Design und ein Deckblatt mit Kennzahlen. Dazu gibt es eigene PDFs für den **Lizenz-Report** und den **Schwachstellen-Report** (durchsuchbare Tabellen mit Handlungsempfehlungen).
+- **PDF-Export:** Du wählst die Abschnitte, Papierformat (A4 oder Letter), dunkles oder helles druckfreundliches Design und ein Deckblatt mit Kennzahlen. Dazu gibt es eigene PDFs für den **Lizenz-Report**, den **Schwachstellen-Report**, den **Code-Health-Report** und den **Secrets-Report** (durchsuchbare Tabellen mit Handlungsempfehlungen).
 - **HTML-Report:** eine einzelne, interaktive HTML-Datei, die in jedem Browser ohne VS Code funktioniert
 - Export als **CSV** oder **JSON**, *Refresh*, *Maximize*, *Full screen*
 
@@ -120,6 +132,15 @@ Alle Einstellungen lassen sich auch pro Projekt in **`.linecounter/settings.json
 | `linecounter.licenses.includeTransitive` | `true` | Transitive Pakete in den Lizenz-Report aufnehmen |
 | `linecounter.vulnerabilities.enabled` | `true` | Schwachstellen über OSV.dev prüfen |
 | `linecounter.vulnerabilities.includeTransitive` | `true` | Auch transitive Pakete prüfen |
+| `linecounter.licenses.fetchFromRegistry` | `true` | Lizenz nicht installierter Pakete aus der npm- bzw. PyPI-Registry holen |
+| `linecounter.health.enabled` | `true` | Code health: Komplexität, lange Funktionen, duplizierter Code |
+| `linecounter.health.maxComplexity` | `15` | Ab dieser zyklomatischen Komplexität gilt eine Funktion als zu komplex |
+| `linecounter.health.maxFunctionLines` | `80` | Ab dieser Länge gilt eine Funktion als zu lang |
+| `linecounter.health.duplicateMinLines` | `6` | Mindestlänge duplizierter Blöcke |
+| `linecounter.secrets.enabled` | `true` | Nach hart codierten Secrets suchen |
+| `linecounter.secrets.ignore` | Tests, Beispiele | Glob-Muster für Dateien, die nicht nach Secrets durchsucht werden |
+| `linecounter.graphs.maxFunctions` | `600` | Maximale Anzahl Funktionen im Graphen und im 3D-Zug |
+| `linecounter.train.keys` | W/S/A/D, Q/E, R, X, C | Tastenbelegung des 3D-Zugs (`forward`, `back`, `left`, `right`, `up`, `down`, `snap`, `fly`, `camera`) |
 | `linecounter.maxFileSizeKB` | `2048` | Größere Dateien zählen nur mit ihrer Größe |
 | `linecounter.maxEntries` | `200000` | Maximale Anzahl gescannter Einträge |
 | `linecounter.maxCommits` | `20000` | Maximale Anzahl gelesener Commits pro Repo |
