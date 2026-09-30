@@ -326,6 +326,99 @@
           "type": "boolean",
           "default": true,
           "markdownDescription": "Look up the license of packages that are declared but not installed in the public registries (registry.npmjs.org, pypi.org). Only package names are sent."
+        },
+        "linecounter.train.keys": {
+          "type": "object",
+          "default": {
+            "forward": "w",
+            "back": "s",
+            "left": "a",
+            "right": "d",
+            "up": "q",
+            "down": "e",
+            "snap": "r",
+            "fly": "x",
+            "camera": "c"
+          },
+          "properties": {
+            "forward": {
+              "type": "string"
+            },
+            "back": {
+              "type": "string"
+            },
+            "left": {
+              "type": "string"
+            },
+            "right": {
+              "type": "string"
+            },
+            "up": {
+              "type": "string"
+            },
+            "down": {
+              "type": "string"
+            },
+            "snap": {
+              "type": "string"
+            },
+            "fly": {
+              "type": "string"
+            },
+            "camera": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false,
+          "description": "Key bindings of the 3D train: forward (drive / thrust), back (turn around / brake), left/right (choose relation / steer), up/down (climb / dive when flying), snap (snap back onto the nearest relation), fly (leave the rails), camera."
+        },
+        "linecounter.graphs.maxFunctions": {
+          "type": "number",
+          "default": 600,
+          "minimum": 0,
+          "description": "Maximum number of functions shown when functions are switched on in the import graph and the 3D train."
+        },
+        "linecounter.health.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Code health scan: complexity per function, long functions, duplicate code."
+        },
+        "linecounter.health.maxComplexity": {
+          "type": "number",
+          "default": 15,
+          "minimum": 2,
+          "description": "Functions with a higher cyclomatic complexity are flagged (and roasted)."
+        },
+        "linecounter.health.maxFunctionLines": {
+          "type": "number",
+          "default": 80,
+          "minimum": 5,
+          "description": "Functions longer than this are flagged."
+        },
+        "linecounter.health.duplicateMinLines": {
+          "type": "number",
+          "default": 6,
+          "minimum": 3,
+          "description": "Minimum number of identical (normalized) lines that count as duplicated code."
+        },
+        "linecounter.secrets.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Scan for hard-coded secrets (API keys, tokens, private keys, passwords). Values are masked in the report."
+        },
+        "linecounter.secrets.ignore": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/*.test.*",
+            "**/test/**",
+            "**/tests/**",
+            "**/*.example",
+            "**/*.sample"
+          ],
+          "description": "Glob patterns of files that are not scanned for secrets."
         }
       }
     },
@@ -343,7 +436,8 @@
   "scripts": {
     "package": "vsce package --skip-license --out linecounter.vsix",
     "test": "node test/smoke.js && node test/graphs.test.js && node test/deps.test.js",
-    "release": "node scripts/release.js"
+    "release": "node scripts/release.js",
+    "schema": "node scripts/schema.js"
   },
   "devDependencies": {
     "@vscode/vsce": "^3.2.0",
