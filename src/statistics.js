@@ -73,6 +73,7 @@ function dependencyOptions(config, onProgress) {
     },
     ignorePackages: config.get('licenses.ignorePackages', []),
     includeTransitiveLicenses: config.get('licenses.includeTransitive', true),
+    fetchFromRegistry: config.get('licenses.fetchFromRegistry', true),
     vulnerabilities: {
       enabled: config.get('vulnerabilities.enabled', true),
       includeTransitive: config.get('vulnerabilities.includeTransitive', true),

@@ -156,16 +156,30 @@ async function analyzeFile(absPath, relPath, root, maxBytes) {
 }
 
 const DEP_PATTERNS = {
-  js: [/(?:import|export)\s[^'"`;]*?from\s*['"]([^'"]+)['"]/g, /import\s*['"]([^'"]+)['"]/g, /(?:require|import)\s*\(\s*['"]([^'"]+)['"]\s*\)/g],
-  css: [/@(?:import|use|forward)\s+(?:url\()?\s*['"]([^'"]+)['"]/g],
-  c: [/#\s*include\s*"([^"]+)"/g],
-  py: [/^[ \t]*from[ \t]+(\.*[\w.]*)[ \t]+import/gm, /^[ \t]*import[ \t]+([\w.]+)/gm],
-  html: [/(?:src|href)\s*=\s*["']([^"':#?]+\.(?:m?js|ts|css))["']/g],
+  // only real import statements: anchored at the start of a line, no quotes before "from"
+  js: [
+    /^[ \t]*(?:import|export)[ \t]+(?:type[ \t]+)?[^;'"`]*?\bfrom[ \t]*['"]([^'"\n]+)['"]/gm,
+    /^[ \t]*import[ \t]*['"]([^'"\n]+)['"]/gm,
+    /\b(?:require|import)[ \t]*\([ \t]*['"]([^'"\n]+)['"][ \t]*\)/g,
+  ],
+  css: [/@(?:import|use|forward)\s+(?:url\()?\s*['"]([^'"\n]+)['"]/g],
+  c: [/^[ \t]*#[ \t]*include[ \t]*"([^"\n]+)"/gm],
+  py: [/^[ \t]*from[ \t]+(\.*[\w.]*)[ \t]+import\b/gm, /^[ \t]*import[ \t]+([\w.]+(?:[ \t]+as[ \t]+\w+)?(?:[ \t]*,[ \t]*[\w.]+(?:[ \t]+as[ \t]+\w+)?)*)/gm],
+  html: [/(?:src|href)\s*=\s*["']([^"':#?\n]+\.(?:m?js|ts|css))["']/g],
 };
 const DEP_KIND = {
   JavaScript: 'js', JSX: 'js', TypeScript: 'js', TSX: 'js', Vue: 'js', Svelte: 'js', Astro: 'js',
   CSS: 'css', SCSS: 'css', Less: 'css', C: 'c', 'C++': 'c', 'Objective-C': 'c', Python: 'py', HTML: 'html',
 };
+const VALID_SPEC = /^[\w@.~/#:+-]{1,200}$/;
+
+/** Removes comments (and Python docstrings) so that example code in them is not taken as an import. */
+function stripComments(text, kind) {
+  const blank = m => m.replace(/[^\n]/g, ' ');
+  if (kind === 'py') return text.replace(/("""|''')[\s\S]*?\1/g, blank).replace(/^[ \t]*#.*$/gm, '');
+  if (kind === 'js' || kind === 'css' || kind === 'c') return text.replace(/\/\*[\s\S]*?\*\//g, blank).replace(/^[ \t]*\/\/.*$/gm, '');
+  return text;
+}
 
 /** Import / include / require specifiers of a file (resolved to files later). */
 function extractDeps(text, langName) {
@@ -174,10 +188,15 @@ function extractDeps(text, langName) {
   const out = new Set();
   const kinds = kind === 'html' ? ['html', 'js'] : [kind];
   for (const k of kinds) {
+    const src = stripComments(text, k);
     for (const re of DEP_PATTERNS[k]) {
       re.lastIndex = 0;
       let m;
-      while ((m = re.exec(text)) && out.size < 300) out.add(m[1]);
+      while ((m = re.exec(src)) && out.size < 300) {
+        const isPlainPyImport = k === 'py' && !m[0].trimStart().startsWith('from');
+        const specs = isPlainPyImport ? m[1].split(',').map(x => x.trim().split(/\s+as\s+/)[0]) : [m[1].trim()];
+        for (const spec of specs) if (spec && VALID_SPEC.test(spec)) out.add(spec);
+      }
     }
   }
   return out.size ? [...out] : null;

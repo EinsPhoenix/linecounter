@@ -26,51 +26,141 @@ function npmLicense(pkg, dir) {
   return lic;
 }
 
+/** Directories from `dir` upwards (at most `max` levels). */
+function ancestors(dir, max = 6) {
+  const out = [];
+  let d = path.resolve(dir);
+  for (let i = 0; i <= max; i++) {
+    out.push(d);
+    const up = path.dirname(d);
+    if (up === d) break;
+    d = up;
+  }
+  return out;
+}
+const isDir = p => { try { return fs.statSync(p).isDirectory(); } catch { return false; } }; // follows symlinks (pnpm)
+const posixRel = (from, to) => path.relative(from, to).split(path.sep).join('/');
+const cleanVersion = v => (v ? String(v).replace(/^[=v]+/, '').replace(/\(.*$/, '').trim() : null);
+
+/** Versions from pnpm-lock.yaml (v5–v9) for one importer (project folder). */
+function pnpmVersions(lockText, rel) {
+  const out = new Map();
+  const lines = lockText.split(/\r?\n/);
+  const want = rel || '.';
+  let inImporters = false, inImporter = false, section = null, pkg = null;
+  for (const line of lines) {
+    if (/^importers:/.test(line)) { inImporters = true; continue; }
+    if (/^\S/.test(line) && !/^importers:/.test(line)) inImporters = false;
+    if (inImporters) {
+      const imp = /^ {2}(\S.*?):\s*$/.exec(line);
+      if (imp) { inImporter = imp[1].replace(/^['"]|['"]$/g, '') === want; section = null; continue; }
+      if (!inImporter) continue;
+      const sec = /^ {4}(dependencies|devDependencies|optionalDependencies):\s*$/.exec(line);
+      if (sec) { section = sec[1]; continue; }
+      if (!section) continue;
+      const dep = /^ {6}(\S+?):\s*(.*)$/.exec(line);
+      if (dep) {
+        pkg = dep[1].replace(/^['"]|['"]$/g, '');
+        if (dep[2] && !/^\s*$/.test(dep[2])) out.set(pkg, { version: cleanVersion(dep[2]), dev: section === 'devDependencies' }); // v5 style
+        continue;
+      }
+      const ver = /^ {8}version:\s*(.*)$/.exec(line);
+      if (ver && pkg) out.set(pkg, { version: cleanVersion(ver[1].replace(/^['"]|['"]$/g, '')), dev: section === 'devDependencies' });
+    }
+  }
+  // lock files without importers (single project, v5): top-level dependencies:
+  if (!out.size) {
+    let sec = null;
+    for (const line of lines) {
+      const s = /^(dependencies|devDependencies|optionalDependencies):\s*$/.exec(line);
+      if (s) { sec = s[1]; continue; }
+      if (/^\S/.test(line)) sec = null;
+      const d = sec && /^ {2}(\S+?):\s*(\S.*)$/.exec(line);
+      if (d) out.set(d[1].replace(/^['"]|['"]$/g, ''), { version: cleanVersion(d[2]), dev: sec === 'devDependencies' });
+    }
+  }
+  return out;
+}
+
+/** Versions from yarn.lock (classic and berry). */
+function yarnVersions(lockText) {
+  const out = new Map();
+  for (const block of lockText.split(/\r?\n\r?\n/)) {
+    const head = /^"?((?:@[^@/\s"]+\/)?[^@\s",]+)@/m.exec(block);
+    const ver = /^\s+version:?\s+"?([^"\s]+)"?/m.exec(block);
+    if (head && ver && !out.has(head[1])) out.set(head[1], { version: ver[1], dev: false });
+  }
+  return out;
+}
+
 /**
  * All npm packages installed for a project directory.
- * Uses package-lock.json (v2/v3 contains versions and licenses) and falls back to node_modules.
+ * Looks for package-lock.json / pnpm-lock.yaml / yarn.lock and node_modules in the project folder and
+ * its parents (npm / pnpm / yarn workspaces), follows symlinks (pnpm) and reads licenses from the lock
+ * file or the installed package.json.
  * -> Map(name -> { name, version, license, dev, dir, source })
  */
 function npmInstalled(projectDir) {
   const out = new Map();
-  const lock = readJson(path.join(projectDir, 'package-lock.json')) || readJson(path.join(projectDir, 'npm-shrinkwrap.json'));
-  if (lock && lock.packages) {
-    for (const [key, v] of Object.entries(lock.packages)) {
-      if (!key || !v || v.link) continue;
-      const i = key.lastIndexOf('node_modules/');
-      if (i < 0) continue;
-      const name = key.slice(i + 'node_modules/'.length);
-      const nested = key.indexOf('node_modules/') !== i;
-      if (out.has(name) && nested) continue; // keep the hoisted (top level) version
-      const dir = path.join(projectDir, key);
-      let license = v.license ? normalizeLicense(v.license) : null;
-      if (license === 'Custom' && /^see licen[cs]e in /i.test(String(v.license))) {
-        const t = readText(path.join(dir, String(v.license).replace(/^see licen[cs]e in /i, '').trim()));
-        license = (t && sniffLicenseText(t)) || 'Custom';
+  const dirs = ancestors(projectDir);
+  // ---- lock files ----
+  for (const d of dirs) {
+    const lock = readJson(path.join(d, 'package-lock.json')) || readJson(path.join(d, 'npm-shrinkwrap.json'));
+    if (lock && lock.packages) {
+      const rel = posixRel(d, projectDir);
+      const prefixes = rel ? [`${rel}/node_modules/`, 'node_modules/'] : ['node_modules/'];
+      for (const prefix of prefixes) {
+        for (const [key, v] of Object.entries(lock.packages)) {
+          if (!v || v.link || !key.startsWith(prefix)) continue;
+          const name = key.slice(prefix.length);
+          if (name.includes('/node_modules/') || out.has(name)) continue; // nested copies / already found closer
+          const dir = path.join(d, key);
+          let license = v.license ? normalizeLicense(v.license) : null;
+          if (license === 'Custom' && /^see licen[cs]e in /i.test(String(v.license))) {
+            const t = readText(path.join(dir, String(v.license).replace(/^see licen[cs]e in /i, '').trim()));
+            license = (t && sniffLicenseText(t)) || 'Custom';
+          }
+          out.set(name, { name, version: v.version || null, license, dev: !!v.dev, optional: !!v.optional, dir, source: 'package-lock.json' });
+        }
       }
-      if (!license) {
-        const pkg = readJson(path.join(dir, 'package.json'));
-        license = pkg ? npmLicense(pkg, dir) : 'Unknown';
-      }
-      out.set(name, { name, version: v.version || null, license, dev: !!v.dev, optional: !!v.optional, dir, source: 'package-lock.json' });
+      break;
     }
-    if (out.size) return out;
+    const pnpm = readText(path.join(d, 'pnpm-lock.yaml'));
+    if (pnpm) {
+      for (const [name, v] of pnpmVersions(pnpm, posixRel(d, projectDir))) if (!out.has(name)) out.set(name, { name, version: v.version, license: null, dev: v.dev, dir: null, source: 'pnpm-lock.yaml' });
+      break;
+    }
+    const yarn = readText(path.join(d, 'yarn.lock'));
+    if (yarn) {
+      for (const [name, v] of yarnVersions(yarn)) if (!out.has(name)) out.set(name, { name, version: v.version, license: null, dev: false, dir: null, source: 'yarn.lock' });
+      break;
+    }
   }
-  // node_modules fallback (top level + scoped packages)
-  const nm = path.join(projectDir, 'node_modules');
-  let entries = [];
-  try { entries = fs.readdirSync(nm, { withFileTypes: true }); } catch { return out; }
-  const addPkg = (dir, name) => {
+  // ---- node_modules (project folder first, then hoisted ones in parent folders) ----
+  const readPkg = (dir, name) => {
     const pkg = readJson(path.join(dir, 'package.json'));
-    if (pkg) out.set(name, { name, version: pkg.version || null, license: npmLicense(pkg, dir), dev: false, dir, source: 'node_modules' });
+    if (!pkg) return;
+    const cur = out.get(name);
+    if (cur && cur.license && cur.dir) return;
+    out.set(name, {
+      name, version: (cur && cur.version) || pkg.version || null,
+      license: (cur && cur.license) || npmLicense(pkg, dir), dev: cur ? cur.dev : false, dir,
+      source: cur ? cur.source : 'node_modules',
+    });
   };
-  for (const e of entries) {
-    if (!e.isDirectory() || e.name.startsWith('.')) continue;
-    if (e.name.startsWith('@')) {
-      let sub = [];
-      try { sub = fs.readdirSync(path.join(nm, e.name), { withFileTypes: true }); } catch { /* ignore */ }
-      for (const s of sub) if (s.isDirectory()) addPkg(path.join(nm, e.name, s.name), `${e.name}/${s.name}`);
-    } else addPkg(path.join(nm, e.name), e.name);
+  for (const d of dirs) {
+    const nm = path.join(d, 'node_modules');
+    let entries = [];
+    try { entries = fs.readdirSync(nm); } catch { continue; }
+    for (const e of entries) {
+      if (e.startsWith('.')) continue;
+      const p = path.join(nm, e);
+      if (e.startsWith('@')) {
+        let sub = [];
+        try { sub = fs.readdirSync(p); } catch { /* ignore */ }
+        for (const s2 of sub) if (isDir(path.join(p, s2))) readPkg(path.join(p, s2), `${e}/${s2}`);
+      } else if (isDir(p)) readPkg(p, e);
+    }
   }
   return out;
 }

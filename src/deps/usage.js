@@ -76,12 +76,12 @@ function analyzeUsage(manifests, files, installed) {
         const top = spec.split('.')[0];
         if (!top || PY_STDLIB.has(top)) continue;
         if (!r.used.has(top)) r.used.set(top, []);
-        if (r.used.get(top).length < 3) r.used.get(top).push(f.path);
+        if (r.used.get(top).length < 5) r.used.get(top).push({ path: f.path, abs: f.abs });
       } else {
         const pkg = npmPackageOf(spec);
         if (!pkg || NODE_BUILTINS.has(pkg) || pkg.startsWith('node:')) continue;
         if (!r.used.has(pkg)) r.used.set(pkg, []);
-        if (r.used.get(pkg).length < 3) r.used.get(pkg).push(f.path);
+        if (r.used.get(pkg).length < 5) r.used.get(pkg).push({ path: f.path, abs: f.abs });
       }
     }
   }
@@ -109,7 +109,7 @@ function analyzeUsage(manifests, files, installed) {
         const pluginLike = /(eslint-(plugin|config)|babel-(plugin|preset)|@babel\/|prettier-plugin|stylelint-|postcss-|@types\/|webpack-|rollup-plugin|vite-plugin|@vitejs\/|karma-|jest-)/.test(d.name);
         if (inConfig) continue;
         if (NPM_IMPLICIT.has(d.name) && (d.type === 'dev' || hasTs)) continue;
-        unused.push({ name: d.name, type: d.type, spec: d.spec, hint: pluginLike ? 'plugin/preset not referenced in any config' : d.type === 'dev' ? 'dev tool not referenced in scripts or configs' : 'never imported' });
+        unused.push({ name: d.name, type: d.type, spec: d.spec, line: d.line, hint: pluginLike ? 'plugin/preset not referenced in any config' : d.type === 'dev' ? 'dev tool not referenced in scripts or configs' : 'never imported' });
       }
       // modules provided by the host environment
       const hostProvided = new Set();
@@ -142,7 +142,7 @@ function analyzeUsage(manifests, files, installed) {
       for (const d of m.deps) {
         if (importNames(d).some(i => r.used.has(i))) continue;
         const tool = PY_TOOLS.has(pyName(d.name)) || /^(types-|pytest-|flake8-|mypy-)/.test(pyName(d.name));
-        unused.push({ name: d.name, type: tool ? 'tool' : d.type, spec: d.spec, hint: tool ? 'tool used from the command line (not imported)' : 'never imported' });
+        unused.push({ name: d.name, type: tool ? 'tool' : d.type, spec: d.spec, line: d.line, hint: tool ? 'tool used from the command line (not imported)' : 'never imported' });
       }
       const instByImport = new Map();
       for (const dist of installed.py.values()) for (const t of dist.topLevel) instByImport.set(t, dist.name);

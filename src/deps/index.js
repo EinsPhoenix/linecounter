@@ -6,6 +6,7 @@ const { npmInstalled, findSitePackages, pyInstalled, pyLockVersions } = require(
 const { classifyLicense } = require('./licenses');
 const { checkVulnerabilities } = require('./vulns');
 const { analyzeUsage } = require('./usage');
+const { fillFromRegistry } = require('./registry');
 
 const EXACT_VERSION = /^v?(\d+\.\d+(\.\d+)?([-.+][\w.]+)?)$/;
 
@@ -26,20 +27,24 @@ async function scanDependencies(files, opts) {
 
   // ---- npm ----
   const npmByDir = new Map();
+  const npmManifestNames = manifests.filter(x => x.ecosystem === 'npm').map(x => x.name);
   const pkgMap = new Map(); // key -> package row
   for (const m of manifests.filter(x => x.ecosystem === 'npm')) {
     if (!npmByDir.has(m.dir)) npmByDir.set(m.dir, npmInstalled(m.dir));
     const inst = npmByDir.get(m.dir);
     const direct = new Map(m.deps.map(d => [d.name, d]));
+    const own = new Set(npmManifestNames);
     const add = (name, info, d) => {
       const key = `npm|${name}|${info ? info.version : d && d.spec}`;
       const existing = pkgMap.get(key);
-      if (existing) { if (d) { existing.direct = true; existing.dev = existing.dev && d.type === 'dev'; if (!existing.manifests.includes(m.rel)) existing.manifests.push(m.rel); } return; }
+      if (existing) { if (d) { existing.direct = true; existing.dev = existing.dev && d.type === 'dev'; if (!existing.manifests.includes(m.rel)) { existing.manifests.push(m.rel); existing.decl.push({ file: m.file, line: d.line }); } } return; }
       const version = info ? info.version : (d && EXACT_VERSION.test(d.spec) ? d.spec.replace(/^v/, '') : null);
-      const license = info ? info.license : 'Unknown';
+      if (own.has(name)) return; // the project itself (workspaces)
+      const license = (info && info.license) || 'Unknown';
       pkgMap.set(key, {
         ecosystem: 'npm', name, version, spec: d ? d.spec : null, license, ...judge(license),
-        direct: !!d, dev: d ? d.type === 'dev' : !!(info && info.dev), installed: !!info, manifests: [m.rel],
+        direct: !!d, dev: d ? d.type === 'dev' : !!(info && info.dev), installed: !!(info && (info.dir || info.license)), manifests: [m.rel],
+        decl: d ? [{ file: m.file, line: d.line }] : [],
         dir: info ? info.dir : null, ignored: ignore.has(name.toLowerCase()),
       });
     };
@@ -56,6 +61,7 @@ async function scanDependencies(files, opts) {
     const lockVersions = new Map();
     for (const d of dirs) for (const [k, v] of pyLockVersions(d)) lockVersions.set(k, v);
     const declaredAll = new Set();
+    const ownPy = new Set(pyManifests.map(m => pyName(m.name)));
     for (const m of pyManifests) {
       for (const d of m.deps) {
         const n = pyName(d.name);
@@ -64,23 +70,30 @@ async function scanDependencies(files, opts) {
         const version = info ? info.version : lockVersions.get(n) || d.pinned || null;
         const key = `py|${n}|${version}`;
         const existing = pkgMap.get(key);
-        if (existing) { existing.direct = true; if (!existing.manifests.includes(m.rel)) existing.manifests.push(m.rel); continue; }
+        if (existing) { existing.direct = true; if (!existing.manifests.includes(m.rel)) { existing.manifests.push(m.rel); existing.decl.push({ file: m.file, line: d.line }); } continue; }
         const license = info ? info.license : 'Unknown';
         pkgMap.set(key, {
           ecosystem: 'PyPI', name: info ? info.name : d.name, version, spec: d.spec || null, license, ...judge(license),
           direct: true, dev: d.type === 'dev', installed: !!info, manifests: [m.rel], dir: info ? info.dir : null, ignored: ignore.has(n),
+          decl: [{ file: m.file, line: d.line }],
         });
       }
     }
     if (opts.includeTransitiveLicenses) {
       for (const [n, info] of pyInst) {
-        if (declaredAll.has(n) || ['pip', 'setuptools', 'wheel', 'distribute', 'pkg-resources'].includes(n)) continue;
+        if (declaredAll.has(n) || ownPy.has(n) || ['pip', 'setuptools', 'wheel', 'distribute', 'pkg-resources'].includes(n)) continue;
         pkgMap.set(`py|${n}|${info.version}`, {
           ecosystem: 'PyPI', name: info.name, version: info.version, spec: null, license: info.license, ...judge(info.license),
-          direct: false, dev: false, installed: true, manifests: [], dir: info.dir, ignored: ignore.has(n),
+          direct: false, dev: false, installed: true, manifests: [], dir: info.dir, ignored: ignore.has(n), decl: [],
         });
       }
     }
+  }
+  // ---- licenses of packages that are not installed: ask the registries ----
+  if (opts.fetchFromRegistry) {
+    if (opts.onProgress) opts.onProgress('Looking up licenses of packages that are not installed (npm / PyPI registry)…');
+    try { report.registry = await fillFromRegistry([...pkgMap.values()], { timeoutMs: opts.registryTimeoutMs || 10000 }); } catch (e) { report.registry = { error: e.message }; }
+    for (const p of pkgMap.values()) if (p.licenseSource === 'registry') Object.assign(p, judge(p.license));
   }
   report.packages = [...pkgMap.values()].sort((a, b) => a.ecosystem.localeCompare(b.ecosystem) || Number(b.direct) - Number(a.direct) || a.name.localeCompare(b.name));
   report.pythonEnvironments = pyInst.size ? [...new Set([...pyInst.values()].map(p => path.dirname(p.dir)))] : [];
