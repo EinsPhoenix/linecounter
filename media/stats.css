@@ -534,3 +534,5 @@ body.has-train { overflow: hidden; }
 .hl-note { font-size: 12px; margin-top: 8px; }
 @media (max-width: 900px) { .hl-top { grid-template-columns: 1fr; } }
 .hl-bottom { align-items: start; }
+#train3d .t3-route { max-width: 250px; text-overflow: ellipsis; }
+#train3d .t3-top { row-gap: 6px; padding-right: 110px; }
