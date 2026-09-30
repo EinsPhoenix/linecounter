@@ -6,6 +6,7 @@ const { analyzeFiles } = require('./analyzer');
 const { aggregate } = require('./stats');
 const git = require('./git');
 const { scanDependencies } = require('./deps');
+const { globToRegExp } = require('./util');
 
 /**
  * Runs the whole analysis for the selected files and returns the data model for the statistics page.
@@ -30,7 +31,7 @@ async function computeStatistics(config, roots, selection, options = {}) {
       const pct = (done / total) * 80;
       progress.report({ increment: pct - reported, message: `Analyzing files ${done}/${total}` });
       reported = pct;
-    }, token);
+    }, token, scanOptions(config));
     if (token.isCancellationRequested) return null;
     const rootNames = new Map(roots.map(r => [r.path, r.name]));
     for (const r of results) r.rootName = rootNames.get(r.root);
@@ -56,6 +57,8 @@ async function computeStatistics(config, roots, selection, options = {}) {
       repos,
       graphMotion: config.get('graphs.motion', 'auto'),
       trainKeys: config.get('train.keys', {}),
+      maxFunctions: config.get('graphs.maxFunctions', 600),
+      health: healthOptions(config),
       rant: {
         enabled: config.get('rant.enabled', true),
         maxLines: Math.max(1, config.get('rant.maxFileLines', 500)),
@@ -63,6 +66,28 @@ async function computeStatistics(config, roots, selection, options = {}) {
       },
     });
   });
+}
+
+function scanOptions(config) {
+  const health = config.get('health.enabled', true);
+  const ignore = (config.get('secrets.ignore', []) || []).map(g => { try { return globToRegExp(g); } catch { return null; } }).filter(Boolean);
+  return {
+    functions: true,
+    duplicates: health,
+    dupMinLines: Math.max(3, config.get('health.duplicateMinLines', 6)),
+    secrets: config.get('secrets.enabled', true),
+    secretIgnore: rel => ignore.some(re => re.test(rel)),
+  };
+}
+
+function healthOptions(config) {
+  return {
+    enabled: config.get('health.enabled', true),
+    maxComplexity: Math.max(2, config.get('health.maxComplexity', 15)),
+    maxFunctionLines: Math.max(5, config.get('health.maxFunctionLines', 80)),
+    duplicateMinLines: Math.max(3, config.get('health.duplicateMinLines', 6)),
+    secrets: config.get('secrets.enabled', true),
+  };
 }
 
 function dependencyOptions(config, onProgress) {

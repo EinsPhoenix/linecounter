@@ -387,5 +387,83 @@
     return pdf.output('datauristring').split(',')[1];
   }
 
-  window.LCExport = { openDialog, createPdf, licensePdf, vulnPdf };
+  const SECRET_STYLE = {
+    critical: { fill: [255, 77, 79], color: [255, 255, 255], bold: true },
+    high: { fill: [224, 98, 27], color: [255, 255, 255], bold: true },
+    medium: { fill: [247, 174, 98], color: [40, 25, 10], bold: true },
+    low: { fill: [200, 200, 200], color: [30, 30, 30] },
+  };
+
+  function healthPdf(D) {
+    const H = D.health;
+    const { pdf, ctx } = reportDoc('Code health report', `${D.workspace || ''} · ${new Date(D.generated).toLocaleString()}`);
+    const gradeColor = H.score >= 80 ? [90, 90, 90] : H.score >= 65 ? [200, 130, 40] : H.score >= 50 ? [224, 98, 27] : [200, 40, 40];
+    ctx.kpis([['Grade', `${H.grade} (${H.score})`, gradeColor], ['Functions', H.functions], ['Too complex', H.overComplex, H.overComplex ? [224, 98, 27] : null],
+      ['Too long', H.overLong], ['Duplicated', H.duplicates ? H.duplicates.percent.toFixed(1) + '%' : 'off'], ['Secrets', H.secrets ? H.secrets.total : 'off', H.secrets && H.secrets.total ? [200, 40, 40] : null]]);
+    ctx.para(`Thresholds: complexity > ${H.thresholds.maxComplexity}, function length > ${H.thresholds.maxFunctionLines} lines, duplicates of ${H.thresholds.duplicateMinLines}+ lines (linecounter.health.*). Average complexity ${H.avgComplexity.toFixed(1)}, maximum ${H.maxComplexity}.`);
+    ctx.heading('Complexity distribution');
+    drawTable(pdf, ctx, [
+      { label: 'Cyclomatic complexity', w: 0.5, get: r => r.label },
+      { label: 'Functions', w: 0.25, get: r => r.count },
+      { label: 'Share', w: 0.25, get: r => (H.functions ? ((r.count / H.functions) * 100).toFixed(1) + '%' : '–') },
+    ], H.complexityBuckets);
+    const cxStyle = r => (r.complexity > H.thresholds.maxComplexity * 2 ? { fill: [255, 77, 79], color: [255, 255, 255], bold: true } : r.complexity > H.thresholds.maxComplexity ? { fill: [247, 174, 98], color: [40, 25, 10], bold: true } : null);
+    const lenStyle = r => (r.lines > H.thresholds.maxFunctionLines ? { fill: [247, 174, 98], color: [40, 25, 10], bold: true } : null);
+    const fnCols = [
+      { label: 'Function', w: 0.24, get: r => r.name + '()', style: () => ({ bold: true }) },
+      { label: 'File', w: 0.46, get: r => `${r.path}:${r.line}` },
+      { label: 'Complexity', w: 0.11, get: r => r.complexity, style: cxStyle },
+      { label: 'Lines', w: 0.1, get: r => r.lines, style: lenStyle },
+      { label: 'Params', w: 0.09, get: r => r.params },
+    ];
+    ctx.heading('Most complex functions – refactor these first');
+    drawTable(pdf, ctx, fnCols, H.complex.slice(0, 40));
+    ctx.heading('Longest functions');
+    drawTable(pdf, ctx, fnCols, H.long.slice(0, 25));
+    if (H.manyParams.length) { ctx.heading('Functions with 6+ parameters'); drawTable(pdf, ctx, fnCols, H.manyParams); }
+    if (H.hotspots.length) {
+      ctx.heading('Hotspot files');
+      drawTable(pdf, ctx, [
+        { label: 'File', w: 0.55, get: r => r.path },
+        { label: 'Functions', w: 0.15, get: r => r.functions },
+        { label: 'Total complexity', w: 0.15, get: r => r.complexity },
+        { label: 'Worst', w: 0.15, get: r => r.maxComplexity, style: r => cxStyle({ complexity: r.maxComplexity }) },
+      ], H.hotspots);
+    }
+    if (H.duplicates) {
+      ctx.heading(`Duplicated code (${H.duplicates.total} blocks, ${H.duplicates.duplicatedLines} lines)`);
+      if (!H.duplicates.groups.length) ctx.para('No duplicated blocks found.');
+      else drawTable(pdf, ctx, [
+        { label: 'Lines', w: 0.1, get: r => r.lines, style: () => ({ bold: true }) },
+        { label: 'First occurrence', w: 0.45, get: r => `${r.occurrences[0].path}:${r.occurrences[0].line}-${r.occurrences[0].end}` },
+        { label: 'Copy', w: 0.45, get: r => `${r.occurrences[1].path}:${r.occurrences[1].line}-${r.occurrences[1].end}` },
+      ], H.duplicates.groups.slice(0, 80));
+    }
+    if (H.secrets && H.secrets.total) {
+      ctx.heading(`Hard-coded secrets (${H.secrets.total}) – details in the secrets report`);
+      ctx.para(H.secrets.byRule.map(r => `${r.label}: ${r.count}`).join(' · '));
+    }
+    return pdf.output('datauristring').split(',')[1];
+  }
+
+  function secretsPdf(D) {
+    const S = D.health && D.health.secrets;
+    const { pdf, ctx } = reportDoc('Secrets report', `${D.workspace || ''} · ${new Date(D.generated).toLocaleString()}`);
+    if (!S) { ctx.para('Secret scanning is disabled (linecounter.secrets.enabled).'); return pdf.output('datauristring').split(',')[1]; }
+    ctx.kpis([['Findings', S.total, S.total ? [200, 40, 40] : null], ['Critical', S.bySeverity.critical, [200, 40, 40]], ['High', S.bySeverity.high, [224, 98, 27]], ['Medium', S.bySeverity.medium, [200, 130, 40]]]);
+    ctx.para('Values are masked. Every real credential that was committed must be rotated (revoked and replaced) – removing it from the file does not remove it from the git history. Move secrets to environment variables or a secret manager, and ignore test fixtures via linecounter.secrets.ignore.');
+    if (!S.items.length) { ctx.para('No hard-coded secrets were found.'); return pdf.output('datauristring').split(',')[1]; }
+    ctx.heading('By type');
+    drawTable(pdf, ctx, [{ label: 'Type', w: 0.7, get: r => r.label }, { label: 'Findings', w: 0.3, get: r => r.count }], S.byRule);
+    ctx.heading('Findings');
+    drawTable(pdf, ctx, [
+      { label: 'Severity', w: 0.12, get: r => r.severity, style: r => SECRET_STYLE[r.severity] },
+      { label: 'Type', w: 0.22, get: r => r.name },
+      { label: 'Location', w: 0.36, get: r => `${r.path}:${r.line}` },
+      { label: 'Match (masked)', w: 0.3, get: r => r.preview },
+    ], S.items);
+    return pdf.output('datauristring').split(',')[1];
+  }
+
+  window.LCExport = { openDialog, createPdf, licensePdf, vulnPdf, healthPdf, secretsPdf };
 })();

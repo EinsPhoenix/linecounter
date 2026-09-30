@@ -27,12 +27,15 @@ const git = require('../src/git');
     }
   };
   walk(res.children, '');
-  const results = await analyzeFiles(files, 2 * 1024 * 1024);
+  const results = await analyzeFiles(files, 2 * 1024 * 1024, null, null, { functions: true, duplicates: true, secrets: true, dupMinLines: 6 });
   results.forEach(r => (r.rootName = 'linecounter'));
   const repoPath = await git.repoRoot(root);
   const repos = repoPath ? [await git.repoStats(repoPath, 1000)].filter(Boolean) : [];
   const data = aggregate(results, { workspace: 'linecounter', repos });
   assert.ok(data.totals.lines > 0);
+  assert.ok(data.health && data.health.functions > 50, 'functions should be detected');
+  assert.ok(data.health.complex[0].complexity >= data.health.complex[1].complexity);
+  assert.ok(data.functionGraph && data.functionGraph.fns.length > 0 && data.functionGraph.calls.length > 0, 'function graph');
   if (process.argv[2]) require('fs').writeFileSync(process.argv[2], JSON.stringify(data));
   console.log(`OK – ${data.totals.files} files, ${data.totals.lines} lines, ${data.languages.length} languages, ${repos.length} repo(s)`);
 })().catch(e => { console.error(e); process.exit(1); });

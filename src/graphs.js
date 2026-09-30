@@ -141,6 +141,7 @@ function buildImportGraph(files, opts = {}) {
       edges.set(f.abs + '\n' + t.abs, [f, t]);
     }
   }
+  if (opts.edgesOut) for (const [a, b] of edges.values()) if (!b.library) opts.edgesOut.push([a.abs, b.abs]);
   const g = analyzeDependencies([...edges.values()], maxNodes + libs.size);
   g.libraryCount = libs.size;
   g.vulnerableLibraries = [...libs.values()].filter(l => l.vulns).length;
@@ -318,4 +319,71 @@ function analyzeDependencies(edgeList, maxNodes) {
   };
 }
 
-module.exports = { buildWordGraph, buildImportGraph, analyzeDependencies };
+// names that exist in nearly every code base – linking calls by these names would be guesswork
+const AMBIGUOUS = new Set(['__init__', 'constructor', 'main', 'init', 'run', 'get', 'set', 'update', 'render', 'toString', 'handle', 'handler',
+  'setup', 'close', 'open', 'start', 'stop', 'create', 'delete', 'remove', 'add', 'load', 'save', 'test', 'call', 'apply', 'build', 'parse',
+  'process', 'execute', 'next', 'reset', 'clear', 'push', 'pop', 'map', 'filter', 'forEach', 'reduce', 'find', 'then', 'catch', 'emit', 'on', 'off']);
+
+/**
+ * Functions as graph nodes: file -> function ("defines") and caller -> callee ("calls").
+ * A call counts only inside the same file or into a file that the caller's file imports.
+ * files: analyzed files (with .functions / .calls), fileEdges: [[fromAbs, toAbs]], allowed: Set of file abs to include
+ */
+function buildFunctionGraph(files, fileEdges, allowed, maxFunctions = 600) {
+  const imports = new Map();
+  for (const [a, b] of fileEdges) { if (!imports.has(a)) imports.set(a, new Set()); imports.get(a).add(b); }
+  const byName = new Map();
+  const fileFns = new Map();
+  const fns = [];
+  for (const f of files) {
+    if (!f.functions || !allowed.has(f.abs)) continue;
+    const list = [];
+    for (const fn of f.functions) {
+      const e = { file: f.abs, path: f.path, name: fn.name, line: fn.line, end: fn.end, cx: fn.complexity, lines: fn.lines, idx: -1, used: 0 };
+      list.push(e);
+      if (!byName.has(fn.name)) byName.set(fn.name, []);
+      byName.get(fn.name).push(e);
+    }
+    fileFns.set(f.abs, list);
+  }
+  const callsRaw = [];
+  for (const f of files) {
+    if (!f.calls || !allowed.has(f.abs)) continue;
+    const own = fileFns.get(f.abs) || [];
+    const imp = imports.get(f.abs) || new Set();
+    for (const [name, lines] of Object.entries(f.calls)) {
+      const defs = byName.get(name);
+      if (!defs || AMBIGUOUS.has(name)) continue;
+      const cands = defs.filter(d => d.file === f.abs || imp.has(d.file));
+      if (!cands.length || cands.length > 2) continue;
+      const target = cands.find(d => d.file === f.abs) || cands[0];
+      for (const line of lines) {
+        if (target.file === f.abs && line >= target.line && line <= target.end && line === target.line) continue;
+        // innermost function around the call site is the caller
+        let caller = null;
+        for (const fn of own) if (line >= fn.line && line <= fn.end && (!caller || fn.end - fn.line < caller.end - caller.line)) caller = fn;
+        if (caller === target) continue; // recursion
+        callsRaw.push([caller, f.abs, target]);
+        target.used++;
+        if (caller) caller.used++;
+      }
+    }
+  }
+  // keep the most connected functions (then the most complex ones)
+  const ranked = [...fileFns.values()].flat().sort((a, b) => b.used - a.used || b.cx - a.cx).slice(0, maxFunctions);
+  ranked.forEach((fn, i) => { fn.idx = i; });
+  const seen = new Map();
+  for (const [caller, file, target] of callsRaw) {
+    if (target.idx < 0 || (caller && caller.idx < 0)) continue;
+    const key = (caller ? 'f' + caller.idx : 'F' + file) + '>' + target.idx;
+    const e = seen.get(key);
+    if (e) e.n++; else seen.set(key, { s: caller ? caller.idx : -1, file, t: target.idx, n: 1 });
+  }
+  return {
+    fns: ranked.map(fn => ({ file: fn.file, path: fn.path, name: fn.name, line: fn.line, end: fn.end, cx: fn.cx, lines: fn.lines })),
+    calls: [...seen.values()],
+    total: [...fileFns.values()].reduce((s, l) => s + l.length, 0),
+  };
+}
+
+module.exports = { buildWordGraph, buildImportGraph, analyzeDependencies, buildFunctionGraph };

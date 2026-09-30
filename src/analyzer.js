@@ -3,6 +3,10 @@
 const fs = require('fs');
 const path = require('path');
 const { languageOf, extensionOf } = require('./languages');
+const { extractFunctions, callSites, KIND_OF } = require('./scanners/functions');
+const { scanSecrets } = require('./scanners/secrets');
+const { fingerprints } = require('./scanners/duplicates');
+
 
 const KEYWORDS = new Set(('the and for with this that from import export return const let var function def class '
   + 'if else elif while true false null none undefined self public private protected static void int string new '
@@ -84,7 +88,7 @@ function countMatches(text, re) {
 /**
  * Analyzes a single file. Returns null if it cannot be read.
  */
-async function analyzeFile(absPath, relPath, root, maxBytes) {
+async function analyzeFile(absPath, relPath, root, maxBytes, scan = {}) {
   let stat;
   try { stat = await fs.promises.stat(absPath); } catch { return null; }
   const name = path.basename(absPath);
@@ -101,6 +105,7 @@ async function analyzeFile(absPath, relPath, root, maxBytes) {
     semicolons: 0, braces: 0, parens: 0, debugPrints: 0, emojis: 0, fortyTwo: 0,
     funcs: 0, imports: 0, depth: relPath.split('/').length - 1,
     identifiers: null, deps: null,
+    functions: null, calls: null, secrets: null, dupPrints: null,
   };
   if (stat.size > maxBytes) { result.skipped = true; return result; }
   let buf;
@@ -139,6 +144,19 @@ async function analyzeFile(absPath, relPath, root, maxBytes) {
   result.imports = countMatches(text, /^\s*(import|from\s+\S+\s+import|#include|using\s+[\w.]+;|require\(|use\s+[\w:]+)/gm);
 
   result.deps = extractDeps(text, lang.name);
+
+  // code health scanners
+  const isCode = !!KIND_OF[lang.name];
+  if (isCode && scan.functions !== false) {
+    const fns = extractFunctions(text, lang.name);
+    if (fns.length) result.functions = fns;
+    if (fns.length || result.deps) result.calls = callSites(text, lang.name);
+  }
+  if (scan.secrets && !(scan.secretIgnore && scan.secretIgnore(relPath))) {
+    const found = scanSecrets(text);
+    if (found.length) result.secrets = found;
+  }
+  if (isCode && scan.duplicates) result.dupPrints = fingerprints(text, scan.dupMinLines || 6);
 
   // Identifier frequencies (only for code-ish files, capped for speed)
   if (lang.name !== 'Other' && !['JSON', 'CSV', 'Text', 'Markdown', 'XML'].includes(lang.name) && text.length < 500000) {
@@ -203,7 +221,7 @@ function extractDeps(text, langName) {
 }
 
 /** Runs analyzeFile over many files with bounded concurrency. */
-async function analyzeFiles(files, maxBytes, onProgress, token) {
+async function analyzeFiles(files, maxBytes, onProgress, token, scan = {}) {
   const results = new Array(files.length);
   let next = 0, done = 0;
   const workers = Array.from({ length: 16 }, async () => {
@@ -211,7 +229,7 @@ async function analyzeFiles(files, maxBytes, onProgress, token) {
       if (token && token.isCancellationRequested) return;
       const i = next++;
       const f = files[i];
-      results[i] = await analyzeFile(f.abs, f.rel, f.root, maxBytes);
+      results[i] = await analyzeFile(f.abs, f.rel, f.root, maxBytes, scan);
       done++;
       if (onProgress && done % 50 === 0) onProgress(done, files.length);
     }
