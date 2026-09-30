@@ -1,6 +1,7 @@
 'use strict';
 
-const { buildWordGraph, buildImportGraph } = require('./graphs');
+const { buildWordGraph, buildImportGraph, buildFunctionGraph } = require('./graphs');
+const { buildHealth } = require('./scanners/health');
 
 /** Aggregates per-file analysis results into the data model shown on the statistics page. */
 function aggregate(files, meta) {
@@ -79,10 +80,16 @@ function aggregate(files, meta) {
     chars: f.chars, trailing: f.trailing, debug: f.debugPrints, emojis: f.emojis, funcs: f.funcs, wtf: f.wtf,
   }));
 
+  const fileEdges = [];
+  const importGraph = buildImportGraph(text, { libraries: !!meta.includeLibraries, deps: meta.dependencies, edgesOut: fileEdges });
+  const graphFiles = new Set(importGraph.nodes.filter(n => !n.library).map(n => n.abs));
+  const hopts = meta.health || {};
   return {
     generated: now, ...meta, multiRoot,
     totals, languages, extensions, folders, histogram, identifiers, ages, table,
-    wordGraph: buildWordGraph(text), importGraph: buildImportGraph(text, { libraries: !!meta.includeLibraries, deps: meta.dependencies }),
+    wordGraph: buildWordGraph(text), importGraph,
+    functionGraph: meta.maxFunctions === 0 ? null : buildFunctionGraph(text, fileEdges, graphFiles, meta.maxFunctions || 600),
+    health: hopts.enabled === false ? null : buildHealth(text, hopts),
   };
 }
 
