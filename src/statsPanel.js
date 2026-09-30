@@ -67,6 +67,8 @@ class StatsPanel {
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'vendor', 'jspdf.umd.min.js'))}"></script>
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'vendor', 'html2canvas.min.js'))}"></script>
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'export.js'))}"></script>
+<script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'vendor', 'three.min.js'))}"></script>
+<script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'train3d.js'))}"></script>
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'stats.js'))}"></script></body></html>`;
 
     w.onDidReceiveMessage(msg => this.onMessage(msg), null, context.subscriptions);
@@ -114,7 +116,7 @@ window.acquireVsCodeApi = () => ({
   },
   getState() { return null; }, setState() {},
 });</script>
-${['vendor/d3.min.js', 'graphs.js', 'deps.js', 'vendor/jspdf.umd.min.js', 'vendor/html2canvas.min.js', 'export.js', 'stats.js'].map(f => `<script>${safe(read(f))}</script>`).join('\n')}
+${['vendor/d3.min.js', 'graphs.js', 'deps.js', 'vendor/jspdf.umd.min.js', 'vendor/html2canvas.min.js', 'export.js', 'vendor/three.min.js', 'train3d.js', 'stats.js'].map(f => `<script>${safe(read(f))}</script>`).join('\n')}
 </body></html>`;
     await fs.promises.writeFile(uri.fsPath, html, 'utf8');
     const open = await vscode.window.showInformationMessage(`HTML report saved to ${uri.fsPath}`, 'Open in browser');
