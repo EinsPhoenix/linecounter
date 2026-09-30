@@ -3,7 +3,7 @@
 const https = require('https');
 
 /**
- * Vulnerability lookup via the OSV.dev API (https://osv.dev) for npm and PyPI packages.
+ * Vulnerability lookup via the OSV.dev API (https://osv.dev) for npm, PyPI, crates.io and Go packages.
  * Only package names and versions are sent.
  */
 const OSV = 'https://api.osv.dev/v1';
@@ -98,7 +98,7 @@ async function checkVulnerabilities(packages, opts = {}) {
   const ids = new Map(); // vuln id -> packages
   for (let i = 0; i < list.length; i += 500) {
     const chunk = list.slice(i, i + 500);
-    const res = await post(`${OSV}/querybatch`, { queries: chunk.map(p => ({ package: { name: p.name, ecosystem: p.ecosystem }, version: p.version })) });
+    const res = await post(`${OSV}/querybatch`, { queries: chunk.map(p => ({ package: { name: p.name, ecosystem: p.ecosystem }, version: p.ecosystem === 'Go' ? String(p.version).replace(/^v/, '') : p.version })) });
     (res.results || []).forEach((r, j) => {
       const pkg = { ...chunk[j], vulnIds: (r.vulns || []).map(v => v.id) };
       results.push(pkg);

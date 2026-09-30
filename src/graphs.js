@@ -51,6 +51,23 @@ function buildImportGraph(files, opts = {}) {
   const byKey = new Map(); // "root|rel" -> file
   for (const f of files) byKey.set(f.root + '|' + f.path, f);
   const has = (root, rel) => byKey.get(root + '|' + rel);
+  const dirOf = p => (path.posix.dirname(p) === '.' ? '' : path.posix.dirname(p));
+  // Go: module paths (go.mod) and the .go files per package folder
+  const goMods = files.filter(f => f.goModule).map(f => ({ root: f.root, dir: dirOf(f.path), module: f.goModule })).sort((a, b) => b.module.length - a.module.length);
+  const goPkgs = new Map();
+  for (const f of files) if (f.lang === 'Go' && !/_test\.go$/.test(f.path)) { const k = f.root + '|' + dirOf(f.path); if (!goPkgs.has(k)) goPkgs.set(k, []); goPkgs.get(k).push(f); }
+  const localCrates = new Set(files.filter(f => f.crateName).map(f => f.crateName.replace(/-/g, '_')));
+  const rustFile = (root, base) => has(root, base + '.rs') || has(root, base + '/mod.rs');
+  /** module folder of a Rust file: foo.rs -> foo/, mod.rs / lib.rs / main.rs -> their folder */
+  const rustModDir = f => (/(^|\/)(mod|lib|main)\.rs$/.test(f.path) ? dirOf(f.path) : f.path.replace(/\.rs$/, ''));
+  const rustCrateSrc = f => { const i = f.path.lastIndexOf('src/'); return i >= 0 ? f.path.slice(0, i + 3) : dirOf(f.path); };
+  const rustPath = (root, base, segs) => {
+    for (let k = segs.length; k >= 1; k--) {
+      const hit = rustFile(root, (base ? base + '/' : '') + segs.slice(0, k).join('/'));
+      if (hit) return hit;
+    }
+    return null;
+  };
 
   const resolve = (f, spec) => {
     const dir = path.dirname(f.path) === '.' ? '' : path.dirname(f.path);
@@ -85,6 +102,30 @@ function buildImportGraph(files, opts = {}) {
       }
       return null;
     }
+    if (f.lang === 'Go') {
+      const m = goMods.find(g => g.root === f.root && (spec === g.module || spec.startsWith(g.module + '/')));
+      if (!m) return null;
+      const rel = [m.dir, spec.slice(m.module.length + 1)].filter(Boolean).join('/');
+      const pkg = goPkgs.get(f.root + '|' + rel);
+      return pkg ? pkg.slice().sort((a, b) => a.path.localeCompare(b.path)).slice(0, 4) : null;
+    }
+    if (f.lang === 'Rust') {
+      if (spec.startsWith('mod:')) {
+        const base = rustModDir(f);
+        return rustFile(f.root, (base ? base + '/' : '') + spec.slice(4));
+      }
+      const segs = spec.split('::');
+      if (segs[0] === 'crate') return rustPath(f.root, rustCrateSrc(f), segs.slice(1));
+      if (segs[0] === 'self') return rustPath(f.root, rustModDir(f), segs.slice(1));
+      if (segs[0] === 'super') {
+        let base = /(^|\/)(mod|lib|main)\.rs$/.test(f.path) ? dirOf(dirOf(f.path)) : dirOf(f.path);
+        let rest = segs.slice(1);
+        while (rest[0] === 'super') { base = dirOf(base); rest = rest.slice(1); }
+        return rustPath(f.root, base, rest);
+      }
+      if (localCrates.has(segs[0])) return null; // another crate of the workspace
+      return null;
+    }
     if (/^[a-z]+:/i.test(spec)) return null; // urls, node: builtins
     const isCss = ['CSS', 'SCSS', 'Less'].includes(f.lang);
     const isC = ['C', 'C++', 'Objective-C'].includes(f.lang);
@@ -114,6 +155,17 @@ function buildImportGraph(files, opts = {}) {
       name = spec.split('.')[0];
       if (!name || PY_STDLIB.has(name)) return null;
       eco = 'PyPI';
+    } else if (f.lang === 'Rust') {
+      if (spec.startsWith('mod:')) return null;
+      name = spec.split('::')[0];
+      if (!name || RUST_STD.has(name) || localCrates.has(name)) return null;
+      eco = 'crates.io';
+    } else if (f.lang === 'Go') {
+      const first = spec.split('/')[0];
+      if (!first.includes('.')) return null; // standard library
+      if (goMods.some(g => spec === g.module || spec.startsWith(g.module + '/'))) return null;
+      name = /^(github\.com|gitlab\.com|bitbucket\.org|golang\.org\/x|gopkg\.in)\//.test(spec) ? spec.split('/').slice(0, first === 'golang.org' ? 3 : 3).join('/') : spec.split('/').slice(0, 3).join('/');
+      eco = 'Go';
     } else if (JS_LANGS.has(f.lang)) {
       name = npmPackageOf(spec);
       if (!name || NODE_BUILTINS.has(name) || name.startsWith('node:')) return null;
@@ -136,9 +188,11 @@ function buildImportGraph(files, opts = {}) {
   for (const f of files) {
     if (!f.deps) continue;
     for (const spec of f.deps) {
-      const t = resolve(f, spec) || libraryOf(f, spec);
-      if (!t || t === f) continue;
-      edges.set(f.abs + '\n' + t.abs, [f, t]);
+      const r = resolve(f, spec) || libraryOf(f, spec);
+      for (const t of Array.isArray(r) ? r : [r]) {
+        if (!t || t === f) continue;
+        edges.set(f.abs + '\n' + t.abs, [f, t]);
+      }
     }
   }
   if (opts.edgesOut) for (const [a, b] of edges.values()) if (!b.library) opts.edgesOut.push([a.abs, b.abs]);
@@ -148,6 +202,7 @@ function buildImportGraph(files, opts = {}) {
   return g;
 }
 
+const RUST_STD = new Set(['std', 'core', 'alloc', 'proc_macro', 'test', 'crate', 'self', 'super', 'Self']);
 const JS_LANGS = new Set(['JavaScript', 'JSX', 'TypeScript', 'TSX', 'Vue', 'Svelte', 'Astro']);
 
 /** Finds version, license and vulnerabilities of a library in the dependency report. */
@@ -158,8 +213,9 @@ function libraryLookup(report) {
   const norm = n => String(n).toLowerCase().replace(/[-_.]+/g, '-');
   const rank = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1, UNKNOWN: 0, NONE: 0 };
   return (eco, name) => {
-    const want = eco === 'PyPI' ? norm(aliasToDist.get(name.toLowerCase()) || name) : name;
-    const same = x => x.ecosystem === eco && (eco === 'PyPI' ? norm(x.name) === want : x.name === want);
+    const fuzzy = eco === 'PyPI' || eco === 'crates.io';
+    const want = eco === 'PyPI' ? norm(aliasToDist.get(name.toLowerCase()) || name) : fuzzy ? norm(name) : name;
+    const same = x => x.ecosystem === eco && (fuzzy ? norm(x.name) === want : x.name === want || (eco === 'Go' && want.startsWith(x.name + '/')));
     const p = report.packages.find(x => same(x) && x.direct) || report.packages.find(same);
     if (!p) return null;
     const vulns = ((report.vulns && report.vulns.items) || []).filter(v => v.ecosystem === eco && v.name === p.name && v.version === p.version);

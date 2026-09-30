@@ -435,7 +435,7 @@
   },
   "scripts": {
     "package": "vsce package --skip-license --out linecounter.vsix",
-    "test": "node test/smoke.js && node test/graphs.test.js && node test/deps.test.js",
+    "test": "node test/smoke.js && node test/graphs.test.js && node test/deps.test.js && node test/rustgo.test.js",
     "release": "node scripts/release.js",
     "schema": "node scripts/schema.js"
   },

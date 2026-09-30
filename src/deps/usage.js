@@ -67,10 +67,24 @@ function analyzeUsage(manifests, files, installed) {
   for (const f of files) {
     if (!f.deps) continue;
     const isPy = f.lang === 'Python';
-    const owner = ownerOf(f.abs, isPy ? 'PyPI' : 'npm');
+    const eco = isPy ? 'PyPI' : f.lang === 'Rust' ? 'crates.io' : f.lang === 'Go' ? 'Go' : 'npm';
+    const owner = ownerOf(f.abs, eco);
     if (!owner) continue;
     const r = res(owner);
+    const use = (key) => { if (!r.used.has(key)) r.used.set(key, []); if (r.used.get(key).length < 5 && !r.used.get(key).some(x => x.abs === f.abs)) r.used.get(key).push({ path: f.path, abs: f.abs }); };
     for (const spec of f.deps) {
+      if (eco === 'crates.io') {
+        if (spec.startsWith('mod:')) continue;
+        const top = spec.split('::')[0];
+        if (!['std', 'core', 'alloc', 'crate', 'self', 'super', 'proc_macro', 'test'].includes(top)) use(top);
+        continue;
+      }
+      if (eco === 'Go') {
+        if (!spec.split('/')[0].includes('.')) continue; // standard library
+        if (owner.module && (spec === owner.module || spec.startsWith(owner.module + '/'))) continue;
+        use(spec);
+        continue;
+      }
       if (isPy) {
         if (spec.startsWith('.')) continue;
         const top = spec.split('.')[0];
@@ -90,7 +104,26 @@ function analyzeUsage(manifests, files, installed) {
   for (const r of results) {
     const m = r.manifest;
     const unused = [], undeclared = [];
-    if (m.ecosystem === 'npm') {
+    if (m.ecosystem === 'crates.io') {
+      const norm = n => n.replace(/-/g, '_');
+      const declared = new Set(m.deps.map(d => norm(d.name)));
+      for (const d of m.deps) {
+        if (d.spec === 'workspace' || r.used.has(norm(d.name))) continue;
+        // macros / derives are often only used as attributes (#[derive(Serialize)]), tests use dev-dependencies
+        unused.push({ name: d.name, type: d.type === 'prod' ? 'prod' : 'dev', spec: d.spec, line: d.line, hint: d.type === 'prod' ? 'never used with use / path (check macros and derives)' : `${d.type}-dependency not used in the scanned files` });
+      }
+      for (const [name, where] of r.used) if (!declared.has(name) && name !== norm(m.name)) undeclared.push({ name, files: where, installed: false });
+    } else if (m.ecosystem === 'Go') {
+      for (const d of m.deps) {
+        if (d.type === 'indirect') continue;
+        if ([...r.used.keys()].some(k => k === d.name || k.startsWith(d.name + '/'))) continue;
+        unused.push({ name: d.name, type: 'prod', spec: d.spec, line: d.line, hint: 'never imported (go mod tidy removes it)' });
+      }
+      for (const [name, where] of r.used) {
+        if (m.deps.some(d => name === d.name || name.startsWith(d.name + '/'))) continue;
+        undeclared.push({ name, files: where, installed: false });
+      }
+    } else if (m.ecosystem === 'npm') {
       const cfg = configText(m.dir, m);
       const hasTs = /"typescript"|tsconfig/.test(cfg) || fs.existsSync(path.join(m.dir, 'tsconfig.json'));
       const declared = new Set(m.deps.map(d => d.name));

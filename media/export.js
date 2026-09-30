@@ -335,13 +335,23 @@
       { label: 'Status', w: 0.2, get: r => r.status, style: r => STATUS_STYLE[r.status] },
       { label: 'Packages', w: 0.15, get: r => r.n },
     ], [...lic.values()].sort((a, b) => b.n - a.n));
+    const unknown = P.filter(p => p.license === 'Unknown' || p.license === 'Custom');
+    if (unknown.length) {
+      ctx.heading(`Unknown & custom licenses (${unknown.length}) – check these manually`);
+      ctx.para('Unknown: no license was found in the package metadata, the registry, the package archive (LICENSE files), deps.dev or the GitHub repository. Custom: a license text exists but is not a standard license.');
+      drawTable(pdf, ctx, [
+        { label: 'Package', w: 0.28, get: r => `${r.name}${r.version ? '@' + r.version : ''}\n${r.ecosystem}${r.direct ? '' : ' · transitive'}`, style: () => ({ bold: true }) },
+        { label: 'License', w: 0.12, get: r => r.license, style: r => (r.license === 'Unknown' ? STATUS_STYLE.review : STATUS_STYLE.problematic) },
+        { label: 'What was checked', w: 0.6, get: r => (r.licenseTrail && r.licenseTrail.length ? r.licenseTrail.map(t => `${t.source}: ${t.result}`).join('\n') : (r.installed ? 'local metadata: no license field or file' : 'not installed, online lookup off')) },
+      ], unknown);
+    }
     const rank = { problematic: 0, review: 1, ok: 2 };
     const rows = P.slice().sort((a, b) => rank[a.status] - rank[b.status] || Number(b.direct) - Number(a.direct) || a.name.localeCompare(b.name));
     ctx.heading(`All packages (${P.length})`);
     drawTable(pdf, ctx, [
-      { label: 'Package', w: 0.27, get: r => r.name, style: () => ({ bold: true }) },
+      { label: 'Package', w: 0.23, get: r => r.name, style: () => ({ bold: true }) },
       { label: 'Version', w: 0.1, get: r => r.version || r.spec || '–' },
-      { label: 'Eco', w: 0.07, get: r => r.ecosystem },
+      { label: 'Ecosystem', w: 0.11, get: r => r.ecosystem },
       { label: 'License', w: 0.2, get: r => r.license },
       { label: 'Status', w: 0.12, get: r => (r.ignored ? 'ignored' : r.status), style: r => (r.ignored ? null : STATUS_STYLE[r.status]) },
       { label: 'Scope', w: 0.12, get: r => `${r.direct ? 'direct' : 'transitive'}${r.dev ? ' dev' : ''}` },

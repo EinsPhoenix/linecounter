@@ -11,6 +11,11 @@
     restricted: { label: 'Restricted / custom', color: '#b8480f' },
     unknown: { label: 'Unknown', color: '#5a5a5a' },
   };
+  const ECO_CLS = { npm: 'npm', PyPI: 'py', 'crates.io': 'rs', Go: 'go' };
+  const ECO_LABEL = { npm: 'npm', PyPI: 'Python', 'crates.io': 'Rust', Go: 'Go' };
+  const ecoCls = e => ECO_CLS[e] || 'py';
+  /** public page of a package (for manual license checks) */
+  const pkgUrl = p => ({ npm: `https://www.npmjs.com/package/${p.name}`, PyPI: `https://pypi.org/project/${p.name}/`, 'crates.io': `https://crates.io/crates/${p.name}`, Go: `https://pkg.go.dev/${p.name}` })[p.ecosystem];
   const state = { status: 'flagged', eco: '', scope: '', q: '', sev: '', limit: 150, showAllVulns: false, license: '', category: '' };
   const declLink = (p, esc) => (p.decl || []).filter(d => d.file).map(d => `<a href="#" class="file" data-abs="${esc(d.file)}" ${d.line ? `data-line="${d.line}"` : ''} title="Open the declaration">${esc(d.file.split(/[\\/]/).slice(-2).join('/'))}${d.line ? ':' + d.line : ''}</a>`).join(', ');
 
@@ -38,10 +43,10 @@
       : { label: 'Vulnerabilities', value: 'off', sub: 'linecounter.vulnerabilities.enabled' };
 
     return `
-      <div class="dep-manifests muted">${R.manifests.map(m => `<a class="file" href="#" data-abs="${esc(m.abs)}">${esc(m.file)}</a> <span class="dep-eco ${m.ecosystem === 'npm' ? 'npm' : 'py'}">${m.ecosystem}</span> ${fmt(m.deps)} deps`).join(' &nbsp;·&nbsp; ')}
+      <div class="dep-manifests muted">${R.manifests.map(m => `<a class="file" href="#" data-abs="${esc(m.abs)}">${esc(m.file)}</a> <span class="dep-eco ${ecoCls(m.ecosystem)}">${m.ecosystem}</span> ${fmt(m.deps)} deps`).join(' &nbsp;·&nbsp; ')}
         ${R.pythonEnvironments && R.pythonEnvironments.length ? `&nbsp;·&nbsp; Python env: ${R.pythonEnvironments.map(esc).join(', ')}` : ''}</div>
       ${tiles([
-        { label: 'Direct dependencies', value: fmt(direct.length), sub: `${fmt(direct.filter(p => p.ecosystem === 'npm').length)} npm · ${fmt(direct.filter(p => p.ecosystem === 'PyPI').length)} Python` },
+        { label: 'Direct dependencies', value: fmt(direct.length), sub: Object.keys(ECO_LABEL).map(e => [e, direct.filter(p => p.ecosystem === e).length]).filter(([, n]) => n).map(([e, n]) => `${fmt(n)} ${ECO_LABEL[e]}`).join(' · ') || '–' },
         { label: 'Packages in total', value: fmt(P.length), sub: `${fmt(P.filter(p => !p.direct).length)} transitive` },
         { label: 'Problematic licenses', html: `<span class="${flagged('problematic').length ? 'dep-bad' : ''}">${fmt(flagged('problematic').length)}</span>`, sub: 'linecounter.licenses.problematic' },
         { label: 'Needs review', value: fmt(flagged('review').length), sub: 'unknown, custom or weak copyleft' },
@@ -54,6 +59,7 @@
           <div class="dep-lic-donut">${donut(cats, fmt(P.length), 'packages')}</div>
           <div class="dep-lic-bars">${hbars(topLic.map(([l, c]) => ({ label: l, value: c, color: CAT[(P.find(p => p.license === l) || {}).category || 'unknown'].color, attrs: `data-dep-lic="${esc(l)}"`, tip: `<b>${esc(l)}</b><br>${fmt(c)} packages<br><i>click to list them</i>` })))}</div>
         </div>`, { sub: 'click a category or license to list its packages' })}
+      ${unknownCard(ui, R)}
       ${card('Dependency hygiene – unused & undeclared', usageHtml(ui, R), { sub: 'click a package to jump to its declaration · click a file to open it' })}
       ${card(`${icon('alert')} Vulnerabilities <span class="muted">via OSV.dev</span>`, `<div id="dep-vulns">${vulnsHtml(ui, R)}</div>`, { sub: R.vulns.enabled && !R.vulns.error ? `${fmt(R.vulns.checked)} packages checked`: '', tools: R.vulns.enabled ? `<button class="btn" data-dep-pdf="vulns">${icon('pages')} Vulnerability PDF</button>` : '' })}
       ${card('License report', `<div class="table-tools dep-tools">
@@ -64,7 +70,7 @@
             <option value="ok" ${state.status === 'ok' ? 'selected' : ''}>OK</option>
             <option value="" ${state.status === '' ? 'selected' : ''}>All packages</option>
           </select>
-          <select id="depEco"><option value="">npm + Python</option><option value="npm">npm</option><option value="PyPI">Python</option></select>
+          <select id="depEco"><option value="">All ecosystems</option>${Object.keys(ECO_LABEL).filter(e => P.some(p => p.ecosystem === e)).map(e => `<option value="${e}" ${state.eco === e ? 'selected' : ''}>${ECO_LABEL[e]}</option>`).join('')}</select>
           <select id="depScope"><option value="">direct + transitive</option><option value="direct">direct only</option><option value="transitive">transitive only</option></select>
           <input id="depQ" type="text" placeholder="Filter packages or licenses…" spellcheck="false">
           <span id="depActive"></span>
@@ -85,7 +91,7 @@
       const tools = u.unused.filter(x => x.type === 'tool');
       return `<div class="dep-hyg-card">
         <div class="dep-hyg-head">
-          <span class="dep-eco ${u.ecosystem === 'npm' ? 'npm' : 'py'}">${u.ecosystem}</span>
+          <span class="dep-eco ${ecoCls(u.ecosystem)}">${u.ecosystem}</span>
           <a href="#" class="file dep-hyg-file" data-abs="${esc(u.abs)}" title="Open ${esc(u.file)}">${esc(u.file)}</a>
           <span class="dep-hyg-chips">${real.length ? `<span class="dep-chip warn">${fmt(real.length)} unused</span>` : ''}${u.undeclared.length ? `<span class="dep-chip bad">${fmt(u.undeclared.length)} undeclared</span>` : ''}${tools.length ? `<span class="dep-chip">${fmt(tools.length)} CLI tools</span>` : ''}</span>
         </div>
@@ -98,6 +104,28 @@
         ${tools.length ? `<details class="dep-hyg-tools"><summary>${fmt(tools.length)} command-line tool${tools.length === 1 ? '' : 's'} – not imported, probably fine</summary><ul class="dep-rows">${tools.map(x => row(u, x)).join('')}</ul></details>` : ''}
       </div>`;
     }).join('')}</div>`;
+  }
+
+  /** Packages whose license could not be determined (or is not a standard license), with what was checked */
+  function unknownCard(ui, R) {
+    const { esc, fmt, card } = ui;
+    const list = R.packages.filter(p => p.license === 'Unknown' || p.license === 'Custom');
+    const reg = R.registry || {};
+    const info = reg.looked != null ? `${fmt(reg.looked)} packages looked up online · ${fmt(reg.resolved || 0)} resolved` : 'online lookup off (linecounter.licenses.fetchFromRegistry)';
+    if (!list.length) return card('Unknown & custom licenses', `<p class="dep-okmsg">Every package has a recognised license.</p><p class="muted">${esc(info)}</p>`, { sub: 'checked: metadata, registry, package archive, deps.dev, GitHub' });
+    const SRC = { registry: 'registry', archive: 'package archive', 'deps.dev': 'deps.dev' };
+    const trail = p => (p.licenseTrail && p.licenseTrail.length
+      ? p.licenseTrail.map(t => `<span class="dep-trail ${/^failed/.test(t.result) ? 'fail' : ''}"><b>${esc(SRC[t.source] || t.source)}</b> ${esc(t.result)}</span>`).join('')
+      : `<span class="dep-trail"><b>local metadata</b> ${p.installed ? 'no license field / file' : 'not installed'}</span>`);
+    return card(`Unknown & custom licenses <span class="dep-chip bad">${fmt(list.length)}</span>`, `
+      <p class="muted dep-unknown-note">These packages need a manual check. “Unknown” means no license was found anywhere, “Custom” means a license text exists but is not a standard license. ${esc(info)}.</p>
+      <div class="table-scroll small"><table class="grid"><thead><tr><th>Package</th><th>License</th><th>What was checked</th><th></th></tr></thead><tbody>
+      ${list.map(p => `<tr>
+        <td><b>${p.decl && p.decl.length ? `<a href="#" class="file" data-abs="${esc(p.decl[0].file)}" ${p.decl[0].line ? `data-line="${p.decl[0].line}"` : ''}>${esc(p.name)}</a>` : esc(p.name)}</b>${p.version ? '@' + esc(p.version) : ''} <span class="dep-eco ${ecoCls(p.ecosystem)}">${esc(p.ecosystem)}</span>${p.direct ? '' : ' <span class="muted">transitive</span>'}</td>
+        <td><span class="dep-status ${p.license === 'Unknown' ? 'review' : 'problematic'}">${esc(p.license)}</span></td>
+        <td class="dep-trails">${trail(p)}</td>
+        <td class="dep-unknown-links">${pkgUrl(p) ? `<a href="#" class="file" data-url="${esc(pkgUrl(p))}">registry page</a>` : ''}${p.dir ? ` <button class="icon-mini" data-dep-dir="${esc(p.dir)}" title="Open the installed package">${ui.icon('folder')}</button>` : ''}</td></tr>`).join('')}
+      </tbody></table></div>`, { sub: 'checked: metadata, registry, package archive, deps.dev, GitHub' });
   }
 
   function vulnsHtml(ui, R) {
@@ -114,7 +142,7 @@
     return chips + `<div class="table-scroll small"><table class="grid"><thead><tr><th>Severity</th><th>Package</th><th>Advisory</th><th>Summary</th><th>Fixed in</th></tr></thead><tbody>
       ${shown.map(v => `<tr>
         <td><span class="sev" style="background:${SEV_COLOR[v.severity] || SEV_COLOR.UNKNOWN}">${esc(v.severity)}${v.score != null ? ' ' + v.score.toFixed(1) : ''}</span></td>
-        <td><b>${(() => { const p = R.packages.find(x => x.name === v.name && x.ecosystem === v.ecosystem && (x.decl || []).length); return p ? `<a href="#" class="file" data-abs="${esc(p.decl[0].file)}" ${p.decl[0].line ? `data-line="${p.decl[0].line}"` : ''} title="Open the declaration to update it">${esc(v.name)}</a>` : esc(v.name); })()}</b>@${esc(v.version)}${v.versionFromRange ? ' <span class="muted">(range)</span>' : ''} <span class="dep-eco ${v.ecosystem === 'npm' ? 'npm' : 'py'}">${v.ecosystem}</span>${v.direct ? '' : ' <span class="muted">transitive</span>'}${v.dev ? ' <span class="muted">dev</span>' : ''}</td>
+        <td><b>${(() => { const p = R.packages.find(x => x.name === v.name && x.ecosystem === v.ecosystem && (x.decl || []).length); return p ? `<a href="#" class="file" data-abs="${esc(p.decl[0].file)}" ${p.decl[0].line ? `data-line="${p.decl[0].line}"` : ''} title="Open the declaration to update it">${esc(v.name)}</a>` : esc(v.name); })()}</b>@${esc(v.version)}${v.versionFromRange ? ' <span class="muted">(range)</span>' : ''} <span class="dep-eco ${ecoCls(v.ecosystem)}">${v.ecosystem}</span>${v.direct ? '' : ' <span class="muted">transitive</span>'}${v.dev ? ' <span class="muted">dev</span>' : ''}</td>
         <td><a href="#" class="file" data-url="${esc(v.url)}">${esc(v.id)}</a>${v.aliases && v.aliases.length ? `<br><span class="muted">${v.aliases.map(esc).join(', ')}</span>` : ''}</td>
         <td class="dep-summary">${esc(v.summary)}</td>
         <td>${v.fixed && v.fixed.length ? v.fixed.map(esc).join(', ') : '<span class="muted">–</span>'}</td></tr>`).join('')}
@@ -138,7 +166,7 @@
     rows = rows.slice(0, state.limit);
     el.innerHTML = `<thead><tr><th>Package</th><th>Version</th><th>License</th><th>Category</th><th>Status</th><th>Scope</th><th class="num">Vulns</th><th>Declared in</th><th></th></tr></thead>
       <tbody>${rows.map(p => `<tr class="${p.decl && p.decl.length || p.dir ? 'clickable' : ''}" ${p.decl && p.decl.length ? `data-abs="${esc(p.decl[0].file)}" ${p.decl[0].line ? `data-line="${p.decl[0].line}"` : ''} title="Open the declaration"` : p.dir ? `data-dep-dir="${esc(p.dir)}" title="Open the package metadata"` : ''}>
-        <td><b>${esc(p.name)}</b> <span class="dep-eco ${p.ecosystem === 'npm' ? 'npm' : 'py'}">${p.ecosystem}</span></td>
+        <td><b>${esc(p.name)}</b> <span class="dep-eco ${ecoCls(p.ecosystem)}">${p.ecosystem}</span></td>
         <td>${esc(p.versionFromRange ? p.spec : p.version || p.spec || '–')}${p.installed ? '' : ` <span class="muted">${p.latest ? 'latest ' + esc(p.latest) : 'not installed'}</span>`}</td>
         <td>${esc(p.license)}${p.licenseSource === 'registry' ? ' <span class="muted" title="License taken from the public registry because the package is not installed">(registry)</span>' : ''}</td>
         <td><span class="sw" style="background:${(CAT[p.category] || CAT.unknown).color}"></span>${esc((CAT[p.category] || CAT.unknown).label)}</td>

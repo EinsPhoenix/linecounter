@@ -144,6 +144,8 @@ async function analyzeFile(absPath, relPath, root, maxBytes, scan = {}) {
   result.imports = countMatches(text, /^\s*(import|from\s+\S+\s+import|#include|using\s+[\w.]+;|require\(|use\s+[\w:]+)/gm);
 
   result.deps = extractDeps(text, lang.name);
+  if (name === 'go.mod') { const m = /^\s*module\s+(\S+)/m.exec(text); if (m) result.goModule = m[1]; }
+  if (name === 'Cargo.toml') { const m = /^\s*\[package\][^[]*?^\s*name\s*=\s*"([^"]+)"/ms.exec(text); if (m) result.crateName = m[1]; }
 
   // code health scanners
   const isCode = !!KIND_OF[lang.name];
@@ -184,10 +186,15 @@ const DEP_PATTERNS = {
   c: [/^[ \t]*#[ \t]*include[ \t]*"([^"\n]+)"/gm],
   py: [/^[ \t]*from[ \t]+(\.*[\w.]*)[ \t]+import\b/gm, /^[ \t]*import[ \t]+([\w.]+(?:[ \t]+as[ \t]+\w+)?(?:[ \t]*,[ \t]*[\w.]+(?:[ \t]+as[ \t]+\w+)?)*)/gm],
   html: [/(?:src|href)\s*=\s*["']([^"':#?\n]+\.(?:m?js|ts|css))["']/g],
+  go: [/^[ \t]*import[ \t]+(?:[\w.]+[ \t]+)?"([^"\n]+)"/gm, /^[ \t]+(?:[\w.]+[ \t]+)?"([^"\n]+)"[ \t]*$/gm],
+  rs: [
+    /^[ \t]*(?:pub(?:\([^)]*\))?[ \t]+)?use[ \t]+(?:::)?([\w]+(?:::[\w]+)*)/gm,
+    /^[ \t]*extern[ \t]+crate[ \t]+(\w+)/gm,
+  ],
 };
 const DEP_KIND = {
   JavaScript: 'js', JSX: 'js', TypeScript: 'js', TSX: 'js', Vue: 'js', Svelte: 'js', Astro: 'js',
-  CSS: 'css', SCSS: 'css', Less: 'css', C: 'c', 'C++': 'c', 'Objective-C': 'c', Python: 'py', HTML: 'html',
+  CSS: 'css', SCSS: 'css', Less: 'css', C: 'c', 'C++': 'c', 'Objective-C': 'c', Python: 'py', HTML: 'html', Go: 'go', Rust: 'rs',
 };
 const VALID_SPEC = /^[\w@.~/#:+-]{1,200}$/;
 
@@ -195,7 +202,7 @@ const VALID_SPEC = /^[\w@.~/#:+-]{1,200}$/;
 function stripComments(text, kind) {
   const blank = m => m.replace(/[^\n]/g, ' ');
   if (kind === 'py') return text.replace(/("""|''')[\s\S]*?\1/g, blank).replace(/^[ \t]*#.*$/gm, '');
-  if (kind === 'js' || kind === 'css' || kind === 'c') return text.replace(/\/\*[\s\S]*?\*\//g, blank).replace(/^[ \t]*\/\/.*$/gm, '');
+  if (kind === 'js' || kind === 'css' || kind === 'c' || kind === 'go' || kind === 'rs') return text.replace(/\/\*[\s\S]*?\*\//g, blank).replace(/^[ \t]*\/\/.*$/gm, '');
   return text;
 }
 
@@ -206,7 +213,15 @@ function extractDeps(text, langName) {
   const out = new Set();
   const kinds = kind === 'html' ? ['html', 'js'] : [kind];
   for (const k of kinds) {
-    const src = stripComments(text, k);
+    let src = stripComments(text, k);
+    if (k === 'go') {
+      // only the import declarations (single imports and import blocks)
+      src = [...src.matchAll(/^[ \t]*import[ \t]*\(([\s\S]*?)\)|^[ \t]*import[ \t]+[^(\n]*$/gm)].map(m => (m[1] != null ? m[1] : m[0])).join('\n');
+    }
+    if (k === 'rs') {
+      // "mod foo;" declares a submodule file
+      for (const m of src.matchAll(/^[ \t]*(?:pub(?:\([^)]*\))?[ \t]+)?mod[ \t]+(\w+)[ \t]*;/gm)) out.add('mod:' + m[1]);
+    }
     for (const re of DEP_PATTERNS[k]) {
       re.lastIndex = 0;
       let m;

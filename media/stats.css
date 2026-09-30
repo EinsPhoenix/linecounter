@@ -570,3 +570,11 @@ body.has-train { overflow: hidden; }
 .dep-hyg-tools summary { cursor: pointer; }
 body.print-light .dep-hyg-card { background: #f4f2ef; }
 body.print-light .dep-catseg { color: #111; }
+.dep-eco.rs { background: rgba(183, 72, 15, .28); color: #ffb080; }
+.dep-eco.go { background: rgba(220, 220, 220, .16); color: #eaeaea; }
+.dep-unknown-note { font-size: 12px; margin: 0 0 10px; }
+.dep-trails { display: flex; flex-wrap: wrap; gap: 4px; }
+.dep-trail { font-size: 11px; padding: 1px 8px; border-radius: 9px; background: var(--card-2); border: 1px solid var(--border); }
+.dep-trail b { color: var(--accent); font-weight: 700; margin-right: 3px; }
+.dep-trail.fail { opacity: .6; }
+.dep-unknown-links { white-space: nowrap; }
