@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { normalizeLicense, sniffLicenseText, fromClassifiers } = require('./licenses');
 const { pyName } = require('./manifests');
 
@@ -10,11 +11,15 @@ const readText = p => { try { return fs.readFileSync(p, 'utf8'); } catch { retur
 const exists = p => { try { fs.accessSync(p); return true; } catch { return false; } };
 
 function licenseFromDir(dir) {
-  for (const n of ['LICENSE', 'LICENSE.md', 'LICENSE.txt', 'LICENCE', 'LICENCE.md', 'COPYING', 'license', 'license.md', 'LICENSE-MIT']) {
+  let entries = [];
+  try { entries = fs.readdirSync(dir); } catch { return null; }
+  const found = [];
+  for (const n of entries.filter(e => /^(un)?licen[cs]e([-._][\w.-]+)?(\.(md|txt|rst))?$|^copying(\.(md|txt))?$/i.test(e)).sort()) {
     const t = readText(path.join(dir, n));
-    if (t) return sniffLicenseText(t);
+    const id = t && sniffLicenseText(t);
+    if (id && !found.includes(id)) found.push(id);
   }
-  return null;
+  return found.length ? found.join(' OR ') : null;
 }
 
 function npmLicense(pkg, dir) {
@@ -259,4 +264,59 @@ function pyLockVersions(dir) {
   return out;
 }
 
-module.exports = { npmInstalled, findSitePackages, pyInstalled, pyLockVersions, parseMetadata };
+// ---------------------------------------------------------------- Rust
+/** Versions from the nearest Cargo.lock: Map(name -> [versions]) plus all locked registry packages */
+function cargoLock(dir) {
+  for (const d of ancestors(dir, 6)) {
+    const text = readText(path.join(d, 'Cargo.lock'));
+    if (!text) continue;
+    const pkgs = [];
+    for (const block of text.split(/\[\[package\]\]/).slice(1)) {
+      const name = /^\s*name\s*=\s*"([^"]+)"/m.exec(block), version = /^\s*version\s*=\s*"([^"]+)"/m.exec(block), source = /^\s*source\s*=\s*"([^"]+)"/m.exec(block);
+      if (name && version) pkgs.push({ name: name[1], version: version[1], registry: !!(source && /registry/.test(source[1])) });
+    }
+    return { file: path.join(d, 'Cargo.lock'), packages: pkgs };
+  }
+  return null;
+}
+/** License of a crate that cargo already downloaded (~/.cargo/registry/src/<index>/<name>-<version>) */
+function cargoLocalLicense(name, version) {
+  const home = process.env.CARGO_HOME || path.join(os.homedir(), '.cargo');
+  let indexes = [];
+  try { indexes = fs.readdirSync(path.join(home, 'registry', 'src')); } catch { return null; }
+  for (const idx of indexes) {
+    const dir = path.join(home, 'registry', 'src', idx, `${name}-${version}`);
+    const toml = readText(path.join(dir, 'Cargo.toml'));
+    if (!toml) continue;
+    const m = /^\s*license\s*=\s*"([^"]+)"/m.exec(toml);
+    const lic = m ? normalizeLicense(m[1]) : licenseFromDir(dir);
+    return { license: lic || 'Unknown', dir };
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------- Go
+const goEscape = p => p.replace(/[A-Z]/g, c => '!' + c.toLowerCase());
+/** License of a module in the local module cache (GOMODCACHE / GOPATH/pkg/mod) */
+function goLocalLicense(mod, version) {
+  const roots = [process.env.GOMODCACHE, process.env.GOPATH && path.join(process.env.GOPATH.split(path.delimiter)[0], 'pkg', 'mod'), path.join(os.homedir(), 'go', 'pkg', 'mod')].filter(Boolean);
+  for (const r of roots) {
+    const dir = path.join(r, ...goEscape(mod).split('/').slice(0, -1), goEscape(mod).split('/').pop() + '@' + version);
+    if (!exists(dir)) continue;
+    return { license: licenseFromDir(dir) || 'Unknown', dir };
+  }
+  return null;
+}
+/** Every module listed in go.sum next to go.mod (the full, transitive module graph) */
+function goSumModules(dir) {
+  const text = readText(path.join(dir, 'go.sum'));
+  if (!text) return [];
+  const seen = new Map();
+  for (const line of text.split(/\r?\n/)) {
+    const m = /^(\S+)\s+(v[^\s/]+?)(\/go\.mod)?\s+h1:/.exec(line);
+    if (m && !m[3]) seen.set(m[1], m[2]);
+  }
+  return [...seen].map(([name, version]) => ({ name, version }));
+}
+
+module.exports = { npmInstalled, findSitePackages, pyInstalled, pyLockVersions, parseMetadata, cargoLock, cargoLocalLicense, goLocalLicense, goSumModules, licenseFromDir };

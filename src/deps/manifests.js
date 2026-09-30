@@ -6,7 +6,7 @@ const path = require('path');
 /** PEP 503 normalisation of Python distribution names. */
 const pyName = n => String(n).toLowerCase().replace(/[-_.]+/g, '-');
 
-const MANIFEST_NAMES = new Set(['package.json', 'pyproject.toml', 'Pipfile', 'setup.py', 'setup.cfg']);
+const MANIFEST_NAMES = new Set(['package.json', 'pyproject.toml', 'Pipfile', 'setup.py', 'setup.cfg', 'Cargo.toml', 'go.mod']);
 const isManifest = name => MANIFEST_NAMES.has(name) || /^requirements.*\.(txt|in)$/i.test(name);
 
 function readText(p) { try { return fs.readFileSync(p, 'utf8'); } catch { return null; } }
@@ -159,12 +159,79 @@ function parseSetupCfg(file) {
   return deps.length ? { ecosystem: 'PyPI', file, dir: path.dirname(file), name: path.basename(path.dirname(file)), deps } : null;
 }
 
+/** Rust Cargo.toml: [dependencies], [dev-dependencies], [build-dependencies], target specific and workspace tables */
+function parseCargoToml(file) {
+  const text = readText(file);
+  if (text == null) return null;
+  const deps = [];
+  let section = '';
+  let pkgName = null, inPackage = false;
+  let sub = null; // [dependencies.foo] style table
+  const typeOf = sec => (/(^|\.)dev-dependencies$/.test(sec) ? 'dev' : /(^|\.)build-dependencies$/.test(sec) ? 'build' : 'prod');
+  const lines = text.split(/\r?\n/);
+  for (const raw of lines) {
+    const line = raw.replace(/\s+#.*$/, '');
+    const h = /^\s*\[([^\]]+)\]\s*$/.exec(line);
+    if (h) {
+      section = h[1].trim().replace(/\s+/g, '');
+      inPackage = section === 'package';
+      const m = /^(?:target\.[^.]+(?:\.[^.]+)*\.|workspace\.)?((?:dev-|build-)?dependencies)\.("?)([\w-]+)\2$/.exec(section.replace(/'[^']*'/g, 'X'));
+      sub = m ? { name: m[3], type: typeOf(m[1]) } : null;
+      if (sub) deps.push({ name: sub.name, spec: '', type: sub.type });
+      continue;
+    }
+    if (inPackage) { const n = /^\s*name\s*=\s*"([^"]+)"/.exec(line); if (n) pkgName = n[1]; continue; }
+    if (sub) {
+      const v = /^\s*version\s*=\s*"([^"]+)"/.exec(line);
+      if (v) deps[deps.length - 1].spec = v[1];
+      const pk = /^\s*package\s*=\s*"([^"]+)"/.exec(line);
+      if (pk) { deps[deps.length - 1].crate = pk[1]; }
+      continue;
+    }
+    if (!/(^|\.)((dev-|build-)?dependencies)$/.test(section)) continue;
+    const m = /^\s*("?)([\w-]+)\1\s*=\s*(.+)$/.exec(line);
+    if (!m) continue;
+    const val = m[3].trim();
+    let spec = '', crate = null;
+    if (val.startsWith('"')) spec = val.replace(/^"|"$/g, '');
+    else {
+      const v = /version\s*=\s*"([^"]+)"/.exec(val); if (v) spec = v[1];
+      const pk = /package\s*=\s*"([^"]+)"/.exec(val); if (pk) crate = pk[1];
+      if (/\b(path|workspace)\s*=/.test(val) && !v) spec = /path\s*=/.test(val) ? 'path' : 'workspace';
+    }
+    deps.push({ name: m[2], spec, type: typeOf(section), crate });
+  }
+  // local path / workspace crates are not packages of the registry
+  const out = deps.filter(d => d.spec !== 'path').map(d => ({ ...d, pinned: /^=\s*\d/.test(d.spec) ? d.spec.replace(/^=\s*/, '') : null }));
+  return { ecosystem: 'crates.io', file, dir: path.dirname(file), name: pkgName || path.basename(path.dirname(file)), deps: out };
+}
+
+/** Go go.mod: module path and required modules (exact versions, "// indirect" = transitive) */
+function parseGoMod(file) {
+  const text = readText(file);
+  if (text == null) return null;
+  const mod = /^\s*module\s+(\S+)/m.exec(text);
+  const deps = [];
+  let inBlock = false;
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (/^require\s*\($/.test(line)) { inBlock = true; continue; }
+    if (inBlock && line === ')') { inBlock = false; continue; }
+    const m = (inBlock ? /^(\S+)\s+(v[^\s/]+)(.*)$/ : /^require\s+(\S+)\s+(v[^\s/]+)(.*)$/).exec(line);
+    if (!m) continue;
+    deps.push({ name: m[1], spec: m[2], pinned: m[2], type: /\/\/\s*indirect/.test(m[3]) ? 'indirect' : 'prod' });
+  }
+  return { ecosystem: 'Go', file, dir: path.dirname(file), name: mod ? mod[1] : path.basename(path.dirname(file)), module: mod ? mod[1] : null, deps };
+}
+
 /** 1-based line of a dependency declaration in the manifest text (for "open at line"). */
 function declarationLine(text, name, ecosystem) {
   const lines = text.split(/\r?\n/);
   const esc = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const re = ecosystem === 'npm'
     ? new RegExp(`"${esc}"\\s*:`)
+    : ecosystem === 'Go' ? new RegExp(`(^|\\s)${esc}\\s+v`)
+    : ecosystem === 'crates.io' ? new RegExp(`^\\s*("?)${esc}\\1\\s*=|dependencies\\.${esc}\\]`)
     : new RegExp(`(^|["'\\s])${esc.replace(/[-_.]+/g, '[-_.]')}\\s*(\\[|=|>|<|~|!|;|"|'|,|$)`, 'i');
   const i = lines.findIndex(l => re.test(l));
   return i >= 0 ? i + 1 : null;
@@ -186,6 +253,8 @@ function parseManifestRaw(file) {
   if (name === 'Pipfile') return parsePipfile(file);
   if (name === 'setup.py') return parseSetupPy(file);
   if (name === 'setup.cfg') return parseSetupCfg(file);
+  if (name === 'Cargo.toml') return parseCargoToml(file);
+  if (name === 'go.mod') return parseGoMod(file);
   if (/^requirements.*\.(txt|in)$/i.test(name)) return parseRequirementsTxt(file);
   return null;
 }

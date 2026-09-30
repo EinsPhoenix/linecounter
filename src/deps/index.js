@@ -2,7 +2,7 @@
 
 const path = require('path');
 const { parseManifest, isManifest, pyName } = require('./manifests');
-const { npmInstalled, findSitePackages, pyInstalled, pyLockVersions } = require('./installed');
+const { npmInstalled, findSitePackages, pyInstalled, pyLockVersions, cargoLock, cargoLocalLicense, goLocalLicense, goSumModules } = require('./installed');
 const { classifyLicense } = require('./licenses');
 const { checkVulnerabilities } = require('./vulns');
 const { analyzeUsage } = require('./usage');
@@ -89,12 +89,59 @@ async function scanDependencies(files, opts) {
       }
     }
   }
-  // ---- licenses of packages that are not installed: ask the registries ----
-  if (opts.fetchFromRegistry) {
-    if (opts.onProgress) opts.onProgress('Looking up licenses of packages that are not installed (npm / PyPI registry)…');
-    try { report.registry = await fillFromRegistry([...pkgMap.values()], { timeoutMs: opts.registryTimeoutMs || 10000 }); } catch (e) { report.registry = { error: e.message }; }
-    for (const p of pkgMap.values()) if (p.licenseSource === 'registry') Object.assign(p, judge(p.license));
+  // ---- Rust (crates.io) ----
+  for (const m of manifests.filter(x => x.ecosystem === 'crates.io')) {
+    const lock = cargoLock(m.dir);
+    const locked = new Map();
+    for (const p of lock ? lock.packages : []) { if (!locked.has(p.name)) locked.set(p.name, []); locked.get(p.name).push(p.version); }
+    const own = new Set(manifests.filter(x => x.ecosystem === 'crates.io').map(x => x.name));
+    const addCrate = (name, version, d) => {
+      const key = `cargo|${name}|${version || (d && d.spec)}`;
+      const existing = pkgMap.get(key);
+      if (existing) { if (d) { existing.direct = true; if (!existing.manifests.includes(m.rel)) { existing.manifests.push(m.rel); existing.decl.push({ file: m.file, line: d.line }); } } return; }
+      const local = version ? cargoLocalLicense(name, version) : null;
+      const license = local ? local.license : 'Unknown';
+      pkgMap.set(key, {
+        ecosystem: 'crates.io', name, version: version || null, spec: d ? d.spec : null, license, ...judge(license), licenseSource: local ? 'cargo cache' : null,
+        direct: !!d, dev: d ? d.type !== 'prod' : false, installed: !!local, manifests: d ? [m.rel] : [], decl: d ? [{ file: m.file, line: d.line }] : [],
+        dir: local ? local.dir : null, ignored: ignore.has(name.toLowerCase()),
+      });
+    };
+    const direct = new Set();
+    for (const d of m.deps) {
+      if (d.spec === 'workspace') continue;
+      const crate = d.crate || d.name;
+      direct.add(crate);
+      const versions = locked.get(crate) || [];
+      addCrate(crate, versions[versions.length - 1] || d.pinned || null, d);
+    }
+    if (opts.includeTransitiveLicenses && lock) for (const p of lock.packages) if (p.registry && !direct.has(p.name) && !own.has(p.name)) addCrate(p.name, p.version, null);
   }
+
+  // ---- Go modules ----
+  for (const m of manifests.filter(x => x.ecosystem === 'Go')) {
+    const addMod = (name, version, d) => {
+      const key = `go|${name}|${version}`;
+      const existing = pkgMap.get(key);
+      if (existing) { if (d) { existing.direct = existing.direct || d.type !== 'indirect'; if (!existing.manifests.includes(m.rel)) { existing.manifests.push(m.rel); existing.decl.push({ file: m.file, line: d.line }); } } return; }
+      const local = goLocalLicense(name, version);
+      const license = local ? local.license : 'Unknown';
+      pkgMap.set(key, {
+        ecosystem: 'Go', name, version, spec: d ? d.spec : null, license, ...judge(license), licenseSource: local ? 'module cache' : null,
+        direct: !!d && d.type !== 'indirect', dev: false, installed: !!local, manifests: d ? [m.rel] : [], decl: d ? [{ file: m.file, line: d.line }] : [],
+        dir: local ? local.dir : null, ignored: ignore.has(name.toLowerCase()),
+      });
+    };
+    for (const d of m.deps) addMod(d.name, d.pinned, d);
+    if (opts.includeTransitiveLicenses) for (const x of goSumModules(m.dir)) if (x.name !== m.module) addMod(x.name, x.version, null);
+  }
+
+  // ---- licenses that are still unknown: registry -> package archive -> deps.dev -> GitHub ----
+  if (opts.fetchFromRegistry) {
+    if (opts.onProgress) opts.onProgress('Looking up unknown licenses (registries, package archives, deps.dev, GitHub)…');
+    try { report.registry = await fillFromRegistry([...pkgMap.values()], { timeoutMs: opts.registryTimeoutMs || 10000, onProgress: opts.onProgress }); } catch (e) { report.registry = { error: e.message }; }
+  }
+  for (const p of pkgMap.values()) Object.assign(p, judge(p.license));
   report.packages = [...pkgMap.values()].sort((a, b) => a.ecosystem.localeCompare(b.ecosystem) || Number(b.direct) - Number(a.direct) || a.name.localeCompare(b.name));
   report.pythonEnvironments = pyInst.size ? [...new Set([...pyInst.values()].map(p => path.dirname(p.dir)))] : [];
 
