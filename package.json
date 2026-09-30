@@ -1,0 +1,130 @@
+{
+  "name": "linecounter",
+  "displayName": "Line Counter & Code Statistics",
+  "description": "Browse your workspace as a filterable tree, exclude files and folders with a click and generate full-screen code statistics with charts, git insights, fun facts and a file ranking.",
+  "version": "1.0.0",
+  "publisher": "einsphoenix",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/EinsPhoenix/linecounter.git"
+  },
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "line counter",
+    "lines of code",
+    "loc",
+    "statistics",
+    "cloc",
+    "git"
+  ],
+  "main": "./src/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "linecounter",
+          "title": "Line Counter",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "linecounter": [
+        {
+          "type": "webview",
+          "id": "linecounter.explorer",
+          "name": "Files"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "linecounter.createStatistics",
+        "title": "Create Statistics",
+        "category": "Line Counter",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "linecounter.refresh",
+        "title": "Rescan Workspace",
+        "category": "Line Counter",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "linecounter.resetFilters",
+        "title": "Reset All Filters",
+        "category": "Line Counter",
+        "icon": "$(clear-all)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "linecounter.createStatistics",
+          "when": "view == linecounter.explorer",
+          "group": "navigation@1"
+        },
+        {
+          "command": "linecounter.refresh",
+          "when": "view == linecounter.explorer",
+          "group": "navigation@2"
+        },
+        {
+          "command": "linecounter.resetFilters",
+          "when": "view == linecounter.explorer",
+          "group": "navigation@3"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Line Counter",
+      "properties": {
+        "linecounter.statisticsLayout": {
+          "type": "string",
+          "enum": [
+            "maximized",
+            "fullscreen",
+            "normal"
+          ],
+          "enumDescriptions": [
+            "Open the statistics page maximized (side bars and panel hidden).",
+            "Maximized and additionally switch the VS Code window to full screen.",
+            "Open the statistics page like a normal editor tab."
+          ],
+          "default": "maximized",
+          "description": "How the statistics page is opened."
+        },
+        "linecounter.maxFileSizeKB": {
+          "type": "number",
+          "default": 2048,
+          "description": "Files larger than this (in KB) are counted by size only; their lines are not analyzed."
+        },
+        "linecounter.maxEntries": {
+          "type": "number",
+          "default": 200000,
+          "description": "Maximum number of files and folders scanned for the tree."
+        },
+        "linecounter.maxCommits": {
+          "type": "number",
+          "default": 20000,
+          "description": "Maximum number of commits read per git repository."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "package": "vsce package --skip-license --out linecounter.vsix",
+    "test": "node test/smoke.js"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.2.0"
+  }
+}

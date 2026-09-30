@@ -1,0 +1,38 @@
+'use strict';
+// Smoke test for the non-UI parts: scan -> analyze -> git -> aggregate. Run: npm test
+const path = require('path');
+const assert = require('assert');
+const { scanRoot, DEFAULT_PRESETS } = require('../src/scanner');
+const { analyzeFiles, classifyLines } = require('../src/analyzer');
+const { aggregate } = require('../src/stats');
+const git = require('../src/git');
+
+(async () => {
+  const c = classifyLines(['// a', 'x = 1; /* b', 'c */', '', '  ', 'y /* z */ = 2', '/* only */'], { line: ['//'], block: [['/*', '*/']] });
+  assert.deepStrictEqual(c, { code: 2, comment: 3, blank: 2 });
+  const py = classifyLines(['"""doc', 'more', '"""', 'x = 1  # c', '# only'], { line: ['#'], block: [['"""', '"""']] });
+  assert.deepStrictEqual(py, { code: 1, comment: 4, blank: 0 });
+
+  const root = process.env.ROOT || path.resolve(__dirname, '..');
+  const res = await scanRoot(root, { presets: DEFAULT_PRESETS });
+  const nm = res.children.find(c => c.n === 'node_modules');
+  if (!process.env.ROOT) assert.ok(nm && nm.p === 'node_modules' && nm.u, 'node_modules should be preset-excluded and not scanned');
+
+  const files = [];
+  const walk = (nodes, rel) => {
+    for (const n of nodes) {
+      const r = rel ? rel + '/' + n.n : n.n;
+      if (n.p) continue;
+      if (n.d) walk(n.c, r); else files.push({ abs: path.join(root, r), rel: r, root });
+    }
+  };
+  walk(res.children, '');
+  const results = await analyzeFiles(files, 2 * 1024 * 1024);
+  results.forEach(r => (r.rootName = 'linecounter'));
+  const repoPath = await git.repoRoot(root);
+  const repos = repoPath ? [await git.repoStats(repoPath, 1000)].filter(Boolean) : [];
+  const data = aggregate(results, { workspace: 'linecounter', repos });
+  assert.ok(data.totals.lines > 0);
+  if (process.argv[2]) require('fs').writeFileSync(process.argv[2], JSON.stringify(data));
+  console.log(`OK – ${data.totals.files} files, ${data.totals.lines} lines, ${data.languages.length} languages, ${repos.length} repo(s)`);
+})().catch(e => { console.error(e); process.exit(1); });
