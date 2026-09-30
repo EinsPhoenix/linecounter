@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.10.0
+- Code health section: cyclomatic complexity per function, long functions, too many parameters, hotspot files, duplicated code, grade A–F with rants
+- Secrets scanner (cloud / VCS / payment / AI API keys, private keys, JWTs, connection strings, hard-coded passwords) with masked output
+- Code health PDF and Secrets PDF
+- Functions as graph nodes (toggle "ƒ Functions") in the import graph and in the 3D train, longest call chain route
+- 3D train: tracks run over the planets and meet on turntables (no tunnels or rings), the train follows the planet surface, spacey maglev train
+- Configurable train keys (`linecounter.train.keys`), Q/E climb and dive, R snaps back onto the rails
+- Redesigned dependency section: license overview with category bar, dependency hygiene cards per manifest with expandable file lists
+
 ## 1.9.0
 - Dependency scan: npm workspaces / monorepos, pnpm and yarn lockfiles, symlinked `node_modules`, licenses from the npm / PyPI registry when a package is not installed (`linecounter.licenses.fetchFromRegistry`)
 - Robust import detection (comments and docstrings ignored, extras like `pydantic[email]` in pyproject), the project's own package is no longer listed
