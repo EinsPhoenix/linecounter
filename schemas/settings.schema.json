@@ -255,6 +255,154 @@
       ],
       "default": "auto",
       "description": "How much the graphs move."
+    },
+    "dependencies.enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Scan package.json / requirements.txt / pyproject.toml / Pipfile / setup.py for the dependency, license and vulnerability report."
+    },
+    "linecounter.dependencies.enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Scan package.json / requirements.txt / pyproject.toml / Pipfile / setup.py for the dependency, license and vulnerability report."
+    },
+    "licenses.problematic": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "GPL*",
+        "AGPL*",
+        "SSPL*",
+        "CC-BY-NC*",
+        "BUSL*",
+        "Proprietary"
+      ],
+      "markdownDescription": "Licenses that are flagged as **problematic** (SPDX ids, `*` wildcards). Example: `GPL*` matches GPL-2.0 and GPL-3.0, but not LGPL."
+    },
+    "linecounter.licenses.problematic": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "GPL*",
+        "AGPL*",
+        "SSPL*",
+        "CC-BY-NC*",
+        "BUSL*",
+        "Proprietary"
+      ],
+      "markdownDescription": "Licenses that are flagged as **problematic** (SPDX ids, `*` wildcards). Example: `GPL*` matches GPL-2.0 and GPL-3.0, but not LGPL."
+    },
+    "licenses.review": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "LGPL*",
+        "MPL*",
+        "EPL*",
+        "CDDL*",
+        "EUPL*",
+        "CC-BY-SA*",
+        "Unknown",
+        "Custom"
+      ],
+      "markdownDescription": "Licenses that **need a review** (weak copyleft, unknown or custom licenses)."
+    },
+    "linecounter.licenses.review": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [
+        "LGPL*",
+        "MPL*",
+        "EPL*",
+        "CDDL*",
+        "EUPL*",
+        "CC-BY-SA*",
+        "Unknown",
+        "Custom"
+      ],
+      "markdownDescription": "Licenses that **need a review** (weak copyleft, unknown or custom licenses)."
+    },
+    "licenses.allowed": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "markdownDescription": "Optional allowlist. If set, every license that does not match is flagged as problematic (e.g. `[\"MIT\", \"BSD*\", \"Apache-2.0\", \"ISC\"]`)."
+    },
+    "linecounter.licenses.allowed": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "markdownDescription": "Optional allowlist. If set, every license that does not match is flagged as problematic (e.g. `[\"MIT\", \"BSD*\", \"Apache-2.0\", \"ISC\"]`)."
+    },
+    "licenses.ignorePackages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Packages that are accepted exceptions: they stay in the report but are not flagged or checked for vulnerabilities."
+    },
+    "linecounter.licenses.ignorePackages": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": [],
+      "description": "Packages that are accepted exceptions: they stay in the report but are not flagged or checked for vulnerabilities."
+    },
+    "licenses.includeTransitive": {
+      "type": "boolean",
+      "default": true,
+      "description": "Include installed transitive packages (from package-lock.json / node_modules / the virtual environment) in the license report."
+    },
+    "linecounter.licenses.includeTransitive": {
+      "type": "boolean",
+      "default": true,
+      "description": "Include installed transitive packages (from package-lock.json / node_modules / the virtual environment) in the license report."
+    },
+    "vulnerabilities.enabled": {
+      "type": "boolean",
+      "default": true,
+      "markdownDescription": "Check npm and PyPI packages for known vulnerabilities via [OSV.dev](https://osv.dev). Only package names and versions are sent."
+    },
+    "linecounter.vulnerabilities.enabled": {
+      "type": "boolean",
+      "default": true,
+      "markdownDescription": "Check npm and PyPI packages for known vulnerabilities via [OSV.dev](https://osv.dev). Only package names and versions are sent."
+    },
+    "vulnerabilities.includeTransitive": {
+      "type": "boolean",
+      "default": true,
+      "description": "Also check transitive (installed but not declared) packages for vulnerabilities."
+    },
+    "linecounter.vulnerabilities.includeTransitive": {
+      "type": "boolean",
+      "default": true,
+      "description": "Also check transitive (installed but not declared) packages for vulnerabilities."
+    },
+    "vulnerabilities.timeoutSeconds": {
+      "type": "number",
+      "default": 20,
+      "minimum": 3,
+      "description": "Timeout for requests to OSV.dev."
+    },
+    "linecounter.vulnerabilities.timeoutSeconds": {
+      "type": "number",
+      "default": 20,
+      "minimum": 3,
+      "description": "Timeout for requests to OSV.dev."
     }
   },
   "additionalProperties": true
