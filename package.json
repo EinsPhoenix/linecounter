@@ -2,7 +2,7 @@
   "name": "linecounter",
   "displayName": "Line Counter & Code Statistics",
   "description": "Browse your workspace as a filterable tree, exclude files and folders with a click and generate full-screen code statistics with charts, git insights, fun facts and a file ranking.",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "publisher": "einsphoenix",
   "icon": "media/icon.png",
   "repository": {
@@ -344,6 +344,7 @@
     "@vscode/vsce": "^3.2.0",
     "d3": "^7.9.0",
     "html2canvas": "^1.4.1",
-    "jspdf": "^4.2.1"
+    "jspdf": "^4.2.1",
+    "three": "^0.159.0"
   }
 }

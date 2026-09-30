@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.8.0
+- Toggle "Show libraries as graph nodes": external npm / PyPI packages appear in the import graph (not counted in any statistic), vulnerable ones as skulls
+- 3D "Dependency Express" (three.js): files as planets, libraries as metal cubes, vulnerable packages as skulls, relations as lines
+- Chain mode (ride chains / circular lines with stations) and free roam mode (W drive, A/D choose relation, S turn around), auto pilot with random routes and dead-end turnarounds
+- Labels only for nearby / looked-at objects, chase / cab / free camera
+
 ## 1.7.0
 - PDF export of the statistics page (choose sections, A4/Letter, dark or light printer-friendly theme, cover page with key numbers)
 - Separate License report PDF and Vulnerability report PDF (searchable text tables)

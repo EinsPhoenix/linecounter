@@ -41,6 +41,7 @@
     esc, fmt, pct, pctStr, short, bytes, date, icon, card, tiles, donut, hbars, columns, tipAttr,
     post: m => vscode.postMessage(m),
     data: () => D,
+    colorOf, resolveColor: c => (window.LCGraphs ? LCGraphs.resolveColor(c) : c),
     /** re-draw canvas based charts after a theme switch (PDF light mode) */
     onThemeChange: () => { if (treemap) treemap.render(); for (const g of Object.values(graphs)) g.refreshColors(); },
   });
@@ -366,6 +367,7 @@
     if (clr) clr.disabled = !html;
   }
   function clearImportHighlight() {
+    impSelected = null;
     const g = graphs.importgraph;
     if (g) g.setHighlight(null);
     document.querySelectorAll('.imp-item.active').forEach(e => e.classList.remove('active'));
@@ -396,9 +398,11 @@
   }
 
   /** Click on a file: its (transitive) dependents in red, dependencies in amber. */
+  let impSelected = null;
   function selectImportNode(index, focus) {
     const g = graphs.importgraph;
     if (!g) return;
+    impSelected = g.nodes[index] ? g.nodes[index].f.abs : null;
     const nodesHl = new Map([[index, '#ffffff']]);
     const linksHl = new Map();
     const walk = (dirOut, color) => {
@@ -459,6 +463,8 @@
         <input id="impFind" type="text" list="impFiles" placeholder="Find a file in the graph…" spellcheck="false">
         <datalist id="impFiles">${G.nodes.map(n => `<option value="${esc(n.path)}">`).join('')}</datalist>
         <button class="btn" id="impClear" disabled>${icon('close')} Clear highlight</button>
+        <button class="btn primary" data-train="chain" title="Ride a train along a dependency chain through a 3D universe of your files">${icon('play')} 3D Train</button>
+        <button class="btn" data-train="free" title="Free roam: drive along any relation (W, A/D, S) starting at the selected file">${icon('play')} 3D Free roam</button>
       </div>
       <div class="imp-summary">
         <span class="imp-chip ${G.cycleCount ? 'red' : 'ok'}">${fmt(G.cycleCount)} circular import${G.cycleCount === 1 ? '' : 's'}${G.cycleCount ? ` · ${fmt(G.filesInCycles)} files involved` : ''}</span>
@@ -1249,6 +1255,8 @@
       else if (a === 'reset') g.resetView();
       return;
     }
+    const trainBtn = t.closest('[data-train]');
+    if (trainBtn && window.LCTrain) { LCTrain.open(UI(), D, { selectedAbs: impSelected, mode: /** @type {HTMLElement} */ (trainBtn).dataset.train }); return; }
     const impLayout = t.closest('[data-imp-layout]');
     if (impLayout && graphs.importgraph) {
       graphs.importgraph.setLayout(/** @type {HTMLElement} */ (impLayout).dataset.impLayout);

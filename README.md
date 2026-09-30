@@ -68,6 +68,15 @@ Die Seite nutzt ein festes Farbschema aus dunklem Orange und Grau mit SVG-Icons.
     - **Klick auf eine Datei:** alle Dateien, die (transitiv) davon abhängen, werden **rot**, alle Abhängigkeiten **bernsteinfarben**. Die Statuszeile nennt die Zahlen, auch für das ganze Projekt.
     - **Biggest blast radius:** die Dateien, von denen am meisten abhängt. Dazu Most imported und Imports the most, außerdem eine Dateisuche.
     - **Layout:** *Force* oder *Layered*. Layered zeigt Importeure oben und importierte Dateien darunter, Ketten laufen damit von oben nach unten.
+    - **Bibliotheken als Knoten:** In der Sidebar gibt es unter den Filtern den Schalter *Show libraries as graph nodes*. Externe npm- und Python-Pakete werden dann zu Knoten im Graphen: Quadrate, und Pakete mit bekannten Schwachstellen als rote Totenköpfe. Tooltip mit Version, Lizenz und Schwachstellen. Sie zählen in keiner Statistik.
+    - **3D Train (Dependency Express):**
+      - **Welt:** Dateien sind Planeten (Größe nach Importen, Ringe für Hubs, roter Schein bei Zyklen), Bibliotheken sind Metallwürfel, verwundbare Pakete sind Totenköpfe, und Dateien, die verwundbare Pakete importieren, bekommen einen Totenkopf-Mond. Beziehungen sind leuchtende Linien, Zyklen sind rot.
+      - **Beschriftungen** erscheinen nur für Objekte in der Nähe, für das, was die Kamera anschaut, und für die Stationen der Strecke.
+      - **Chain:** Der Zug fährt eine Kette oder eine Ringlinie (zirkulärer Import) mit Stationen ab. Das Fahrziel ist wählbar.
+      - **Free roam:** Du startest an der ausgewählten Datei oder klickst auf einem Planeten *Free roam from here*.
+      - **Manuell:** **W** fährt. An Kreuzungen wählst du die Beziehung mit **A**/**D**. Gibt es nur eine Fortsetzung, geht es ohne Auswahl geradeaus. **S** dreht den Zug um. Im Chain-Modus bleibt der Zug auf der Kette.
+      - **Auto:** konstante Geschwindigkeit. Im Free Roam wählt der Zug an Kreuzungen zufällig eine Beziehung und nimmt bevorzugt nicht den Weg, auf dem er gekommen ist. In Sackgassen dreht er um.
+      - **Kameras:** Chase, Cab (Führerstand) und Free cam. **C** wechselt, Ziehen mit der Maus schaut umher, das Mausrad zoomt, ↑/↓ ändert die Geschwindigkeit, Leertaste pausiert, **Esc** beendet.
     - **Motion:** *Wiggle*, *Calm* (kommt zur Ruhe) oder *Still* (statisch, ohne Animation). Gezogene Knoten bleiben in Calm und Still dort liegen, wo man sie ablegt. Gegenseitige Imports werden als Bögen gezeichnet.
   - Alle Graphen lassen sich zoomen, verschieben und per Drag bewegen. Hover hebt die Nachbarn hervor. Die Buttons oben rechts pausieren die Animation, schalten das Wackeln ein und aus, schütteln den Graphen durch und setzen den Zoom zurück. Die Einblend-Animation startet, sobald ein Graph ins Bild scrollt.
 - **Ranglisten-Tabelle** aller Dateien: sortierbar nach jeder Spalte, Filter nach Pfad und Sprache. Ein Klick öffnet die Datei.
