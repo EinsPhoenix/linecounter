@@ -316,6 +316,25 @@
     return best;
   }
 
+  /** keeps the 3D universe fast: at most `cap` nodes – cycles, chains, the selected file and the most connected ones */
+  function capGraph(G, cap, selectedAbs) {
+    if (G.nodes.length <= cap) return G;
+    const deg = G.nodes.map(() => 0);
+    for (const l of G.links) { deg[l.s]++; deg[l.t]++; }
+    const must = new Set();
+    G.nodes.forEach((n, i) => { if (n.cycle >= 0 || n.abs === selectedAbs) must.add(i); });
+    const byAbs = new Map(G.nodes.map((n, i) => [n.abs, i]));
+    for (const c of G.chains || []) for (const f of c.files) if (byAbs.has(f.abs)) must.add(byAbs.get(f.abs));
+    const order = [...must, ...G.nodes.map((_, i) => i).filter(i => !must.has(i)).sort((a, b) => deg[b] - deg[a])].slice(0, cap);
+    const keep = new Map(order.map((i, k) => [i, k]));
+    return {
+      ...G,
+      nodes: order.map(i => G.nodes[i]),
+      links: G.links.filter(l => keep.has(l.s) && keep.has(l.t)).map(l => ({ ...l, s: keep.get(l.s), t: keep.get(l.t) })),
+      capped: G.nodes.length,
+    };
+  }
+
   // ---------------------------------------------------------------- main
   function storeGet(k) { try { return window.localStorage.getItem(k); } catch { return null; } }
   function storeSet(k, v) { try { window.localStorage.setItem(k, v); } catch { /* storage unavailable */ } }
@@ -324,7 +343,7 @@
     if (!window.THREE) { alert('3D view not available (three.js failed to load).'); return; }
     const G0 = D.importGraph;
     if (!G0 || !G0.nodes.length) return;
-    const G = opts.functions && window.LCGraphs && D.functionGraph ? LCGraphs.withFunctions(G0, D.functionGraph) : G0;
+    const G = capGraph(opts.functions && window.LCGraphs && D.functionGraph ? LCGraphs.withFunctions(G0, D.functionGraph) : G0, (D.graphLimits && D.graphLimits.train3d) || 800, opts.selectedAbs);
     close();
     const { esc } = ui;
     const routes = routesFor(G, opts.selectedAbs);

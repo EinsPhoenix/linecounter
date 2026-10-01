@@ -251,6 +251,7 @@
     let colorCache = new Map();
     const col = c => { if (!colorCache.has(c)) colorCache.set(c, resolveColor(c)); return colorCache.get(c); };
     const nodeR = n => (opts.radius ? opts.radius(n) : 4);
+    let zoomLabel = null;
     // ---- clusters: nodes of one group (e.g. folder) gather around their own anchor inside a soft bubble ----
     let clusters = !!opts.clusters;
     let groups = new Map(); // key -> { key, n, x, y, r, color, label, hull }
@@ -281,10 +282,10 @@
         sim.force('y', d3.forceY(n => (anchor(n) ? anchor(n).y : 0)).strength(n => (anchor(n) ? 0.16 : 0.02)));
         sim.force('link').strength(l => (groupOf(l.source) === groupOf(l.target) ? 0.35 : 0.012));
         sim.force('charge').distanceMax(160);
-        sim.force('collide').radius(n => nodeR(n) + 4);
+        if (sim.force('collide')) sim.force('collide').radius(n => nodeR(n) + 4);
       } else {
         sim.force('charge').distanceMax(400);
-        sim.force('collide').radius(n => nodeR(n) + (opts.collidePad ?? 2));
+        if (sim.force('collide')) sim.force('collide').radius(n => nodeR(n) + (opts.collidePad ?? 2));
         applyLayout();
       }
     }
@@ -335,7 +336,7 @@
       .on('tick', () => {
         if (motion === 'wiggle') jiggle();
         if (!fitted && sim.alpha() < 0.12) { fitted = true; fitView(600); }
-        draw();
+        requestDraw();
       });
 
     function applyLayout() {
@@ -407,6 +408,9 @@
       }
       sim.nodes(nodes);
       sim.force('link').links(links);
+      // huge graphs: no collision force (expensive) and a static layout instead of a running animation
+      sim.force('collide', nodes.length > 4000 ? null : d3.forceCollide(n => nodeR(n) + (opts.collidePad ?? 2)));
+      if (nodes.length > 4000 && motion !== 'still') motion = 'still';
       applyLayout();
       applyClusters();
       applyMotion();
@@ -420,7 +424,8 @@
     function settleNow() {
       sim.stop();
       sim.alpha(1);
-      for (let i = 0; i < 260 && sim.alpha() > sim.alphaMin(); i++) sim.tick();
+      const ticks = Math.max(50, Math.round(260 * Math.min(1, 2500 / Math.max(1, nodes.length))));
+      for (let i = 0; i < ticks && sim.alpha() > sim.alphaMin(); i++) sim.tick();
       fitted = true;
       fitView(0);
       draw();
@@ -442,7 +447,7 @@
       if (!ns.length) return;
       const { x0, y0, x1, y1 } = bounds(ns);
       const { w, h } = cv.state;
-      const k = Math.max(0.15, Math.min(list ? 3 : 2.5, 0.9 * Math.min(w / (x1 - x0 || 1), h / (y1 - y0 || 1))));
+      const k = Math.max(0.02, Math.min(list ? 3 : 2.5, 0.9 * Math.min(w / (x1 - x0 || 1), h / (y1 - y0 || 1))));
       const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
       const t = d3.zoomIdentity.translate(-cx * k, -cy * k).scale(k);
       const sel = d3.select(canvas);
@@ -496,9 +501,15 @@
         if (opts.arrows) { ctx.fillStyle = color; drawArrow(p, l.target, (hl && hl.links.has(l) ? 8 : 5) / Math.sqrt(k)); }
       };
       drawHulls(k);
+      // visible area in graph coordinates (+ margin) – everything outside is skipped (big graphs stay fluid)
+      const vx0 = (-w / 2 - transform.x) / k - 40, vx1 = (w / 2 - transform.x) / k + 40;
+      const vy0 = (-h / 2 - transform.y) / k - 40, vy1 = (h / 2 - transform.y) / k + 40;
+      const inView = n => n.x >= vx0 && n.x <= vx1 && n.y >= vy0 && n.y <= vy1;
+      const big = nodes.length > 2500;
       // links – normal ones first, highlighted ones on top
       for (const l of links) {
         if (hl && hl.links.has(l)) continue;
+        if (!inView(l.source) && !inView(l.target)) continue;
         const hot = hovered && (l.source === hovered || l.target === hovered);
         const base = opts.linkAlpha || 0.35;
         const alpha = hl ? 0.05 : hovered ? (hot ? 0.95 : 0.06) : base;
@@ -507,7 +518,10 @@
       }
       if (hl) for (const [l, c] of hl.links) drawLink(l, col(c), c === hl.soft ? 0.55 : 0.95, (c === hl.soft ? 1.3 : 3) / Math.sqrt(k));
       // nodes
+      let visibleCount = 0;
       for (const n of nodes) {
+        if (!inView(n)) continue;
+        visibleCount++;
         const hc = hl && hl.nodes.get(n.index);
         const dim = hl ? !hc : hovered && n !== hovered && !nb.has(n.index);
         ctx.globalAlpha = dim ? (hl ? 0.12 : 0.15) : 1;
@@ -540,11 +554,14 @@
       // labels
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
+      // label budget: with thousands of visible nodes only forced labels (hover, highlight) are drawn
+      const labelAll = visibleCount < (big ? 900 : 2500);
       for (const n of nodes) {
+        if (!inView(n)) continue;
         const hc = hl && hl.nodes.get(n.index);
         const dim = hl ? !hc : hovered && n !== hovered && !nb.has(n.index);
         const labelled = hl && hl.labels ? hl.labels.has(n.index) || (hc && k > 3) : hc;
-        const show = labelled || n === hovered || (!hl && nb && nb.has(n.index)) || (!hl && opts.showLabel && opts.showLabel(n, k));
+        const show = labelled || n === hovered || (!hl && nb && nb.has(n.index)) || (labelAll && !hl && opts.showLabel && opts.showLabel(n, k));
         if (!show || !opts.label) continue;
         const text = opts.label(n);
         if (!text) continue;
@@ -559,6 +576,14 @@
       }
       // layer guides for the layered layout
       ctx.restore();
+      if (zoomLabel) zoomLabel.textContent = Math.round(k * 100) + '%';
+    }
+    /** coalesces many draw requests (simulation ticks, zoom events) into one frame */
+    let drawPending = false;
+    function requestDraw() {
+      if (drawPending) return;
+      drawPending = true;
+      requestAnimationFrame(() => { drawPending = false; draw(); });
     }
 
     const toGraph = ev => {
@@ -577,10 +602,34 @@
       return best;
     };
 
-    const zoom = d3.zoom().scaleExtent([0.08, 10])
+    const zoom = d3.zoom().scaleExtent([0.02, 40])
+      // smooth wheel / touchpad: small steps per notch, pinch (ctrl + wheel) zooms faster
+      .wheelDelta(ev => -ev.deltaY * (ev.deltaMode === 1 ? 0.05 : ev.deltaMode ? 1 : 0.0018) * (ev.ctrlKey ? 6 : 1))
       .filter(ev => (ev.type === 'wheel' || ev.type === 'dblclick' || !findNode(ev)) && !ev.button)
-      .on('zoom', ev => { transform = ev.transform; draw(); });
+      .on('zoom', ev => { transform = ev.transform; requestDraw(); });
     d3.select(canvas).call(zoom).on('dblclick.zoom', null);
+    // zoom controls (+, −, fit, level) in the corner of every graph; keyboard +/−/0 while the mouse is over the graph
+    const zoomBy = (f, at) => d3.select(canvas).transition().duration(220).call(zoom.scaleBy, f, at);
+    const zctl = document.createElement('div');
+    zctl.className = 'gzoom';
+    zctl.innerHTML = '<button data-z="in" title="Zoom in (+)">+</button><span class="gzoom-lvl">100%</span><button data-z="out" title="Zoom out (−)">−</button><button data-z="fit" title="Fit everything (0)">⤢</button>';
+    container.appendChild(zctl);
+    zoomLabel = zctl.querySelector('.gzoom-lvl');
+    zctl.addEventListener('click', ev => {
+      const b = /** @type {HTMLElement} */ (ev.target).closest('button');
+      if (!b) return;
+      if (b.dataset.z === 'in') zoomBy(1.6); else if (b.dataset.z === 'out') zoomBy(1 / 1.6); else fitView(450);
+    });
+    let mouseInside = false;
+    canvas.addEventListener('mouseenter', () => { mouseInside = true; });
+    canvas.addEventListener('mouseleave', () => { mouseInside = false; });
+    const onKeyZoom = ev => {
+      if (!mouseInside || /input|select|textarea/i.test(/** @type {HTMLElement} */ (ev.target).tagName)) return;
+      if (ev.key === '+' || ev.key === '=') { zoomBy(1.4); ev.preventDefault(); }
+      else if (ev.key === '-' || ev.key === '_') { zoomBy(1 / 1.4); ev.preventDefault(); }
+      else if (ev.key === '0') { fitView(450); ev.preventDefault(); }
+    };
+    window.addEventListener('keydown', onKeyZoom);
 
     let dragNode = null, dragMoved = false;
     canvas.addEventListener('pointerdown', ev => {
@@ -629,7 +678,8 @@
       const n = findNode(ev);
       if (n && opts.onDblClick) { opts.onDblClick(n, ev); return; }
       const g = !n && groupAt(ev);
-      if (g) fitView(500, nodes.filter(x => groupOf(x) === g.key)); // zoom into a cluster
+      if (g) { fitView(500, nodes.filter(x => groupOf(x) === g.key)); return; } // zoom into a cluster
+      if (!n) { const r = canvas.getBoundingClientRect(); zoomBy(ev.shiftKey ? 1 / 2 : 2, [ev.clientX - r.left, ev.clientY - r.top]); } // double-click: zoom in (shift: out)
     });
     canvas.addEventListener('mouseleave', ev => { hovered = null; draw(); if (opts.onHover) opts.onHover(null, ev); });
     canvas.addEventListener('contextmenu', ev => {
@@ -706,7 +756,7 @@
       refreshColors() { colorCache = new Map(); draw(); },
       positions() { return nodes.map(n => [n.id, { x: n.x, y: n.y }]); },
       get running() { return running; },
-      destroy() { sim.stop(); io.disconnect(); ro.disconnect(); },
+      destroy() { sim.stop(); io.disconnect(); ro.disconnect(); window.removeEventListener('keydown', onKeyZoom); zctl.remove(); },
       /** group nodes into bubbles (e.g. by folder) */
       setClusters(on) {
         clusters = !!on;

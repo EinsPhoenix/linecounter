@@ -47,7 +47,8 @@ const CSS_EXT = ['', '.css', '.scss', '.sass', '.less'];
 
 /** File dependency graph from import / require / include / @import statements. */
 function buildImportGraph(files, opts = {}) {
-  const maxNodes = opts.maxNodes || 400;
+  const maxNodes = opts.maxNodes || 20000;
+  const maxLinks = opts.maxLinks || 40000;
   const byKey = new Map(); // "root|rel" -> file
   for (const f of files) byKey.set(f.root + '|' + f.path, f);
   const has = (root, rel) => byKey.get(root + '|' + rel);
@@ -238,7 +239,7 @@ function buildImportGraph(files, opts = {}) {
     }
   }
   if (opts.edgesOut) for (const [a, b] of edges.values()) if (!b.library) opts.edgesOut.push([a.abs, b.abs]);
-  const g = analyzeDependencies([...edges.values()], maxNodes + libs.size);
+  const g = analyzeDependencies([...edges.values()], maxNodes + libs.size, maxLinks);
   g.libraryCount = libs.size;
   g.vulnerableLibraries = [...libs.values()].filter(l => l.vulns).length;
   return g;
@@ -270,7 +271,7 @@ function libraryLookup(report) {
  * Graph analysis on file -> file import edges:
  * circular imports (strongly connected components), longest dependency chains, layers, blast radius.
  */
-function analyzeDependencies(edgeList, maxNodes) {
+function analyzeDependencies(edgeList, maxNodes, maxLinks = 40000) {
   const all = [];
   const id = new Map();
   const node = f => { if (!id.has(f)) { id.set(f, all.length); all.push(f); } return id.get(f); };
@@ -401,16 +402,18 @@ function analyzeDependencies(edgeList, maxNodes) {
       dependencies: N <= 4000 ? reach(v, out) : null,
     };
   });
-  const links = [];
+  let links = [];
   for (const [a, b] of E) {
     if (pos.has(a) && pos.has(b)) links.push({ s: pos.get(a), t: pos.get(b), cyc: comp[a] === comp[b] });
   }
+  const linksTruncated = links.length > maxLinks;
+  if (linksTruncated) links = links.filter(l => l.cyc).concat(links.filter(l => !l.cyc)).slice(0, maxLinks); // cycles are always kept
   const top = (arr, n) => arr.slice().sort((x, y) => y.count - x.count).slice(0, n);
   const counts = (adj) => all.map((f, v) => ({ path: f.path, abs: f.abs, count: adj[v].length, library: !!f.library })).filter(x => x.count && !x.library);
   const blast = nodes.filter(n => n.dependents && !n.library).map(n => ({ path: n.path, abs: n.abs, count: n.dependents }));
   const libUse = all.map((f, v) => ({ path: f.path, abs: f.abs, count: inn[v].length, library: !!f.library, vulns: f.vulns || 0, severity: f.severity || null, version: f.version || null })).filter(x => x.library);
   return {
-    nodes, links, edgeCount: E.length, truncated: N > maxNodes,
+    nodes, links, edgeCount: E.length, truncated: N > maxNodes || linksTruncated, limits: { maxNodes, maxLinks, totalNodes: N },
     mostImported: top(counts(inn), 5), mostImporting: top(counts(out), 5), blastRadius: top(blast, 5), mostUsedLibraries: top(libUse, 8),
     cycles, cycleCount: cyclicComps.length, filesInCycles: cyclicComps.reduce((s, x) => s + x.m.length, 0),
     chains, longestChain: chains.length ? chains[0].length : 0, maxLayer: Math.max(0, ...nodes.map(n => n.layer)),

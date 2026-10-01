@@ -73,6 +73,7 @@ async function computeStatistics(config, roots, selection, options = {}) {
       graphMotion: config.get('graphs.motion', 'auto'),
       trainKeys: config.get('train.keys', {}),
       maxFunctions: config.get('graphs.maxFunctions', 600),
+      graphLimits: { maxNodes: Math.max(10, config.get('graphs.maxNodes', 20000)), maxLinks: Math.max(10, config.get('graphs.maxLinks', 40000)), train3d: Math.max(20, config.get('train.maxNodes', 800)) },
       health: healthOptions(config),
       rant: {
         enabled: config.get('rant.enabled', true),

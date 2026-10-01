@@ -81,7 +81,8 @@ function aggregate(files, meta) {
   }));
 
   const fileEdges = [];
-  const importGraph = buildImportGraph(text, { libraries: !!meta.includeLibraries, deps: meta.dependencies, edgesOut: fileEdges });
+  const limits = meta.graphLimits || {};
+  const importGraph = buildImportGraph(text, { libraries: !!meta.includeLibraries, deps: meta.dependencies, edgesOut: fileEdges, maxNodes: limits.maxNodes, maxLinks: limits.maxLinks });
   const graphFiles = new Set(importGraph.nodes.filter(n => !n.library).map(n => n.abs));
   const churn = new Map();
   for (const r of meta.repos || []) {
