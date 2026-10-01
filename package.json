@@ -447,6 +447,28 @@
           "default": 800,
           "minimum": 20,
           "description": "Maximum number of planets in the 3D train view (the 3D layout gets slow with thousands of nodes). The most connected files are kept."
+        },
+        "linecounter.customFilters": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "patterns": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "patterns"
+            ]
+          },
+          "description": "Own filters shown as checkboxes in the sidebar (in addition to .linecounter/filters.json), e.g. [{\"label\": \"Data folders\", \"patterns\": [\"*/data\"]}]."
         }
       }
     },

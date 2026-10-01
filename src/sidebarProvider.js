@@ -85,6 +85,26 @@ class SidebarProvider {
       case 'presetDelete':
         await this.deletePreset(msg.name);
         break;
+      case 'filterAdd': {
+        const pats = String(msg.patterns || '').split(/[,;\n]/).map(s => s.trim()).filter(Boolean);
+        if (!pats.length) break;
+        const label = String(msg.label || '').trim() || pats.join(', ');
+        try {
+          await this.config.addCustomFilter(label, pats);
+          const id = this.config.listCustomFilters().find(f => f.label === label).id;
+          await this.setState({ presets: [...new Set([...this.state.presets, id])] }); // new filters start enabled
+        } catch (e) { vscode.window.showErrorMessage(e.message); }
+        await this.scan();
+        break;
+      }
+      case 'filterRemove': {
+        const ok = await vscode.window.showWarningMessage(`Delete the filter "${msg.label}"?`, { modal: true }, 'Delete');
+        if (!ok) break;
+        await this.config.removeCustomFilter(msg.id);
+        await this.setState({ presets: this.state.presets.filter(p => p !== msg.id) });
+        await this.scan();
+        break;
+      }
       case 'openConfig':
         await vscode.commands.executeCommand('linecounter.openWorkspaceSettings');
         break;
@@ -151,13 +171,17 @@ class SidebarProvider {
     const state = this.state;
     this.post({ type: 'busy', text: 'Scanning workspace…' });
     const patterns = (this.config.get('excludePatterns', []) || []).filter(Boolean).map(globToRegExp);
+    // "*/data" means: a folder "data" anywhere below some folder (like "**/data")
+    const filterGlob = g => globToRegExp(String(g).trim().replace(/^\*\//, '**/'));
+    const customFilters = this.config.listCustomFilters();
+    const userFilters = customFilters.map(f => ({ id: f.id, res: f.patterns.map(p => { try { return filterGlob(p); } catch { return null; } }).filter(Boolean) }));
     const roots = [];
     for (const wf of folders) {
       const rootPath = wf.uri.fsPath;
       const prefix = wf.name + '/';
       const forceScan = new Set(state.included.filter(k => k.startsWith(prefix)).map(k => k.slice(prefix.length)));
       const res = await scanRoot(rootPath, {
-        presets: state.presets, forceScan, patterns, maxEntries: this.config.get('maxEntries', 200000),
+        presets: state.presets, forceScan, patterns, userFilters, maxEntries: this.config.get('maxEntries', 200000),
       });
       if (state.presets.includes(GITIGNORE_PRESET.id)) {
         markIgnored(res.children, await git.ignoredPaths(rootPath));
@@ -169,7 +193,8 @@ class SidebarProvider {
       type: 'tree',
       roots: roots.map(r => ({ name: r.name, children: r.children, truncated: r.truncated, count: r.count })),
       presets: [...PRESETS.map(p => ({ id: p.id, label: p.label })), GITIGNORE_PRESET,
-        { ...CUSTOM_PRESET, label: patterns.length ? `Custom patterns (${patterns.length})` : 'Custom patterns (none configured)' }],
+        { ...CUSTOM_PRESET, label: patterns.length ? `Custom patterns (${patterns.length})` : 'Custom patterns (none configured)' },
+        ...customFilters.map(f => ({ id: f.id, label: f.label, user: true, patterns: f.patterns, source: f.source }))],
       state,
       userPresets: this.config.listPresets(),
       activePreset: this.config.activePreset,

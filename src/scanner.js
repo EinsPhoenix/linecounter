@@ -21,8 +21,10 @@ const PRESETS = [
 
 const DEFAULT_PRESETS = PRESETS.map(p => p.id);
 
-function presetFor(name, isDir, fullPath, enabled, rel, custom) {
+function presetFor(name, isDir, fullPath, enabled, rel, custom, userFilters) {
   if (custom && custom.length && enabled.has('custom') && custom.some(r => r.test(rel))) return 'custom';
+  // user defined filters (each one is its own preset id "cf:…")
+  for (const f of userFilters || []) if (enabled.has(f.id) && f.res.some(r => r.test(rel))) return f.id;
   for (const p of PRESETS) {
     if (!enabled.has(p.id)) continue;
     if (isDir) {
@@ -46,6 +48,7 @@ async function scanRoot(rootPath, opts) {
   const enabled = new Set(opts.presets);
   const forceScan = opts.forceScan || new Set(); // relative paths the user re-included
   const custom = opts.patterns || [];
+  const userFilters = opts.userFilters || [];
   const state = { count: 0, limit: opts.maxEntries || 200000, truncated: false, gitRepos: [] };
 
   async function walk(abs, rel) {
@@ -70,7 +73,7 @@ async function scanRoot(rootPath, opts) {
       if (e.name === '.git') state.gitRepos.push(abs);
       if (e.isDirectory()) {
         const node = { n: e.name, d: 1 };
-        const p = presetFor(e.name, true, childAbs, enabled, childRel + '/', custom);
+        const p = presetFor(e.name, true, childAbs, enabled, childRel + '/', custom, userFilters);
         if (p) node.p = p;
         // Never descend into .git; don't descend into preset folders unless re-included
         if (e.name === '.git' || (p && !forceScan.has(childRel))) {
@@ -82,7 +85,7 @@ async function scanRoot(rootPath, opts) {
         out.push(node);
       } else if (e.isFile()) {
         const node = { n: e.name };
-        const p = presetFor(e.name, false, childAbs, enabled, childRel, custom);
+        const p = presetFor(e.name, false, childAbs, enabled, childRel, custom, userFilters);
         if (p) node.p = p;
         out.push(node);
       }

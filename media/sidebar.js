@@ -5,7 +5,7 @@
   const MAX_ROWS = 3000;
 
   /** @type {any[]} */ let roots = [];
-  /** @type {{id:string,label:string}[]} */ let presets = [];
+  /** @type {{id:string,label:string,user?:boolean,patterns?:string[],source?:string}[]} */ let presets = [];
   let enabledPresets = new Set();
   let excluded = new Set();
   let included = new Set();
@@ -181,9 +181,23 @@
     const incByExt = new Map();
     for (const f of incFiles) incByExt.set(f.ext, (incByExt.get(f.ext) || 0) + 1);
 
-    const presetHtml = presets.map(p => `
+    const presetHtml = presets.filter(p => !p.user).map(p => `
       <label class="check"><input type="checkbox" data-preset="${esc(p.id)}" ${enabledPresets.has(p.id) ? 'checked' : ''}>
       <span>${esc(p.label)}</span></label>`).join('');
+    const userFilters = presets.filter(p => p.user);
+    const userHtml = `<div class="ufilters">
+        <div class="ufilters-title">My filters <span class="muted">(.linecounter/filters.json)</span></div>
+        ${userFilters.map(p => `<div class="ufilter">
+          <label class="check"><input type="checkbox" data-preset="${esc(p.id)}" ${enabledPresets.has(p.id) ? 'checked' : ''}>
+            <span>${esc(p.label)}${p.label !== (p.patterns || []).join(', ') ? ` <span class="muted">${esc((p.patterns || []).join(', '))}</span>` : ''}</span></label>
+          ${p.source === 'settings' ? '<span class="muted" title="Defined in linecounter.customFilters">settings</span>' : `<button class="icon-btn2 ufilter-del" data-filter-del="${esc(p.id)}" data-label="${esc(p.label)}" title="Delete this filter">${SVG.trash}</button>`}
+        </div>`).join('') || '<div class="muted ufilter-empty">No own filters yet.</div>'}
+        <form class="ufilter-add" id="filterAdd">
+          <input id="filterPat" type="text" placeholder="Pattern, e.g. */data, *.generated.ts, docs/" spellcheck="false" title="Glob patterns, comma separated. */data = every folder named data below another folder, **/x = anywhere, x/ = folder">
+          <input id="filterName" type="text" placeholder="Name (optional)" spellcheck="false">
+          <button class="icon-btn2" type="submit" title="Add filter">+</button>
+        </form>
+      </div>`;
 
     const extHtml = exts.map(([e, c]) => `
       <label class="chip ${hiddenExt.has(e) ? 'off' : ''}" title="${hiddenExt.has(e) ? 'Hidden – click to show' : 'Shown – click to hide'}">
@@ -219,6 +233,7 @@
           <span class="muted">${matches} match${matches === 1 ? '' : 'es'}</span>
           <button class="link" id="exMatches">Exclude all</button>
           <button class="link" id="inMatches">Include all</button>
+          <button class="link" id="saveFilter" title="Save this search as a reusable filter">Save as filter</button>
         </div>` : ''}
       </div>
       <div class="presetbar" title="Filter presets are stored in .linecounter/presets.json">
@@ -240,6 +255,7 @@
       <details id="filters" ${ui.filtersOpen ? 'open' : ''}>
         <summary>Predefined filters</summary>
         <div class="presets">${presetHtml}</div>
+        ${userHtml}
         <label class="check libs-toggle" title="External packages (npm, Python) become nodes in the import graph and the 3D train view. They are not counted in any statistic."><input type="checkbox" id="libToggle" ${libraries ? 'checked' : ''}>
           <span>Show libraries as graph nodes <span class="muted">(not counted)</span></span></label>
       </details>
@@ -326,6 +342,21 @@
     const lt = /** @type {HTMLInputElement} */ (document.getElementById('libToggle'));
     if (lt) lt.addEventListener('change', () => { libraries = lt.checked; save(); });
     on('presetSave', () => vscode.postMessage({ type: 'presetSave' }));
+    on('saveFilter', () => { const q = query.trim(); if (q) { busyText = 'Saving filter…'; render(); vscode.postMessage({ type: 'filterAdd', patterns: q.includes('/') || /[*?]/.test(q) ? q : '**/*' + q + '*', label: q }); } });
+    const fa = document.getElementById('filterAdd');
+    if (fa) fa.addEventListener('submit', ev => {
+      ev.preventDefault();
+      const pat = /** @type {HTMLInputElement} */ (document.getElementById('filterPat')).value.trim();
+      const name = /** @type {HTMLInputElement} */ (document.getElementById('filterName')).value.trim();
+      if (!pat) return;
+      busyText = 'Adding filter…'; render();
+      vscode.postMessage({ type: 'filterAdd', patterns: pat, label: name });
+    });
+    document.querySelectorAll('[data-filter-del]').forEach(b => b.addEventListener('click', ev => {
+      ev.preventDefault();
+      const el = /** @type {HTMLElement} */ (b);
+      vscode.postMessage({ type: 'filterRemove', id: el.dataset.filterDel, label: el.dataset.label });
+    }));
     on('presetDelete', () => activePreset && vscode.postMessage({ type: 'presetDelete', name: activePreset }));
     on('openConfig', () => vscode.postMessage({ type: 'openConfig' }));
     const sel = /** @type {HTMLSelectElement} */ (document.getElementById('presetSel'));
