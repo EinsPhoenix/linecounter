@@ -158,66 +158,99 @@
   // ---------------------------------------------------------------- train model
   function buildTrain() {
     const train = new THREE.Group();
-    const hull = new THREE.MeshStandardMaterial({ color: 0x3a3a40, metalness: 0.85, roughness: 0.28 });
-    const hullLight = new THREE.MeshStandardMaterial({ color: 0x9a9aa2, metalness: 0.8, roughness: 0.3 });
-    const accent = new THREE.MeshStandardMaterial({ color: 0xe0621b, metalness: 0.5, roughness: 0.35, emissive: 0x5a1e04 });
-    const neon = new THREE.MeshBasicMaterial({ color: 0xffa24d });
-    const glass = new THREE.MeshStandardMaterial({ color: 0x241208, metalness: 0.2, roughness: 0.05, emissive: 0xf7ae62, emissiveIntensity: 0.35, transparent: true, opacity: 0.9 });
+    const phys = o => new THREE.MeshPhysicalMaterial({ clearcoat: 1, clearcoatRoughness: 0.04, envMapIntensity: 1.6, ...o });
+    const hull = phys({ color: 0x22242b, metalness: 0.9, roughness: 0.16 });
+    const hullLight = phys({ color: 0xc9ccd4, metalness: 0.85, roughness: 0.14 });
+    const accent = phys({ color: 0xe0621b, metalness: 0.55, roughness: 0.18, emissive: 0x3a1204 });
+    const chrome = phys({ color: 0xf2f2f2, metalness: 1, roughness: 0.05 });
+    const glass = phys({ color: 0x0c0a08, metalness: 0.2, roughness: 0.02, transparent: true, opacity: 0.88, emissive: 0xf7ae62, emissiveIntensity: 0.12 });
+    const neon = new THREE.MeshBasicMaterial({ color: 0xffa24d, toneMapped: false });
+    const neonWhite = new THREE.MeshBasicMaterial({ color: 0xfff1d6, toneMapped: false });
     const glowTex = glowTexture('rgba(255,150,60,.9)');
     const bobs = [];
-    const glowSprite = (scale, opacity) => {
-      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity }));
+    const glowSprite = (scale, opacity, color) => {
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity, color: color || 0xffffff }));
       s.scale.setScalar(scale);
       return s;
     };
-    /** hover pads + glow below a car (no wheels – it floats over the rails) */
-    const pads = (group, len) => {
-      for (const z of [-len / 3, len / 3]) {
-        const pad = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.25, 1.1), hull); pad.position.set(0, -0.95, z); group.add(pad);
-        const glow = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.08, 0.9), neon); glow.position.set(0, -1.1, z); group.add(glow);
-        const g = glowSprite(3.2, 0.45); g.position.set(0, -1.2, z); group.add(g);
-      }
+    /** streamlined body: lathe profile along -z (nose) .. +z (tail), flattened to an oval */
+    const body = (len, rad, noseLen, tailLen, mat) => {
+      const pts = [];
+      const steps = 22;
+      for (let i = 0; i <= steps; i++) { const t = i / steps; pts.push(new THREE.Vector2(rad * Math.sin(t * Math.PI / 2) ** 0.55, -len / 2 - noseLen + noseLen * t)); }
+      pts.push(new THREE.Vector2(rad, len / 2));
+      for (let i = 1; i <= 8; i++) { const t = i / 8; pts.push(new THREE.Vector2(rad * (1 - 0.35 * t * t), len / 2 + tailLen * t)); }
+      pts.push(new THREE.Vector2(0.001, len / 2 + tailLen));
+      const g = new THREE.LatheGeometry(pts, 40);
+      g.rotateX(-Math.PI / 2); // lathe axis y -> z (nose at -z)
+      g.scale(1, 0.78, 1);
+      return new THREE.Mesh(g, mat);
     };
-    // locomotive: sleek capsule, front along -z
+    const strip = (x, y, z0, z1, mat, h = 0.1) => { const m = new THREE.Mesh(new THREE.BoxGeometry(0.06, h, z1 - z0), mat); m.position.set(x, y, (z0 + z1) / 2); return m; };
+    /** maglev skirt + glowing pads below a car */
+    const skirt = (group, len) => {
+      const s = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.35, len), hull); s.position.set(0, -0.95, 0); group.add(s);
+      for (const x of [-0.8, 0.8]) group.add(Object.assign(strip(x, -1.14, -len / 2 + 0.3, len / 2 - 0.3, neon, 0.05), {}));
+      for (const z of [-len / 3, len / 3]) { const g = glowSprite(3.4, 0.5); g.position.set(0, -1.25, z); group.add(g); }
+    };
+
+    // ---- locomotive ----
     const loco = new THREE.Group();
     const lb = new THREE.Group(); loco.add(lb); bobs.push(lb);
-    const body = new THREE.Mesh(new THREE.CapsuleGeometry(1.25, 4.4, 8, 20), hull);
-    body.rotation.x = Math.PI / 2; body.scale.set(1, 1, 0.85); lb.add(body);
-    const nose = new THREE.Mesh(new THREE.ConeGeometry(1.2, 2.6, 24), accent);
-    nose.rotation.x = -Math.PI / 2; nose.position.set(0, -0.05, -3.9); nose.scale.set(1, 0.7, 1); lb.add(nose);
-    const canopy = new THREE.Mesh(new THREE.SphereGeometry(1, 20, 14, 0, Math.PI * 2, 0, Math.PI / 2), glass);
-    canopy.scale.set(0.95, 0.75, 1.9); canopy.position.set(0, 0.55, -1.2); lb.add(canopy);
-    for (const x of [-1.27, 1.27]) {
-      const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.14, 5.6), neon); stripe.position.set(x, 0.05, 0); lb.add(stripe);
+    lb.add(body(4.2, 1.35, 3.6, 1.4, hull));
+    // orange nose cap and a chrome collar
+    const cap = body(0.01, 1.36, 1.6, 0.01, accent); cap.position.z = -2.1 - 0.02; cap.scale.multiplyScalar(1.01); lb.add(cap);
+    const collar = new THREE.Mesh(new THREE.TorusGeometry(1.34, 0.06, 8, 40), chrome); collar.scale.set(1, 0.78, 1); collar.position.z = -2.05; lb.add(collar);
+    // cockpit canopy
+    const canopy = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 16, 0, Math.PI * 2, 0, Math.PI / 2), glass);
+    canopy.scale.set(0.9, 0.62, 2.1); canopy.position.set(0, 0.55, -1.7); lb.add(canopy);
+    const frame = new THREE.Mesh(new THREE.TorusGeometry(1, 0.035, 6, 40, Math.PI), chrome); frame.scale.set(0.9, 0.62, 1); frame.position.set(0, 0.55, -1.7); frame.rotation.y = Math.PI / 2; frame.scale.set(2.1, 0.62, 0.9); lb.add(frame);
+    // light lines along the sides and a sweeping line over the nose
+    for (const x of [-1.33, 1.33]) { lb.add(strip(x, 0.02, -2.2, 2.4, neon)); lb.add(strip(x * 0.985, -0.28, -1.2, 2.1, neonWhite, 0.03)); }
+    const noseLine = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.04, 6, 40, Math.PI), neon); noseLine.rotation.set(Math.PI / 2, 0, 0); noseLine.scale.set(1, 1, 0.78); noseLine.position.set(0, 0, -3.4); lb.add(noseLine);
+    // headlights: two slit lights in the nose
+    for (const x of [-0.55, 0.55]) { const h = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.1), neonWhite); h.position.set(x, -0.15, -4.95 + Math.abs(x) * 0.7); h.rotation.y = -x * 0.5; lb.add(h); }
+    const lamp = glowSprite(2.6, 0.9, 0xfff1c8); lamp.position.set(0, -0.1, -5.9); lb.add(lamp);
+    // dorsal fin with a light at the tip, side winglets
+    const finShape = new THREE.Shape(); finShape.moveTo(0, 0); finShape.lineTo(1.9, 0); finShape.lineTo(1.4, 1.1); finShape.lineTo(0.9, 1.1); finShape.closePath();
+    const fin = new THREE.Mesh(new THREE.ExtrudeGeometry(finShape, { depth: 0.1, bevelEnabled: true, bevelSize: 0.03, bevelThickness: 0.03, bevelSegments: 2 }), accent);
+    fin.rotation.y = -Math.PI / 2; fin.position.set(0.05, 0.9, 1.2); lb.add(fin);
+    const finLight = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 8), neon); finLight.position.set(0, 2.02, 2.6); lb.add(finLight);
+    for (const x of [-1, 1]) {
+      const w = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.07, 1.2), accent); w.position.set(x * 1.75, -0.25, 1.6); w.rotation.z = x * 0.18; lb.add(w);
+      const tip = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.08, 1.2), neon); tip.position.set(x * 2.3, -0.16, 1.6); lb.add(tip);
     }
-    const fin = new THREE.Mesh(new THREE.BoxGeometry(0.12, 1.1, 1.8), accent); fin.position.set(0, 1.25, 2.1); fin.rotation.x = -0.35; lb.add(fin);
-    const engine = new THREE.Mesh(new THREE.CylinderGeometry(0.75, 0.95, 0.9, 20), hull); engine.rotation.x = Math.PI / 2; engine.position.set(0, 0, 3.4); lb.add(engine);
-    const flame = new THREE.Mesh(new THREE.CircleGeometry(0.62, 20), neon); flame.position.set(0, 0, 3.86); lb.add(flame);
-    const exhaust = glowSprite(4.5, 0.8); exhaust.position.set(0, 0, 4.4); lb.add(exhaust);
-    const lamp = glowSprite(2.2, 0.9); lamp.material.color = new THREE.Color(0xfff1c8); lamp.position.set(0, 0.1, -5.1); lb.add(lamp);
-    pads(lb, 5);
+    // twin thrusters
+    const exhausts = [];
+    for (const x of [-0.55, 0.55]) {
+      const eng = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.55, 1.1, 24, 1, true), chrome); eng.rotation.x = Math.PI / 2; eng.position.set(x, -0.05, 3.55); lb.add(eng);
+      const core = new THREE.Mesh(new THREE.CircleGeometry(0.4, 24), neon); core.position.set(x, -0.05, 4.1); lb.add(core);
+      const ex = glowSprite(3.2, 0.8); ex.position.set(x, -0.05, 4.6); lb.add(ex); exhausts.push(ex);
+    }
+    skirt(lb, 6);
     const head = new THREE.SpotLight(0xfff1c8, 140, 120, Math.PI / 8, 0.5, 1.8);
-    head.position.set(0, 0.3, -5);
+    head.position.set(0, 0, -5.5);
     const target = new THREE.Object3D(); target.position.set(0, -2, -30); loco.add(target); head.target = target;
     loco.add(head);
     train.add(loco);
+
+    // ---- passenger pods ----
     const wagons = [];
     for (let i = 0; i < 3; i++) {
       const wg = new THREE.Group();
       const wb = new THREE.Group(); wg.add(wb); bobs.push(wb);
-      const shell = new THREE.Mesh(new THREE.CapsuleGeometry(1.15, 3.6, 8, 18), i % 2 ? hullLight : hull);
-      shell.rotation.x = Math.PI / 2; shell.scale.set(1, 1, 0.85); wb.add(shell);
-      for (const x of [-1.16, 1.16]) {
-        for (let k = -1; k <= 1; k++) {
-          const win = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.35, 0.8), neon); win.position.set(x, 0.3, k * 1.2); wb.add(win);
-        }
-      }
-      const band = new THREE.Mesh(new THREE.TorusGeometry(1.0, 0.1, 8, 24), accent); band.scale.set(1.15, 0.97, 1); band.position.z = -2.3; wb.add(band);
-      pads(wb, 4);
+      wb.add(body(3.6, 1.2, 0.9, 0.9, i % 2 ? hullLight : hull));
+      // continuous window band, roof light bar and accent rings at both ends
+      for (const x of [-1.19, 1.19]) { const band = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.42, 3.4), glass); band.position.set(x, 0.25, 0); wb.add(band); wb.add(strip(x * 1.005, 0.25, -1.5, 1.5, neonWhite, 0.06)); wb.add(strip(x, -0.3, -1.9, 1.9, neon, 0.05)); }
+      const roof = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.06, 2.6), neon); roof.position.set(0, 0.95, 0); wb.add(roof);
+      for (const z of [-1.9, 1.9]) { const r = new THREE.Mesh(new THREE.TorusGeometry(1.2, 0.07, 8, 40), accent); r.scale.set(1, 0.78, 1); r.position.z = z; wb.add(r); }
+      // gangway to the car in front
+      const gang = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 1.6, 16, 1, true), hull); gang.rotation.x = Math.PI / 2; gang.position.set(0, 0, -3.2); wb.add(gang);
+      skirt(wb, 4.4);
       train.add(wg);
       wagons.push(wg);
     }
-    return { train, loco, wagons, bobs, exhaust, chimneyLocal: new THREE.Vector3(0, 0, 4.2) };
+    return { train, loco, wagons, bobs, exhaust: exhausts[0], exhausts, chimneyLocal: new THREE.Vector3(0, -0.05, 4.4) };
   }
 
   // ---------------------------------------------------------------- routes
@@ -293,6 +326,7 @@
         <span class="t3-seg"><button data-drive="auto">Auto</button><button data-drive="manual">Manual</button></span>
         <span class="t3-seg"><button data-cam="chase" class="on">Chase</button><button data-cam="cab">Cab</button><button data-cam="orbit">Free cam</button></span>
         ${D.functionGraph && D.functionGraph.fns.length ? `<button data-t3="functions" class="${opts.functions ? 'on' : ''}" title="Show functions as stations: file → function and calls between functions">ƒ Functions</button>` : ''}
+        <button data-t3="trail" title="Green trail of the relations you already drove – thicker means driven more often. Click to clear." disabled>Trail: empty</button>
         <button data-t3="autochoose" title="Manual free roam: take the straightest relation at junctions instead of stopping">Auto-choose: off</button>
         <label class="t3-speed">Speed <input type="range" min="0.2" max="4" step="0.1" value="1"></label>
         <label class="t3-speed t3-stoptime" title="How long the auto pilot stops at each planet – 0 rolls straight through">Stop <input type="range" min="0" max="5" step="0.5" value="1"><span>1 s</span></label>
@@ -302,7 +336,8 @@
       <div class="t3-station"><div class="t3-now"></div><div class="t3-next"></div><div class="t3-progress"><span></span></div><div class="t3-choice"></div></div>
       <div class="t3-stops"></div>
       <div class="t3-info"></div>
-      <div class="t3-help"></div>`;
+      <div class="t3-help"></div>
+      <div class="t3-legend"></div>`;
     document.body.appendChild(root);
     document.body.classList.add('has-train');
 
@@ -322,6 +357,24 @@
     scene.add(sun);
     scene.add(new THREE.HemisphereLight(0x8899ff, 0x201008, 0.35));
     scene.add(starField(4000, 2500));
+    // reflections: a small generated environment (dark space with warm and cool light panels)
+    {
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.15;
+      const env = new THREE.Scene();
+      const c = document.createElement('canvas'); c.width = 256; c.height = 128;
+      const g = c.getContext('2d');
+      const grad = g.createLinearGradient(0, 0, 0, 128);
+      grad.addColorStop(0, '#1b1d26'); grad.addColorStop(0.48, '#0a0a0e'); grad.addColorStop(0.52, '#3a1a08'); grad.addColorStop(1, '#050505');
+      g.fillStyle = grad; g.fillRect(0, 0, 256, 128);
+      const tex = new THREE.CanvasTexture(c); tex.mapping = THREE.EquirectangularReflectionMapping; tex.colorSpace = THREE.SRGBColorSpace;
+      env.background = tex;
+      const panel = (color, x, y, z, w, h) => { const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide })); m.position.set(x, y, z); m.lookAt(0, 0, 0); env.add(m); };
+      panel(0xffc890, 0, 12, -10, 16, 3); panel(0xff7a2a, -14, 2, 4, 4, 10); panel(0x8fa8ff, 14, 5, 6, 5, 8); panel(0xffffff, 3, 14, 10, 10, 2);
+      const pmrem = new THREE.PMREMGenerator(renderer);
+      scene.environment = pmrem.fromScene(env, 0.02).texture;
+      pmrem.dispose();
+    }
     for (let i = 0; i < 4; i++) {
       const neb = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(['rgba(224,98,27,.35)', 'rgba(120,120,160,.25)', 'rgba(247,174,98,.25)', 'rgba(80,60,120,.3)'][i]), depthWrite: false, transparent: true }));
       neb.position.copy(new THREE.Vector3().randomDirection().multiplyScalar(1400));
@@ -337,6 +390,11 @@
     for (const l of G.links) if (G.nodes[l.t].library && G.nodes[l.t].vulns) vulnerableFiles.add(l.s);
     const skullTex = skullTexture();
     const planetGeo = new THREE.SphereGeometry(1, 32, 20);
+    // colors: files of the same folder share a planet color, functions are colored by their file
+    const colors = window.LCGraphs ? LCGraphs.nodeColors(G.nodes) : { of: () => null, folders: new Map() };
+    const colorFor = n => ui.resolveColor(colors.of(n) || ui.colorOf(n.lang));
+    const texCache = new Map();
+    const planetTex = c => { if (!texCache.has(c)) texCache.set(c, planetTexture(c)); return texCache.get(c); };
     const bodies = [];
     const pickables = [];
     G.nodes.forEach((n, i) => {
@@ -354,9 +412,9 @@
       } else if (n.fn) {
         // functions: small glowing crystals near their file
         r = radiusOf(n);
-        const color = ui.resolveColor(ui.colorOf(n.lang));
+        const color = colorFor(n);
         const hot = n.cx > (D.health ? D.health.thresholds.maxComplexity : 15);
-        const gem = new THREE.Mesh(new THREE.OctahedronGeometry(r, 0), new THREE.MeshStandardMaterial({ color: hot ? 0xe0621b : color, emissive: hot ? 0x5a1a04 : 0x1a1a1a, metalness: 0.6, roughness: 0.25, flatShading: true }));
+        const gem = new THREE.Mesh(new THREE.OctahedronGeometry(r, 0), new THREE.MeshStandardMaterial({ color, emissive: hot ? 0x7a1a04 : 0x1a1a1a, emissiveIntensity: hot ? 1 : 0.6, metalness: 0.6, roughness: 0.2, flatShading: true }));
         gem.userData.i = i; gem.userData.spin = 0.6 + Math.random() * 0.6;
         group.add(gem); pickables.push(gem);
       } else if (n.library) {
@@ -367,8 +425,8 @@
         group.add(cube); pickables.push(cube);
       } else {
         r = radiusOf(n);
-        const color = ui.resolveColor(ui.colorOf(n.lang));
-        const planet = new THREE.Mesh(planetGeo, new THREE.MeshStandardMaterial({ map: planetTexture(color), roughness: 0.85, metalness: 0.05 }));
+        const color = colorFor(n);
+        const planet = new THREE.Mesh(planetGeo, new THREE.MeshStandardMaterial({ map: planetTex(color), roughness: 0.85, metalness: 0.05 }));
         planet.scale.setScalar(r);
         planet.rotation.z = (Math.random() - 0.5) * 0.6;
         planet.userData.i = i; planet.userData.spin = 0.05 + Math.random() * 0.2;
@@ -479,10 +537,13 @@
       let vCount = 0, iCount = 0;
       for (const g of geos) { vCount += g.attributes.position.count; iCount += g.index.count; }
       const P = new Float32Array(vCount * 3), N = new Float32Array(vCount * 3), I = new Uint32Array(iCount);
+      const withUv = geos.every(g => g.attributes.uv);
+      const UV = withUv ? new Float32Array(vCount * 2) : null;
       let vo = 0, io = 0;
       for (const g of geos) {
         P.set(g.attributes.position.array, vo * 3);
         N.set(g.attributes.normal.array, vo * 3);
+        if (UV) UV.set(g.attributes.uv.array, vo * 2);
         const gi = g.index.array;
         for (let k = 0; k < gi.length; k++) I[io + k] = gi[k] + vo;
         vo += g.attributes.position.count; io += gi.length;
@@ -491,6 +552,7 @@
       const out = new THREE.BufferGeometry();
       out.setAttribute('position', new THREE.BufferAttribute(P, 3));
       out.setAttribute('normal', new THREE.BufferAttribute(N, 3));
+      if (UV) out.setAttribute('uv', new THREE.BufferAttribute(UV, 2));
       out.setIndex(new THREE.BufferAttribute(I, 1));
       return out;
     }
@@ -503,70 +565,132 @@
       down = new THREE.Vector3().crossVectors(side, t).normalize().multiplyScalar(-1);
       return { side, down };
     }
-    /** two glowing rails + sleeper matrices along a curve */
-    function railTubes(curve, sleepers, hub, radius = 0.13) {
+    /**
+     * Maglev guideway along a curve: a glossy beam (rounded box profile) with two neon edge lines that carry a
+     * flowing light pattern, plus glowing cross bars and support pylons (instance matrices).
+     */
+    function guideway(curve, hub, out) {
       const len = curve.getLength();
-      const segs = Math.max(6, Math.round(len / 2));
-      const tubes = [];
+      const segs = Math.max(6, Math.round(len / 1.6));
+      // beam cross-section (local: x = side, y = up), slightly tapered at the bottom
+      const prof = [[-0.95, -0.04], [-1.02, -0.14], [-0.7, -0.42], [0.7, -0.42], [1.02, -0.14], [0.95, -0.04]];
+      const P = [], N = [], I = [];
+      const frames = [];
+      for (let k = 0; k <= segs; k++) {
+        const u = k / segs;
+        const p = curve.getPointAt(u), t = curve.getTangentAt(u);
+        const f = railFrame(p, t, hub);
+        frames.push({ p, t, f });
+        const base = p.clone().add(f.down.clone().multiplyScalar(1.25));
+        const up = f.down.clone().multiplyScalar(-1);
+        for (const [x, y] of prof) {
+          const v = base.clone().add(f.side.clone().multiplyScalar(x)).add(up.clone().multiplyScalar(y));
+          P.push(v.x, v.y, v.z);
+          N.push(0, 0, 0);
+        }
+      }
+      const m = prof.length;
+      for (let k = 0; k < segs; k++) {
+        for (let j = 0; j < m; j++) {
+          const a = k * m + j, b = k * m + ((j + 1) % m), c = (k + 1) * m + j, d = (k + 1) * m + ((j + 1) % m);
+          I.push(a, c, b, b, c, d);
+        }
+      }
+      const beam = new THREE.BufferGeometry();
+      beam.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+      beam.setIndex(I);
+      beam.computeVertexNormals();
+      beam.setAttribute('uv', new THREE.Float32BufferAttribute(new Array((P.length / 3) * 2).fill(0), 2));
+      out.beams.push(beam);
+      // neon edges (tube uv.x runs along the length -> scaled so that the light pattern has a constant size)
       for (const s of [-1, 1]) {
-        const pts = [];
-        for (let k = 0; k <= segs; k++) {
-          const u = k / segs;
-          const p = curve.getPointAt(u), t = curve.getTangentAt(u);
-          const f = railFrame(p, t, hub);
-          pts.push(p.add(f.side.multiplyScalar(s * 0.95)).add(f.down.multiplyScalar(1.25)));
-        }
-        tubes.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), segs, radius, 5, false));
+        const pts = frames.map(({ p, f }) => p.clone().add(f.side.clone().multiplyScalar(s * 0.92)).add(f.down.clone().multiplyScalar(1.22)));
+        const tube = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), segs, 0.07, 5, false);
+        const uv = tube.attributes.uv;
+        for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * len / 7);
+        out.edges.push(tube);
       }
-      if (sleepers) {
-        const m = new THREE.Matrix4(), basis = new THREE.Matrix4();
-        for (let d = 1; d < len; d += 2.6) {
-          const u = d / len;
-          const p = curve.getPointAt(u), t = curve.getTangentAt(u);
-          const f = railFrame(p, t, hub);
+      // glowing cross bars every 5 units, pylons below the beam every 22 units (only out in space)
+      const basis = new THREE.Matrix4();
+      for (let d = 2.5; d < len; d += 5) {
+        const u = d / len, p = curve.getPointAt(u), t = curve.getTangentAt(u), f = railFrame(p, t, hub);
+        basis.makeBasis(f.side, f.down.clone().multiplyScalar(-1), t);
+        out.bars.push(basis.clone().setPosition(p.clone().add(f.down.clone().multiplyScalar(1.19))));
+      }
+      if (hub == null) {
+        for (let d = 11; d < len - 11; d += 22) {
+          const u = d / len, p = curve.getPointAt(u), t = curve.getTangentAt(u), f = railFrame(p, t, null);
           basis.makeBasis(f.side, f.down.clone().multiplyScalar(-1), t);
-          m.copy(basis).setPosition(p.clone().add(f.down.multiplyScalar(1.4)));
-          sleepers.push(m.clone());
+          out.pylons.push(basis.clone().setPosition(p.clone().add(f.down.clone().multiplyScalar(2.3))));
         }
       }
-      return tubes;
     }
+    // flowing light for the neon edges: a soft dash that moves along the track
+    const flowTex = (() => {
+      const c = document.createElement('canvas'); c.width = 128; c.height = 8;
+      const g = c.getContext('2d');
+      const grad = g.createLinearGradient(0, 0, 128, 0);
+      grad.addColorStop(0, 'rgba(255,255,255,0.25)'); grad.addColorStop(0.55, 'rgba(255,255,255,0.35)');
+      grad.addColorStop(0.8, 'rgba(255,255,255,1)'); grad.addColorStop(0.86, 'rgba(255,255,255,0.35)'); grad.addColorStop(1, 'rgba(255,255,255,0.25)');
+      g.fillStyle = grad; g.fillRect(0, 0, 128, 8);
+      const t = new THREE.CanvasTexture(c);
+      t.wrapS = THREE.RepeatWrapping; t.wrapT = THREE.ClampToEdgeWrapping;
+      return t;
+    })();
+    const neon = color => new THREE.MeshBasicMaterial({ color, map: flowTex, toneMapped: false });
     const railMats = {
-      steel: new THREE.MeshStandardMaterial({ color: 0xb8b2ac, emissive: 0x2a1a10, metalness: 0.9, roughness: 0.3 }),
-      red: new THREE.MeshStandardMaterial({ color: 0xff4d4f, emissive: 0x661010, metalness: 0.8, roughness: 0.3 }),
-      vuln: new THREE.MeshStandardMaterial({ color: 0x9a2a2a, emissive: 0x3a0808, metalness: 0.7, roughness: 0.4 }),
-      fn: new THREE.MeshStandardMaterial({ color: 0xf7ae62, emissive: 0x4a2408, metalness: 0.6, roughness: 0.4 }),
-      sleeper: new THREE.MeshStandardMaterial({ color: 0x2c2c30, emissive: 0x120804, metalness: 0.6, roughness: 0.5 }),
-      table: new THREE.MeshStandardMaterial({ color: 0x3a3a40, emissive: 0x1a0c04, metalness: 0.8, roughness: 0.35 }),
-      tableEdge: new THREE.MeshBasicMaterial({ color: 0xe0621b }),
+      beam: new THREE.MeshPhysicalMaterial({ color: 0x2a2c33, metalness: 0.85, roughness: 0.22, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 1.4 }),
+      beamRed: new THREE.MeshPhysicalMaterial({ color: 0x4a1618, metalness: 0.8, roughness: 0.25, clearcoat: 1, clearcoatRoughness: 0.08, emissive: 0x220406 }),
+      steel: neon(0xff8a3d), red: neon(0xff4d4f), vuln: neon(0xb0283a), fn: neon(0xffc27a),
+      bar: new THREE.MeshBasicMaterial({ color: 0xffa24d, transparent: true, opacity: 0.55, toneMapped: false }),
+      pylon: new THREE.MeshPhysicalMaterial({ color: 0x3a3c44, metalness: 0.9, roughness: 0.3, clearcoat: 0.6 }),
+      table: new THREE.MeshPhysicalMaterial({ color: 0x2e3038, metalness: 0.9, roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.05 }),
+      tableEdge: new THREE.MeshBasicMaterial({ color: 0xff8a3d, toneMapped: false }),
       route: new THREE.MeshBasicMaterial({ color: 0xffa24d, transparent: true, opacity: 0.9 }),
       routeRed: new THREE.MeshBasicMaterial({ color: 0xff4d4f, transparent: true, opacity: 0.9 }),
     };
     {
-      const byMat = { steel: [], red: [], vuln: [], fn: [] };
-      const sleeperM = [];
+      const byMat = { steel: null, red: null, vuln: null, fn: null };
+      for (const k of Object.keys(byMat)) byMat[k] = { beams: [], edges: [], bars: [], pylons: [] };
       const matOf = p => (p.cyc ? 'red' : p.vuln ? 'vuln' : p.fn ? 'fn' : 'steel');
       for (const p of pairs.values()) {
-        byMat[matOf(p)].push(...railTubes(segCurve(p.a, p.b), sleeperM, null));
-        byMat[matOf(p)].push(...railTubes(spokeCurve(p.a, p.b), sleeperM, p.a), ...railTubes(spokeCurve(p.b, p.a), sleeperM, p.b));
+        const out = byMat[matOf(p)];
+        guideway(segCurve(p.a, p.b), null, out);
+        guideway(spokeCurve(p.a, p.b), p.a, out);
+        guideway(spokeCurve(p.b, p.a), p.b, out);
       }
-      for (const [k, geos] of Object.entries(byMat)) if (geos.length) scene.add(new THREE.Mesh(mergeGeometries(geos), railMats[k]));
-      if (sleeperM.length) {
-        const im = new THREE.InstancedMesh(new THREE.BoxGeometry(2.8, 0.16, 0.45), railMats.sleeper, sleeperM.length);
-        sleeperM.forEach((m, i) => im.setMatrixAt(i, m));
+      const bars = [], pylons = [];
+      for (const [k, o] of Object.entries(byMat)) {
+        if (o.beams.length) scene.add(new THREE.Mesh(mergeGeometries(o.beams), k === 'red' || k === 'vuln' ? railMats.beamRed : railMats.beam));
+        if (o.edges.length) scene.add(new THREE.Mesh(mergeGeometries(o.edges), railMats[k]));
+        bars.push(...o.bars); pylons.push(...o.pylons);
+      }
+      if (bars.length) {
+        const im = new THREE.InstancedMesh(new THREE.BoxGeometry(1.7, 0.04, 0.18), railMats.bar, bars.length);
+        bars.forEach((m, i) => im.setMatrixAt(i, m));
+        scene.add(im);
+      }
+      if (pylons.length) {
+        const g = new THREE.CylinderGeometry(0.12, 0.24, 1.4, 8);
+        const im = new THREE.InstancedMesh(g, railMats.pylon, pylons.length);
+        pylons.forEach((m, i) => im.setMatrixAt(i, m));
         scene.add(im);
       }
       // turntables on top of every planet with relations (where the tracks cross)
       const tables = G.nodes.map((_, i) => i).filter(i => nb[i].size);
       if (tables.length) {
-        const disc = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 0.3, 32), railMats.table, tables.length);
-        const edge = new THREE.InstancedMesh(new THREE.CylinderGeometry(1.04, 1.04, 0.12, 32, 1, true), railMats.tableEdge, tables.length);
+        const disc = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 0.3, 40), railMats.table, tables.length);
+        const edge = new THREE.InstancedMesh(new THREE.TorusGeometry(1.0, 0.035, 6, 48), railMats.tableEdge, tables.length);
+        const inner = new THREE.InstancedMesh(new THREE.TorusGeometry(0.55, 0.025, 6, 40), railMats.tableEdge, tables.length);
+        const flat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
         tables.forEach((i, k) => {
           const rad = Math.max(3.2, trackR(i) * 0.36);
-          const m = new THREE.Matrix4().compose(pole(i).add(new THREE.Vector3(0, -1.45, 0)), new THREE.Quaternion(), new THREE.Vector3(rad, 1, rad));
-          disc.setMatrixAt(k, m); edge.setMatrixAt(k, m);
+          const c = pole(i).add(new THREE.Vector3(0, -1.45, 0));
+          disc.setMatrixAt(k, new THREE.Matrix4().compose(c, new THREE.Quaternion(), new THREE.Vector3(rad, 1, rad)));
+          edge.setMatrixAt(k, new THREE.Matrix4().compose(c.clone().add(new THREE.Vector3(0, 0.16, 0)), flat, new THREE.Vector3(rad, rad, rad)));
+          inner.setMatrixAt(k, new THREE.Matrix4().compose(c.clone().add(new THREE.Vector3(0, 0.16, 0)), flat, new THREE.Vector3(rad, rad, rad)));
         });
-        scene.add(disc, edge);
+        scene.add(disc, edge, inner);
       }
     }
     // chain mode: the route glows between the rails
@@ -627,6 +751,14 @@
     const smoke = [];
     const smokeTex = glowTexture('rgba(255,140,50,.9)');
 
+    {
+      const legend = /** @type {HTMLElement} */ (root.querySelector('.t3-legend'));
+      const count = new Map();
+      for (const n of G.nodes) if (!n.library && !n.fn) { const f = LCGraphs.folderOf(n); count.set(f, (count.get(f) || 0) + 1); }
+      const top = [...count].sort((a, b) => b[1] - a[1]).slice(0, 10);
+      legend.innerHTML = top.length > 1 ? `<div class="t3-legend-title">Folders</div>${top.map(([f, c]) => `<div class="t3-legend-row"><span class="t3-dot" style="background:${esc(colors.folders.get(f) || '#888')}"></span>${esc(f)} <span class="t3-muted">${c}</span></div>`).join('')}${count.size > 10 ? `<div class="t3-muted">+${count.size - 10} more</div>` : ''}${G.functions ? '<div class="t3-muted">functions: colored by their file</div>' : ''}` : '';
+      legend.style.display = top.length > 1 ? '' : 'none';
+    }
     const S = {
       mode: routes.length ? 'chain' : 'free', drive: 'auto', cam: 'chase', paused: false, speed: 1,
       yaw: 0, pitch: 0.5, dist: 40, orbitTarget: new THREE.Vector3(), orbitDist: 400,
@@ -700,8 +832,45 @@
     }
     function startLink(curve, onEnd, auto) { S.link = { curve, len: Math.max(0.01, curve.getLength()), d: 0, onEnd, auto: !!auto }; }
     /** the switch inside planet b: from the portal of (a,b) to the portal of (b,c) without a kink */
+    // ---- driven trail: every finished relation / switch is drawn in green, thicker the more often it was driven ----
+    const trailGroup = new THREE.Group();
+    scene.add(trailGroup);
+    const trailMat = new THREE.MeshBasicMaterial({ color: 0x3ddc84, transparent: true, opacity: 0.85, toneMapped: false, depthWrite: false });
+    const driven = new Map(); // key -> { count, mesh }
+    function markDriven(key, curve, hub) {
+      const e = driven.get(key) || { count: 0, mesh: null };
+      e.count++;
+      if (e.mesh) { trailGroup.remove(e.mesh); e.mesh.geometry.dispose(); }
+      const len = curve.getLength();
+      const n = Math.max(6, Math.round(len / 2.5));
+      const pts = [];
+      for (let k = 0; k <= n; k++) {
+        const u = k / n, p = curve.getPointAt(u);
+        pts.push(p.add(railFrame(p, curve.getTangentAt(u), hub).down.multiplyScalar(1.05)));
+      }
+      // 1x thin, grows with every ride (capped)
+      const r = 0.3 + Math.min(12, e.count - 1) * 0.13;
+      e.mesh = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), n, r, 6, false), trailMat);
+      trailGroup.add(e.mesh);
+      driven.set(key, e);
+      updateTrailInfo();
+    }
+    function clearDriven() {
+      for (const e of driven.values()) { trailGroup.remove(e.mesh); e.mesh.geometry.dispose(); }
+      driven.clear();
+      updateTrailInfo();
+    }
+    function updateTrailInfo() {
+      const btn = top.querySelector('[data-t3="trail"]');
+      if (!btn) return;
+      const rels = [...driven.keys()].filter(k => k.startsWith('r:')).length;
+      const most = Math.max(0, ...[...driven.values()].map(e => e.count));
+      btn.textContent = rels ? `Trail: ${rels} relation${rels === 1 ? '' : 's'}${most > 1 ? ` · max ${most}×` : ''} – clear` : 'Trail: empty';
+      btn.disabled = !driven.size;
+    }
     function linkThrough(c) {
       const { a, b } = S.seg;
+      markDriven(`h:${b}:${Math.min(a, c)}:${Math.max(a, c)}`, hubCurve(b, a, c), b);
       startLink(hubCurve(b, a, c), over => {
         if (S.mode === 'chain') S.k = wrap(S.k + S.dir, S.route.path.length);
         setSeg(b, c, over);
@@ -761,6 +930,7 @@
     /** reached the portal of the next planet: decide how to continue */
     function decide() {
       const { a, b } = S.seg;
+      markDriven(`r:${relKey(a, b)}`, segCurve(a, b), null);
       if (S.mode === 'chain') {
         const n2 = chainTarget();
         if (n2 == null) {
@@ -986,6 +1156,7 @@
         setTimeout(() => open(ui, D, next), 0);
         return;
       }
+      if (b.dataset.t3 === 'trail') { clearDriven(); return; }
       if (b.dataset.t3 === 'autochoose') { S.autoChoose = !S.autoChoose; storeSet('lc.train.autoChoose', S.autoChoose ? '1' : '0'); syncButtons(); }
       if (b.dataset.t3 === 'pause') { S.paused = !S.paused; b.textContent = S.paused ? 'Resume' : 'Pause'; }
       if (b.dataset.t3 === 'close') close();
@@ -1243,7 +1414,8 @@
       // ion trail from the engine, hover bobbing, engine glow with the throttle
       const tNow = clock.elapsedTime;
       T.bobs.forEach((b, k) => { b.position.y = Math.sin(tNow * 2.4 + k * 0.9) * 0.18; });
-      T.exhaust.material.opacity = 0.35 + Math.min(1, S.v / 30) * 0.6;
+      for (const ex of T.exhausts) { ex.material.opacity = 0.35 + Math.min(1, S.v / 30) * 0.6; ex.scale.setScalar(2.6 + Math.min(1, S.v / 30) * 1.6 + Math.sin(tNow * 30) * 0.15); }
+      flowTex.offset.x -= dt * (0.6 + S.v * 0.02); // light flowing along the guideways
       if (!S.paused && S.v > 0.5 && Math.random() < 0.7) {
         const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: smokeTex, transparent: true, depthWrite: false, opacity: 0.5, blending: THREE.AdditiveBlending }));
         s.position.copy(T.loco.localToWorld(T.chimneyLocal.clone()));

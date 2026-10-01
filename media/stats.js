@@ -273,6 +273,7 @@
   const RED_SOFT = '#ff8a80';
   const AMBER = '#f7ae62';
   const graphTools = id => `<span class="graph-tools">
+      <input class="gsearch" type="search" data-graph-search="${id}" placeholder="Search…" title="Highlight matching nodes and zoom to them">
       <button class="gbtn" data-graph="${id}" data-gact="pause" title="Pause / resume">${icon('pause')}</button>
       <button class="gbtn gbtn-text" data-graph="${id}" data-gact="motion" title="Motion: wiggle → calm → still">${icon('wave')}<span>${MOTION_LABEL[motionFor(id)]}</span></button>
       <button class="gbtn" data-graph="${id}" data-gact="shake" title="Re-run the layout">${icon('shake')}</button>
@@ -321,6 +322,8 @@
     if (!el || !window.LCGraphs || !G || !G.nodes.length) return;
     const maxIn = Math.max(1, ...G.nodes.map(n => n.in));
     const { nodes, links } = importGraphData();
+    let colors = LCGraphs.nodeColors(nodes.map(n => n.f));
+    impRecolor = list => { colors = LCGraphs.nodeColors(list.map(n => n.f)); };
     const fnTip = f => `<b>${esc(f.name)}()</b> <span style="opacity:.7">function</span><br>${esc(f.filePath)}:${f.line}<br>complexity ${fmt(f.cx)} · ${fmt(f.lines)} lines<br>calls ${fmt(f.out)} · called by ${fmt(f.in)}<br><i>Double-click: open at the function</i>`;
     const g = graphs.importgraph = LCGraphs.ForceGraph(el, {
       nodes, links, arrows: true,
@@ -328,7 +331,12 @@
       layout: 'force',
       layer: n => n.f.layer,
       radius: n => (n.f.fn ? 2.4 + Math.min(5, n.f.cx * 0.18) : Math.max(n.f.library && n.f.vulns ? 7 : 0, 3.5 + Math.sqrt(n.f.in / maxIn) * 13)),
-      color: n => (n.f.library ? (n.f.vulns ? RED : '#8d8d8d') : n.f.fn && n.f.cx > (D.health ? D.health.thresholds.maxComplexity : 15) ? '#e0621b' : colorOf(n.f.lang)),
+      color: n => (n.f.library ? (n.f.vulns ? RED : '#8d8d8d') : impColorMode === 'folder' ? colors.of(n.f) || '#8d8d8d' : n.f.fn && n.f.cx > (D.health ? D.health.thresholds.maxComplexity : 15) ? '#e0621b' : colorOf(n.f.lang)),
+      group: n => LCGraphs.folderOf(n.f),
+      groupColor: g => (g.startsWith('lib:') ? '#8d8d8d' : colors.folders.get(g) || '#8d8d8d'),
+      groupLabel: (g, count) => `${g.startsWith('lib:') ? g.slice(4) + ' libraries' : g} · ${count}`,
+      clusters: impClusters,
+      searchText: n => `${n.f.path} ${n.f.filePath || ''}`,
       shape: n => (n.f.fn ? 'diamond' : n.f.library ? (n.f.vulns ? 'skull' : 'square') : 'circle'),
       ringColor: n => (n.f.cycle >= 0 ? RED : null),
       label: n => (n.f.fn ? n.f.path : n.f.library ? n.f.path + (n.f.version ? '@' + n.f.version : '') : n.f.path.split('/').pop()),
@@ -346,17 +354,31 @@
     });
     const input = /** @type {HTMLInputElement} */ (document.getElementById('impFind'));
     if (input) {
+      let timer = 0;
+      // typing highlights every match; Enter on a single / exact match selects it (dependencies + dependents)
+      input.addEventListener('input', () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => {
+          const q = input.value.trim();
+          if (!q) return clearImportHighlight();
+          const hits = graphs.importgraph.search(q);
+          setImpStatus(hits.length ? `<b>${fmt(hits.length)}</b> match${hits.length === 1 ? '' : 'es'} for “${esc(q)}”${hits.length <= 8 ? ': ' + hits.map(h => esc(h.f.path.split('/').pop())).join(', ') : ''} · press Enter to select` : `Nothing matches “${esc(q)}” in the graph.`);
+        }, 180);
+      });
       input.addEventListener('change', () => {
         const q = input.value.trim().toLowerCase();
         if (!q) return clearImportHighlight();
-        const n = g.nodes.find(x => x.f.path.toLowerCase() === q) || g.nodes.find(x => x.f.path.toLowerCase().includes(q));
-        if (n) selectImportNode(n.index, true); else setImpStatus(`No file matching “${esc(input.value)}” in the graph.`);
+        const n = graphs.importgraph.nodes.find(x => x.f.path.toLowerCase() === q) || graphs.importgraph.nodes.find(x => x.f.path.toLowerCase().includes(q));
+        if (n) selectImportNode(n.index, true); else setImpStatus(`Nothing matches “${esc(input.value)}” in the graph.`);
       });
     }
   }
 
   /** nodes / links for the import graph, with functions when switched on */
   let impFns = false;
+  let impColorMode = 'folder';
+  let impClusters = false;
+  let impRecolor = () => {};
   function importGraphData() {
     const src = impFns && window.LCGraphs ? LCGraphs.withFunctions(D.importGraph, D.functionGraph) : D.importGraph;
     return { nodes: src.nodes.map(n => ({ id: n.abs, f: n })), links: src.links.map(l => ({ source: l.s, target: l.t, cyc: l.cyc, call: l.call, def: l.def })) };
@@ -467,7 +489,10 @@
           <button class="seg-btn on" data-imp-layout="force">Force</button><button class="seg-btn" data-imp-layout="layered" title="Importers on top, imported files below">Layered</button></span>
         <span class="seg" role="group" aria-label="Motion"><span class="seg-label">Motion</span>
           ${MOTIONS.map(m => `<button class="seg-btn ${motionFor('importgraph') === m ? 'on' : ''}" data-imp-motion="${m}">${MOTION_LABEL[m]}</button>`).join('')}</span>
-        <input id="impFind" type="text" list="impFiles" placeholder="Find a file in the graph…" spellcheck="false">
+        <span class="seg" role="group" aria-label="Color"><span class="seg-label">Color</span>
+          <button class="seg-btn ${impColorMode === 'folder' ? 'on' : ''}" data-imp-color="folder" title="Files of the same folder share a color (functions: by file)">Folder</button><button class="seg-btn ${impColorMode === 'lang' ? 'on' : ''}" data-imp-color="lang">Language</button></span>
+        <button class="seg-btn solo ${impClusters ? 'on' : ''}" data-imp-cluster title="Group files into bubbles per folder – double-click a bubble to zoom into it">Cluster folders</button>
+        <input id="impFind" type="search" list="impFiles" placeholder="Search files / functions…" spellcheck="false">
         <datalist id="impFiles">${G.nodes.map(n => `<option value="${esc(n.path)}">`).join('')}</datalist>
         <button class="btn" id="impClear" disabled>${icon('close')} Clear highlight</button>
         ${D.functionGraph && D.functionGraph.fns.length ? `<button class="btn ${impFns ? 'primary' : ''}" data-imp-fns title="Show functions as nodes: file → function, and calls between functions (${fmt(D.functionGraph.fns.length)} of ${fmt(D.functionGraph.total)} functions)">ƒ Functions</button>` : ''}
@@ -593,6 +618,25 @@
       },
       onContext: (n, ev) => { if (!n.t.dir) openMenu(n.t.f.abs, ev.clientX, ev.clientY); },
     });
+  }
+
+  /** expands collapsed folders of the structure graph that contain files matching q */
+  function revealInStructure(q) {
+    const g = graphs.structure;
+    q = String(q || '').trim().toLowerCase();
+    if (!g || !q || !structCollapsed.size) return;
+    let changed = false;
+    for (const f of D.table) {
+      if (!f.path.toLowerCase().includes(q)) continue;
+      const parts = (D.multiRoot ? f.rootName + '/' + f.path : f.path).split('/');
+      for (let i = 1; i < parts.length; i++) {
+        const id = '/' + parts.slice(0, i).join('/') + '/';
+        if (structCollapsed.delete(id)) changed = true;
+      }
+    }
+    if (!changed) return;
+    const next = structVisible();
+    g.setData(next.nodes, next.links, true);
   }
 
   function destroyGraphs() {
@@ -1280,7 +1324,21 @@
       impFnBtn.classList.toggle('primary', impFns);
       clearImportHighlight();
       const d = importGraphData();
+      impRecolor(d.nodes);
       graphs.importgraph.setData(d.nodes, d.links, true);
+      return;
+    }
+    const impColor = t.closest('[data-imp-color]');
+    if (impColor && graphs.importgraph) {
+      impColorMode = /** @type {HTMLElement} */ (impColor).dataset.impColor;
+      impColor.parentElement.querySelectorAll('.seg-btn').forEach(b => b.classList.toggle('on', b === impColor));
+      graphs.importgraph.refreshColors();
+      return;
+    }
+    const impCl = t.closest('[data-imp-cluster]');
+    if (impCl && graphs.importgraph) {
+      impClusters = graphs.importgraph.setClusters(!graphs.importgraph.clusters);
+      impCl.classList.toggle('on', impClusters);
       return;
     }
     const impMotion = t.closest('[data-imp-motion]');
@@ -1460,8 +1518,22 @@
     }
     showToast(`${icon('trash')} Deleted <b>${esc(f ? f.path : abs)}</b> – press Refresh to recalculate all statistics`);
   }
+  let gsearchTimer = 0;
   app.addEventListener('input', ev => {
     const t = /** @type {HTMLInputElement} */ (ev.target);
+    if (t.dataset && t.dataset.graphSearch) {
+      clearTimeout(gsearchTimer);
+      const id = t.dataset.graphSearch;
+      gsearchTimer = setTimeout(() => {
+        if (id === 'structure') revealInStructure(t.value);
+        const g = graphs[id];
+        if (!g) return;
+        const hits = g.search(t.value);
+        t.classList.toggle('nohit', !!t.value.trim() && !hits.length);
+        t.title = t.value.trim() ? `${hits.length} match${hits.length === 1 ? '' : 'es'}` : 'Highlight matching nodes and zoom to them';
+      }, 200);
+      return;
+    }
     if (t.id === 'tfilter') { table.filter = t.value; table.limit = 100; renderTable(); }
     if (window.LCDeps && D.dependencies) LCDeps.handleInput(UI(), D, t);
     if (window.LCHealth && D.health) LCHealth.handleInput(UI(), D, t);
