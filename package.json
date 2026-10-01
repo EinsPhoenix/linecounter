@@ -2,9 +2,14 @@
   "name": "linecounter",
   "displayName": "Line Counter & Code Statistics",
   "description": "Browse your workspace as a filterable tree, exclude files and folders with a click and generate full-screen code statistics with charts, git insights, fun facts and a file ranking.",
-  "version": "1.14.2",
+  "version": "1.14.3",
+  "license": "MIT",
   "publisher": "einsphoenix",
   "icon": "media/icon.png",
+  "homepage": "https://github.com/EinsPhoenix/linecounter#readme",
+  "bugs": {
+    "url": "https://github.com/EinsPhoenix/linecounter/issues"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/EinsPhoenix/linecounter.git"
@@ -653,9 +658,10 @@
     ]
   },
   "scripts": {
-    "package": "vsce package --skip-license --out linecounter.vsix",
+    "package": "vsce package --out linecounter.vsix",
     "test": "node test/smoke.js && node test/graphs.test.js && node test/deps.test.js && node test/rustgo.test.js && node test/todos.test.js",
     "release": "node scripts/release.js",
+    "publish-releases": "node scripts/publish-releases.js",
     "schema": "node scripts/schema.js",
     "gate": "node bin/linecounter.js gate"
   },

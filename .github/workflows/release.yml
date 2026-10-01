@@ -1,0 +1,41 @@
+name: Release
+
+# Publishes every version in releases/ as a GitHub Release with the .vsix attached.
+# Runs when package.json, the CHANGELOG or a packaged .vsix changes on main; versions that already
+# have a release are skipped, so the first run also backfills all older versions.
+on:
+  push:
+    branches: [main]
+    paths:
+      - package.json
+      - CHANGELOG.md
+      - 'releases/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Build the current version if it is not packaged yet
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if [ ! -f "releases/linecounter-$VERSION.vsix" ]; then
+            npm ci
+            npm run release
+          fi
+      - name: Create missing releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/publish-releases.js

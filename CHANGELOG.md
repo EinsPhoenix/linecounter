@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.14.3
+- Downloads as GitHub Releases (one per version with the `.vsix`, notes from this changelog), CI workflow (tests + packaging), README badges and download section, MIT license
+- CI docs download the vsix from the latest release
+
 ## 1.14.2
 - README: overview table of all features with links to FEATURES, CI and MCP docs
 
