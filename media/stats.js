@@ -6,7 +6,7 @@
 
   /** @type {any} */ let D = null;
   let langColor = new Map();
-  const table = { sort: 'lines', dir: -1, filter: '', lang: '', limit: 100 };
+  const table = { sort: 'lines', dir: -1, filter: '', lang: '', repo: '', limit: 100 };
 
   // ---------- helpers ----------
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1160,7 +1160,58 @@
     if (!repos.length) {
       return card('Git', '<p class="muted">No git repository detected in the selected files (or git is not installed).</p>');
     }
-    return repos.map(r => {
+    if (repos.length === 1) return repoDetail(repos[0]);
+    return repoOverview(repos) + `<div id="repo-detail">${repoDetail(repos.find(r => r.label === gitState.repo) || repos[0])}</div>`;
+  }
+
+  // ---------- many repositories: overview table, combined activity, switcher ----------
+  const gitState = { repo: null, sort: 'commitCount', dir: -1 };
+  function repoOverview(repos) {
+    const now = Date.now();
+    const DAY = 86400000;
+    const sel = gitState.repo || repos.slice().sort((a, b) => b.commitCount - a.commitCount)[0].label;
+    gitState.repo = sel;
+    const k = gitState.sort;
+    const rows = repos.slice().sort((a, b) => {
+      const va = k === 'label' ? a.label : k === 'files' ? (a.selection || {}).files : a[k], vb = k === 'label' ? b.label : k === 'files' ? (b.selection || {}).files : b[k];
+      return (typeof va === 'string' ? va.localeCompare(vb) : (va || 0) - (vb || 0)) * gitState.dir;
+    });
+    // last 12 months of activity per repo (sparkline) and combined
+    const monthKeys = [];
+    for (let i = 11; i >= 0; i--) { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i); monthKeys.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`); }
+    const monthsOf = r => { const m = new Map(r.months.map(x => [x.month, x.count])); return monthKeys.map(k2 => m.get(k2) || 0); };
+    const maxM = Math.max(1, ...repos.flatMap(monthsOf));
+    const spark = r => { const v = monthsOf(r); return `<svg viewBox="0 0 120 24" class="repo-spark">${v.map((c, i) => `<rect x="${i * 10 + 1}" y="${24 - Math.max(c ? 2 : 0.5, (c / maxM) * 24)}" width="8" height="${Math.max(c ? 2 : 0.5, (c / maxM) * 24)}" rx="1.5"/>`).join('')}</svg>`; };
+    const colors = window.LCGraphs ? LCGraphs.palette(repos.map(r => r.label)) : new Map();
+    const head = (label, key, cls = '') => `<th class="${cls} sortable ${k === key ? (gitState.dir > 0 ? 'asc' : 'desc') : ''}" data-repo-sort="${key}">${label}</th>`;
+    const ago = t => { const d = Math.floor((now - t) / DAY); return d < 1 ? 'today' : d < 60 ? `${d} days ago` : d < 730 ? `${Math.round(d / 30)} months ago` : `${(d / 365).toFixed(1)} years ago`; };
+    // combined: commits per month across all repos, stacked
+    const stackedMonths = monthKeys.map(m => ({ label: m, parts: repos.map(r => ({ name: r.label, value: (r.months.find(x => x.month === m) || {}).count || 0, color: colors.get(r.label) })) }));
+    const maxStack = Math.max(1, ...stackedMonths.map(m => m.parts.reduce((s2, p) => s2 + p.value, 0)));
+    const combined = `<div class="repo-stack">${stackedMonths.map(m => `<div class="repo-stack-col" ${tipAttr(`<b>${m.label}</b><br>${m.parts.filter(p => p.value).map(p => `<span class="sw" style="background:${p.color}"></span>${esc(p.name)}: ${fmt(p.value)}`).join('<br>') || 'no commits'}`)}>
+        <div class="repo-stack-bar">${m.parts.filter(p => p.value).map(p => `<span style="height:${(p.value / maxStack) * 100}%;background:${p.color}"></span>`).join('')}</div><div class="col-label">${m.label.slice(2)}</div></div>`).join('')}</div>
+      <ul class="legend inline">${repos.map(r => `<li><span class="sw" style="background:${colors.get(r.label)}"></span>${esc(r.label)}</li>`).join('')}</ul>`;
+    const totalCommits = repos.reduce((s2, r) => s2 + r.commitCount, 0);
+    const authors = new Set(repos.flatMap(r => r.authors.map(a => a.name.toLowerCase())));
+    return `${tiles([
+        { label: 'Repositories', value: fmt(repos.length), sub: `${fmt(repos.filter(r => now - r.last < 90 * DAY).length)} active in the last 3 months` },
+        { label: 'Commits (all repos)', value: fmt(totalCommits) },
+        { label: 'People', value: fmt(authors.size), sub: 'distinct authors across repos' },
+        { label: 'Most active', value: rows.slice().sort((a, b) => b.last - a.last)[0].label, sub: `last commit ${ago(Math.max(...repos.map(r => r.last)))}` },
+      ])}
+      ${card('Repositories', `<div class="table-scroll small"><table class="grid repo-table"><thead><tr>${head('Repository', 'label')}<th>Branch</th>${head('Commits', 'commitCount', 'num')}${head('Authors', 'authorCount', 'num')}${head('Last commit', 'last')}<th>Last 12 months</th>${head('Files', 'files', 'num')}<th class="num">Bus factor</th></tr></thead><tbody>
+        ${rows.map(r => `<tr class="clickable ${r.label === sel ? 'sel' : ''} ${now - r.last > 180 * DAY ? 'stale' : ''}" data-repo="${esc(r.label)}" title="${esc(r.root)}">
+          <td><span class="sw" style="background:${colors.get(r.label)}"></span><b>${esc(r.label)}</b>${r.remote ? `<div class="muted repo-remote">${esc(r.remote.replace(/^https?:\/\/|\.git$/g, ''))}</div>` : ''}</td>
+          <td><code>${esc(r.branch || '–')}</code></td><td class="num">${fmt(r.commitCount)}</td><td class="num">${fmt(r.authorCount)}</td>
+          <td>${ago(r.last)}</td><td class="repo-spark-cell" style="color:${colors.get(r.label)}">${spark(r)}</td>
+          <td class="num">${fmt((r.selection || {}).files || 0)}</td><td class="num ${r.busFactor === 1 && r.authorCount > 1 ? 'dep-bad' : ''}">${fmt(r.busFactor)}</td></tr>`).join('')}
+        </tbody></table></div>`, { sub: 'click a repository for its details · inactive for 6+ months = grey' })}
+      ${card('Commits per month – all repositories', combined, { sub: 'last 12 months' })}
+      <div class="repo-switch">${repos.map(r => `<button class="rant-chip ${r.label === sel ? 'on' : ''}" data-repo="${esc(r.label)}"><span class="sw" style="background:${colors.get(r.label)}"></span>${esc(r.label)}</button>`).join('')}</div>`;
+  }
+
+  function repoDetail(r) {
+    {
       const age = r.first ? Math.max(1, Math.round((r.last - r.first) / 86400000)) : 0;
       const topAuthors = r.authors.slice(0, 12);
       const facts = [
@@ -1175,7 +1226,7 @@
       ];
       const msg = (label, c) => c ? `<div class="msg"><span class="muted">${label}</span> <code>${esc(c.hash)}</code> “${esc(c.subject)}” <span class="muted">– ${esc(c.author)}, ${date(c.time)}${c.ins || c.del ? `, +${fmt(c.ins)} / −${fmt(c.del)}` : ''}</span></div>` : '';
       return `<div class="repo">
-        <h2 class="repo-title">${icon('repo')} ${esc(r.name)} <span class="sub">${esc(r.branch || '')}${r.remote ? ' · ' + esc(r.remote) : ''}</span></h2>
+        <h2 class="repo-title">${icon('repo')} ${esc(r.label || r.name)} <span class="sub">${esc(r.branch || '')}${r.remote ? ' · ' + esc(r.remote) : ''}</span></h2>
         ${tiles([
           { label: 'Commits', value: fmt(r.commitCount) + (r.truncated ? '+' : ''), sub: `${fmt(r.mergeCount)} merges` },
           { label: 'Contributors', value: fmt(r.authorCount) },
@@ -1202,7 +1253,7 @@
           <div class="msgs">${msg('Shortest message:', r.shortest)}${msg('Longest message:', r.longest)}${msg('Biggest commit:', r.biggest)}</div>
           ${r.topWords.length ? `<div class="words"><span class="muted">Favourite commit words:</span> ${r.topWords.map(([w, c]) => `<span class="word" ${tipAttr(`${fmt(c)}×`)}>${esc(w)}</span>`).join(' ')}</div>` : ''}`)}
       </div>`;
-    }).join('');
+    }
   }
 
   // ---------- ranking table ----------
@@ -1215,6 +1266,7 @@
     return `<div class="table-tools">
         <input id="tfilter" type="text" placeholder="Filter by path…" value="${esc(table.filter)}" spellcheck="false">
         <select id="tlang"><option value="">All languages</option>${langs.map(l => `<option ${l === table.lang ? 'selected' : ''}>${esc(l)}</option>`).join('')}</select>
+        ${(D.repos || []).length > 1 ? `<select id="trepo"><option value="">All repositories</option>${D.repos.map(r => `<option value="${esc(r.label)}" ${r.label === table.repo ? 'selected' : ''}>${esc(r.label)}</option>`).join('')}</select>` : ''}
         <span class="muted" id="tcount"></span>
       </div>
       <div class="table-scroll"><table class="grid ranking" id="ranking"></table></div>
@@ -1225,7 +1277,7 @@
     const el = document.getElementById('ranking');
     if (!el) return;
     const q = table.filter.toLowerCase();
-    let rows = D.table.filter(f => (!q || f.path.toLowerCase().includes(q) || (f.rootName || '').toLowerCase().includes(q)) && (!table.lang || f.lang === table.lang));
+    let rows = D.table.filter(f => (!q || f.path.toLowerCase().includes(q) || (f.rootName || '').toLowerCase().includes(q)) && (!table.lang || f.lang === table.lang) && (!table.repo || f.repo === table.repo));
     const k = table.sort;
     rows.sort((a, b) => {
       const va = a[k], vb = b[k];
@@ -1238,7 +1290,7 @@
     el.innerHTML = `<thead><tr>${COLS.map(([label, key, cls]) => `<th class="${cls} ${key ? 'sortable' : ''} ${key === k ? (table.dir > 0 ? 'asc' : 'desc') : ''}" ${key ? `data-sort="${key}"` : ''}>${label}</th>`).join('')}</tr></thead>
       <tbody>${rows.map((f, i) => `<tr class="clickable" data-abs="${esc(f.abs)}" title="Open ${esc(f.path)}">
         <td class="rank">${i + 1}</td>
-        <td class="path">${D.multiRoot ? `<span class="muted">${esc(f.rootName)}/</span>` : ''}${esc(f.path)}</td>
+        <td class="path">${f.repo ? `<span class="repo-tag">${esc(f.repo)}</span>` : ''}${D.multiRoot ? `<span class="muted">${esc(f.rootName)}/</span>` : ''}${esc(f.path)}</td>
         <td><span class="sw" style="background:${f.binary ? 'var(--s-other)' : colorOf(f.lang)}"></span>${esc(f.lang)}</td>
         <td class="num ${isTooLong(f) ? 'over' : ''}" ${isTooLong(f) ? `title="Longer than ${fmt(rantCfg().maxLines)} lines"` : ''}>${f.binary ? '<span class="muted">binary</span>' : f.skipped ? '<span class="muted">too large</span>' : fmt(f.lines)}</td>
         <td class="num">${fmt(f.code)}</td><td class="num">${fmt(f.comment)}</td><td class="num ${isTooAiry(f) ? 'over' : ''}" ${isTooAiry(f) ? `title="${blankPct(f).toFixed(1)}% blank lines"` : ''}>${fmt(f.blank)}</td>
@@ -1286,7 +1338,7 @@
         ${D.health && window.LCHealth ? `<h2 id="s-health">Code health</h2>${LCHealth.render(UI(), D)}` : ''}
         ${window.LCTodos && D.todos !== undefined ? `<h2 id="s-todo">TODO tracker</h2>${LCTodos.render(UI(), D)}` : ''}
         ${rantSection()}
-        <h2 id="s-git">Git</h2>${gitSection()}
+        <h2 id="s-git">Git</h2><div id="git-body">${gitSection()}</div>
         ${window.LCCompare && D.compare ? `<h2 id="s-cmp">Branch comparison</h2>${LCCompare.render(UI(), D)}` : ''}
         ${window.LCOwnership && D.ownership ? `<h2 id="s-own">Ownership</h2>${LCOwnership.render(UI(), D)}` : ''}
         <h2 id="s-fun">Fun facts</h2>${funSection()}
@@ -1331,6 +1383,17 @@
     if (window.LCArch && LCArch.handleClick(UI(), D, t)) { ev.preventDefault(); return; }
     if (window.LCTodos && LCTodos.handleClick(UI(), D, t)) { ev.preventDefault(); return; }
     if (window.LCCompare && LCCompare.handleClick(UI(), D, t)) { ev.preventDefault(); return; }
+    const repoSort = t.closest('[data-repo-sort]');
+    const repoPick = !repoSort && t.closest('[data-repo]');
+    if (repoSort || repoPick) {
+      if (repoSort) { const k2 = /** @type {HTMLElement} */ (repoSort).dataset.repoSort; gitState.dir = gitState.sort === k2 ? -gitState.dir : k2 === 'label' ? 1 : -1; gitState.sort = k2; }
+      else gitState.repo = /** @type {HTMLElement} */ (repoPick).dataset.repo;
+      const sec = document.getElementById('s-git');
+      const wrap = document.getElementById('git-body');
+      if (wrap) wrap.innerHTML = gitSection();
+      if (repoPick) { const det = document.getElementById('repo-detail'); if (det) det.scrollIntoView({ behavior: 'smooth', block: 'start' }); } else if (sec) sec.scrollIntoView({ block: 'start' });
+      return;
+    }
     if (t.closest('[data-trend-clear]')) { vscode.postMessage({ type: 'clearHistory', projectRoot: D.projectRoot || '' }); const s = document.getElementById('s-trends'); if (s && s.nextElementSibling) s.nextElementSibling.innerHTML = '<div class="card-body muted">History cleared.</div>'; return; }
     const gb = t.closest('[data-gact]');
     if (gb) {
@@ -1580,6 +1643,7 @@
   app.addEventListener('change', ev => {
     const t = /** @type {HTMLSelectElement} */ (ev.target);
     if (t.id === 'tlang') { table.lang = t.value; table.limit = 100; renderTable(); }
+    if (t.id === 'trepo') { table.repo = t.value; table.limit = 100; renderTable(); }
     if (window.LCDeps && D.dependencies && t.id !== 'depQ') LCDeps.handleInput(UI(), D, t);
   });
 

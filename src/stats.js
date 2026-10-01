@@ -101,6 +101,26 @@ function aggregate(files, meta) {
     delete r.churnAll; // large – not needed on the page
   }
   const hopts = { ...(meta.health || {}), churn };
+  // repositories: unique display names (same folder name twice -> parent/name) and the repo of every file
+  const repos = meta.repos || [];
+  if (repos.length > 1) {
+    const sep = /[\\/]/;
+    for (const r of repos) {
+      const parts = r.root.split(sep);
+      const same = repos.filter(x => x.name === r.name).length > 1;
+      r.label = same ? parts.slice(-2).join('/') : r.name;
+    }
+    const byLen = repos.slice().sort((a, b) => b.root.length - a.root.length);
+    for (const row of table) {
+      const r = byLen.find(x => row.abs.startsWith(x.root + '/') || row.abs.startsWith(x.root + '\\'));
+      row.repo = r ? r.label : null;
+    }
+    for (const r of repos) {
+      const rows = table.filter(x => x.repo === r.label);
+      r.selection = { files: rows.length, lines: rows.reduce((s, x) => s + x.lines, 0) };
+    }
+  }
+
   return {
     generated: now, ...meta, multiRoot,
     totals, languages, extensions, folders, histogram, identifiers, ages, table,

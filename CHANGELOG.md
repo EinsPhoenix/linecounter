@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.14.1
+- Many git repositories: overview table (branch, commits, authors, last commit, 12-month activity, files, bus factor; sortable, inactive repos greyed out), combined commits-per-month chart, repository switcher instead of one long page, repository tag + filter in the file ranking, unique names for repos with the same folder name
+
 ## 1.14.0
 - Graphs: zoom around the mouse pointer, zoom controls (+ / − / fit / level), smooth wheel and pinch, keyboard +/−/0, double-click zoom; limits configurable (`graphs.maxNodes` 20000 / `graphs.maxLinks` 40000, `train.maxNodes` 800) with fast rendering of huge graphs
 - Own filters (e.g. `*/data`) as sidebar checkboxes, stored in `.linecounter/filters.json` and in presets; "Save as filter" from a search

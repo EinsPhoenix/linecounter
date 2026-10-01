@@ -75,7 +75,7 @@ Die Seite öffnet sich maximiert oder im Vollbild. Jedes Diagramm hat einen eige
 | Dependencies | siehe [unten](#dependencies-lizenzen-und-schwachstellen) |
 | Code health | siehe [unten](#code-health) |
 | Code Rant | Rant-o-Meter, Rants über lange Dateien, zu viele Leerzeilen, Commit-Messages, Abhängigkeiten und Code health |
-| Git | Commits, Autoren, Heatmap, Hotspots, Bus-Factor; Repos werden automatisch erkannt |
+| Git | Commits, Autoren, Heatmap, Hotspots, Bus-Factor; Repos werden automatisch erkannt. Bei mehreren Repos: Übersichtstabelle (Branch, Commits, Autoren, letzter Commit, Aktivität der letzten 12 Monate, Bus-Factor, inaktive Repos ausgegraut, sortierbar), gemeinsames Commit-Diagramm, Repo-Umschalter für die Details und ein Repo-Filter in der Rangliste |
 | Fun facts | gedruckte Seiten, Tippzeit, COCOMO, Kaffee … |
 | Words & connections | Word Cloud, Word Web und Importgraph |
 | Ranking | sortierbare Tabelle aller Dateien; ein Klick öffnet die Datei |
