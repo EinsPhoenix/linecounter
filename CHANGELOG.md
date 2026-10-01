@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.14.5
+- 3D train: fixed the grey screen on big projects – hubs such as libraries imported by hundreds of files made the 3D layout explode to infinite coordinates, and the rail sampling then used up all memory of the webview
+- 3D train: level of detail for big universes (coarser rails, planets and turntables; at most 3 relations per node on average are drawn as rails), about 3× fewer triangles
+- 3D train: errors and a lost GPU context are now shown as a message instead of a dead view; only the first 6 vulnerable libraries get a real light
+
 ## 1.14.4
 - Documentation with screenshots: README quick start and gallery, images in every FEATURES section, complete table of contents
 - README badges work for the private repository and link to release, download, CI, changelog and license

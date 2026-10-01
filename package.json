@@ -2,7 +2,7 @@
   "name": "linecounter",
   "displayName": "Line Counter & Code Statistics",
   "description": "Browse your workspace as a filterable tree, exclude files and folders with a click and generate full-screen code statistics with charts, git insights, fun facts and a file ranking.",
-  "version": "1.14.4",
+  "version": "1.14.5",
   "license": "MIT",
   "publisher": "einsphoenix",
   "icon": "media/icon.png",
@@ -659,7 +659,7 @@
   },
   "scripts": {
     "package": "vsce package --out linecounter.vsix",
-    "test": "node test/smoke.js && node test/graphs.test.js && node test/deps.test.js && node test/rustgo.test.js && node test/todos.test.js",
+    "test": "node test/smoke.js && node test/graphs.test.js && node test/deps.test.js && node test/rustgo.test.js && node test/todos.test.js && node test/train.test.js",
     "release": "node scripts/release.js",
     "publish-releases": "node scripts/publish-releases.js",
     "schema": "node scripts/schema.js",
