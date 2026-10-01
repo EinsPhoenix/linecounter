@@ -17,6 +17,7 @@
 - Risiko-Hotspots (Git-Churn × Komplexität), möglicherweise ungenutzte Funktionen
 - Duplikate und Secrets im Code
 - TODO-Tracker mit Autor und Alter aus `git blame`
+- Pinboard: TODOs per Drag & Drop nach Priorität ordnen, mit Sprung zur Code-Zeile, gespeichert in `.linecounter/pinboard.json`
 - Code Ownership: Owner, Bus-Factor pro Ordner, verwaiste Dateien
 
 **Dependencies**
@@ -35,5 +36,5 @@
 
 **Automatisierung**
 - Quality Gate für CI: `node bin/linecounter.js gate` (Exit-Code 1 bei Verstößen)
-- MCP-Server mit 21 Tools für LLM-Agenten (Impact einer Änderung, Risiko, Schwachstellen, Lizenzen …)
+- MCP-Server mit 22 Tools für LLM-Agenten (Impact einer Änderung, Risiko, Schwachstellen, Lizenzen …)
 - PDF-Exporte (Statistik, Code Health, Lizenzen, Schwachstellen)

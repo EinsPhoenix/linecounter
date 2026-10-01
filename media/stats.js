@@ -1325,7 +1325,7 @@
       </header>
       <nav class="toc">
         <a href="#s-overview">Overview</a>${D.history ? '<a href="#s-trends">Trends</a>' : ''}<a href="#s-lang">Languages</a><a href="#s-files">Files</a>
-        <a href="#s-fame">Hall of Fame</a>${D.dependencies ? '<a href="#s-deps">Dependencies</a>' : ''}${D.architecture ? '<a href="#s-arch">Architecture</a>' : ''}${D.health ? '<a href="#s-health">Code health</a>' : ''}${D.todos !== undefined ? '<a href="#s-todo">TODOs</a>' : ''}${rantCfg().enabled ? '<a href="#s-rant">Code Rant</a>' : ''}<a href="#s-git">Git</a>${D.compare ? '<a href="#s-cmp">Branches</a>' : ''}${D.ownership ? '<a href="#s-own">Ownership</a>' : ''}<a href="#s-fun">Fun facts</a><a href="#s-ids">Words & connections</a><a href="#s-rank">Ranking</a><a href="#s-struct">Structure</a>
+        <a href="#s-fame">Hall of Fame</a>${D.dependencies ? '<a href="#s-deps">Dependencies</a>' : ''}${D.architecture ? '<a href="#s-arch">Architecture</a>' : ''}${D.health ? '<a href="#s-health">Code health</a>' : ''}${D.todos !== undefined || D.pinboard ? '<a href="#s-todo">TODOs</a>' : ''}${rantCfg().enabled ? '<a href="#s-rant">Code Rant</a>' : ''}<a href="#s-git">Git</a>${D.compare ? '<a href="#s-cmp">Branches</a>' : ''}${D.ownership ? '<a href="#s-own">Ownership</a>' : ''}<a href="#s-fun">Fun facts</a><a href="#s-ids">Words & connections</a><a href="#s-rank">Ranking</a><a href="#s-struct">Structure</a>
       </nav>
       <main>
         <h2 id="s-overview">Overview</h2>${gateHtml()}${overview()}
@@ -1336,7 +1336,7 @@
         ${D.dependencies && window.LCDeps ? `<h2 id="s-deps">Dependencies, licenses & vulnerabilities</h2>${LCDeps.render(UI(), D)}` : ''}
         ${window.LCArch && D.architecture ? `<h2 id="s-arch">Architecture</h2>${LCArch.render(UI(), D)}` : ''}
         ${D.health && window.LCHealth ? `<h2 id="s-health">Code health</h2>${LCHealth.render(UI(), D)}` : ''}
-        ${window.LCTodos && D.todos !== undefined ? `<h2 id="s-todo">TODO tracker</h2>${LCTodos.render(UI(), D)}` : ''}
+        ${window.LCTodos && (D.todos !== undefined || D.pinboard) ? `<h2 id="s-todo">TODO tracker</h2>${window.LCPinboard ? LCPinboard.render(UI(), D) : ''}${D.todos !== undefined ? LCTodos.render(UI(), D) : ''}` : ''}
         ${rantSection()}
         <h2 id="s-git">Git</h2><div id="git-body">${gitSection()}</div>
         ${window.LCCompare && D.compare ? `<h2 id="s-cmp">Branch comparison</h2>${LCCompare.render(UI(), D)}` : ''}
@@ -1381,6 +1381,7 @@
     if (window.LCDeps && D.dependencies && LCDeps.handleClick(UI(), D, t)) { ev.preventDefault(); return; }
     if (window.LCHealth && D.health && LCHealth.handleClick(UI(), D, t)) { ev.preventDefault(); return; }
     if (window.LCArch && LCArch.handleClick(UI(), D, t)) { ev.preventDefault(); return; }
+    if (window.LCPinboard && LCPinboard.handleClick(UI(), D, t)) { ev.preventDefault(); return; }
     if (window.LCTodos && LCTodos.handleClick(UI(), D, t)) { ev.preventDefault(); return; }
     if (window.LCCompare && LCCompare.handleClick(UI(), D, t)) { ev.preventDefault(); return; }
     const repoSort = t.closest('[data-repo-sort]');
@@ -1638,6 +1639,7 @@
     if (t.id === 'tfilter') { table.filter = t.value; table.limit = 100; renderTable(); }
     if (window.LCDeps && D.dependencies) LCDeps.handleInput(UI(), D, t);
     if (window.LCHealth && D.health) LCHealth.handleInput(UI(), D, t);
+    if (window.LCPinboard && LCPinboard.handleInput(UI(), D, t)) return;
     if (window.LCTodos) LCTodos.handleInput(UI(), D, t);
   });
   app.addEventListener('change', ev => {

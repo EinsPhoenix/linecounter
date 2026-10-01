@@ -96,7 +96,7 @@ async function analyze(folder, opts = {}) {
   const config = headlessConfig(root, overrides);
   const log = msg => { if (!opts.quiet) process.stderr.write(`[linecounter] ${msg}\n`); };
   const { roots, files, base } = await collectFiles(root, config, opts.preset);
-  const data = await runPipeline(config, roots, files, { base, workspaceName: path.basename(root) }, { report: m => m && m.message && log(m.message) });
+  const data = await runPipeline(config, roots, files, { base, workspaceName: path.basename(root), configRoot: root }, { report: m => m && m.message && log(m.message) });
   return data;
 }
 
@@ -113,7 +113,7 @@ async function main() {
   log(`scanning ${root}`);
   const { roots, files, base, preset } = await collectFiles(root, config, args.flags.preset);
   log(`${files.length} files${preset ? ` (preset "${preset}")` : ''}${base ? ` · project root ${base.p}` : ''}`);
-  const data = await runPipeline(config, roots, files, { base, workspaceName: path.basename(root) }, { report: m => m && m.message && log(m.message) });
+  const data = await runPipeline(config, roots, files, { base, workspaceName: path.basename(root), configRoot: root }, { report: m => m && m.message && log(m.message) });
   if (args.cmd === 'report') {
     const out = args.flags.json || 'linecounter-report.json';
     fs.writeFileSync(out, JSON.stringify(data));

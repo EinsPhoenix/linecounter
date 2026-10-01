@@ -38,6 +38,7 @@ The analysis starts when the server starts and is cached. `refresh_analysis` run
 | `secrets` | hard-coded secrets (masked) |
 | `code_owners` | main authors, bus factor, stale files, knowledge at risk |
 | `todos` | TODO / FIXME / HACK with author and age |
+| `todo_pinboard` | the team's TODO priorities from `.linecounter/pinboard.json` (column + rank, current file and line) |
 | `architecture_violations` | imports that break `architecture.rules` / `architecture.layers` |
 | `unused_functions` | dead code candidates |
 | `duplicate_code` | duplicated blocks with both locations |

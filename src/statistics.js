@@ -12,7 +12,7 @@ async function computeStatistics(config, roots, selection, options = {}) {
     location: vscode.ProgressLocation.Notification,
     title: 'Line Counter',
     cancellable: true,
-  }, (progress, token) => runPipeline(config, roots, selection, { ...options, workspaceName: vscode.workspace.name }, progress, token));
+  }, (progress, token) => runPipeline(config, roots, selection, { ...options, workspaceName: vscode.workspace.name, configRoot: config.root }, progress, token));
 }
 
 module.exports = { computeStatistics };

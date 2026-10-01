@@ -2,7 +2,7 @@
 
 # Line Counter & Code Statistics
 
-[![Release](https://img.shields.io/badge/release-v1.14.6-e0621b)](https://github.com/EinsPhoenix/linecounter/releases/latest)
+[![Release](https://img.shields.io/badge/release-v1.15.0-e0621b)](https://github.com/EinsPhoenix/linecounter/releases/latest)
 [![Download vsix](https://img.shields.io/badge/download-linecounter.vsix-2ea44f?logo=visualstudiocode&logoColor=white)](https://github.com/EinsPhoenix/linecounter/releases/latest/download/linecounter.vsix)
 [![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)](https://github.com/EinsPhoenix/linecounter/actions/workflows/ci.yml)
 [![Changelog](https://img.shields.io/badge/changelog-CHANGELOG.md-555)](CHANGELOG.md)
@@ -27,9 +27,10 @@ VS-Code-Extension, die alle Dateien und Ordner des Workspaces rekursiv als Baum 
 | Dependencies | Lizenzen aller Pakete (npm, PyPI, crates.io, Go), Schwachstellen (OSV), ungenutzte und nicht deklarierte Pakete | [FEATURES](docs/FEATURES.md#dependencies-lizenzen-und-schwachstellen) |
 | Architecture | Regeln wie „`ui/` darf nicht `db/` importieren“ und Schichten; Verstöße rot im Graphen | [FEATURES](docs/FEATURES.md#architecture) |
 | Git | mehrere Repos mit Übersicht, Ownership und Bus-Factor, verwaiste Dateien, TODO-Tracker mit Alter, Branch-Vergleich | [FEATURES](docs/FEATURES.md#branch-comparison) |
+| TODO-Pinboard | TODOs per Drag & Drop nach Priorität ordnen, Klick springt zur Code-Zeile, gespeichert in `.linecounter/pinboard.json` | [FEATURES](docs/FEATURES.md#pinboard--todos-nach-priorität) |
 | Graphen | Importgraph mit Zyklen, Ketten, Funktionen, Ordner-Clustern und Suche; bis 20.000 Knoten; 3D-Zug durch das Projekt | [FEATURES](docs/FEATURES.md#graphen-2d) |
 | Quality Gate | gleiche Checks in VS Code und im CI (`node bin/linecounter.js gate`, Exit-Code 1) | [CI.md](docs/CI.md) |
-| MCP-Server | 21 Tools für LLM-Agenten (Copilot, Claude Code …): Impact einer Änderung, Risiko, Schwachstellen, Lizenzen … | [MCP.md](docs/MCP.md) |
+| MCP-Server | 22 Tools für LLM-Agenten (Copilot, Claude Code …): Impact einer Änderung, Risiko, Schwachstellen, Lizenzen … | [MCP.md](docs/MCP.md) |
 | Filter & Presets | eigene Filter wie `*/data`, Presets und Einstellungen in `.linecounter/`, Projekt-Root | [FEATURES](docs/FEATURES.md#sidebar-filter-und-presets) |
 
 ## Schnellstart
@@ -52,6 +53,7 @@ VS-Code-Extension, die alle Dateien und Ordner des Workspaces rekursiv als Baum 
 | ![Lizenzen](docs/images/licenses.png) | **Lizenzen:** alle Pakete aus npm, PyPI, crates.io und Go nach Lizenz und Kategorie. |
 | ![Ownership](docs/images/ownership.png) | **Ownership:** wem der Code gehört, Bus-Factor und Wissen, das mit inaktiven Autoren verloren geht. |
 | ![Commit-Heatmap](docs/images/commit-heatmap.png) | **Git:** wann Code geschrieben wird, Commits pro Monat, Hotspots und Fun Facts. |
+| ![Pinboard](docs/images/pinboard.png) | **Pinboard:** TODOs nach Priorität ordnen (Drag & Drop), mit Sprung zur Code-Zeile; gespeichert in `.linecounter/pinboard.json`. |
 | ![Project roast](docs/images/roast.png) | **Project roast:** die Statistik mit Humor. |
 
 Mehr Bilder und alle Details: [`docs/FEATURES.md`](docs/FEATURES.md)
