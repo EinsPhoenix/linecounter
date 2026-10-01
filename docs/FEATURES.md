@@ -262,6 +262,17 @@ Ein Zug fährt durch dein Projekt als Universum.
 - **In VS Code:** *Line Counter: Run Quality Gate* meldet das Ergebnis.
 - **Im CI:** `node bin/linecounter.js gate .` scheitert mit Exit-Code 1. Details und ein GitHub-Actions-Beispiel stehen in [CI.md](CI.md).
 
+## MCP-Server für LLM-Agenten
+
+- **Zweck.** Die Extension stellt einen MCP-Server bereit. Agenten wie Copilot, Claude Code oder Claude Desktop bekommen damit die Analyse als Tools:
+  - Was bricht, wenn ich diese Datei ändere?
+  - Risiko-Hotspots und oft geänderte Dateien
+  - Schwachstellen, Lizenzen, ungenutzte Pakete
+  - Zyklen, Funktionen und ihre Aufrufer, Ownership, TODOs, Architektur-Verstöße, Quality Gate und Branch-Vergleich
+- **In VS Code** (ab Version 1.101) wird der Server automatisch registriert.
+- **Für andere Clients** kopiert *Line Counter: Copy MCP Server Configuration* die Konfiguration.
+- **Details** und die Tool-Liste stehen in [MCP.md](MCP.md).
+
 ## Exporte und PDFs
 
 | Export | Inhalt |

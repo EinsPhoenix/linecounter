@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.14.0
+- Graphs: zoom around the mouse pointer, zoom controls (+ / − / fit / level), smooth wheel and pinch, keyboard +/−/0, double-click zoom; limits configurable (`graphs.maxNodes` 20000 / `graphs.maxLinks` 40000, `train.maxNodes` 800) with fast rendering of huge graphs
+- Own filters (e.g. `*/data`) as sidebar checkboxes, stored in `.linecounter/filters.json` and in presets; "Save as filter" from a search
+- Architecture rules (`architecture.rules` / `architecture.layers`) with a violations section and red edges in the import graph
+- Quality gate for CI: `node bin/linecounter.js gate` (exit code 1), VS Code command, gate card on the statistics page, docs/CI.md
+- Code ownership from git: owners, bus factor per folder, stale files, knowledge at risk
+- TODO tracker with author and age from git blame
+- Branch comparison: current branch vs. base (files, complexity delta, new functions, TODOs, secrets, dependency changes)
+- MCP server for LLM agents (21 tools: impact of change, risk hotspots, vulnerabilities, licenses, ownership, …), registered in VS Code, docs/MCP.md
+
 ## 1.13.0
 - Trends: every run stores a snapshot (per workspace / project root); "since the last run" deltas and trend charts for lines, functions, complexity, health score, duplicates, unused functions, TODOs, vulnerabilities, licenses, secrets, cycles; optional shared `.linecounter/history.json`
 - Risk hotspots: git churn × complexity scatter with a "refactor first" zone and a risk score per file
