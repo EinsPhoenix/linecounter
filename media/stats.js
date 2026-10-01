@@ -1103,6 +1103,7 @@
     if (window.LCDeps && D.dependencies) out.push(...LCDeps.rants(UI(), D));
     if (window.LCHealth && D.health) out.push(...LCHealth.rants(UI(), D));
     if (window.LCArch) out.push(...LCArch.rants(UI(), D));
+    if (window.LCOwnership) out.push(...LCOwnership.rants(UI(), D));
     if (!out.length) out.push(['😇', 'We tried to roast this project and found nothing. Suspicious. Very suspicious.']);
     return `<ul class="roast-list">${out.map(([e, t2]) => `<li><span class="rant-emoji">${e}</span><span>${t2}</span></li>`).join('')}</ul>`;
   }
@@ -1270,7 +1271,7 @@
       </header>
       <nav class="toc">
         <a href="#s-overview">Overview</a>${D.history ? '<a href="#s-trends">Trends</a>' : ''}<a href="#s-lang">Languages</a><a href="#s-files">Files</a>
-        <a href="#s-fame">Hall of Fame</a>${D.dependencies ? '<a href="#s-deps">Dependencies</a>' : ''}${D.architecture ? '<a href="#s-arch">Architecture</a>' : ''}${D.health ? '<a href="#s-health">Code health</a>' : ''}${rantCfg().enabled ? '<a href="#s-rant">Code Rant</a>' : ''}<a href="#s-git">Git</a><a href="#s-fun">Fun facts</a><a href="#s-ids">Words & connections</a><a href="#s-rank">Ranking</a><a href="#s-struct">Structure</a>
+        <a href="#s-fame">Hall of Fame</a>${D.dependencies ? '<a href="#s-deps">Dependencies</a>' : ''}${D.architecture ? '<a href="#s-arch">Architecture</a>' : ''}${D.health ? '<a href="#s-health">Code health</a>' : ''}${rantCfg().enabled ? '<a href="#s-rant">Code Rant</a>' : ''}<a href="#s-git">Git</a>${D.ownership ? '<a href="#s-own">Ownership</a>' : ''}<a href="#s-fun">Fun facts</a><a href="#s-ids">Words & connections</a><a href="#s-rank">Ranking</a><a href="#s-struct">Structure</a>
       </nav>
       <main>
         <h2 id="s-overview">Overview</h2>${gateHtml()}${overview()}
@@ -1283,6 +1284,7 @@
         ${D.health && window.LCHealth ? `<h2 id="s-health">Code health</h2>${LCHealth.render(UI(), D)}` : ''}
         ${rantSection()}
         <h2 id="s-git">Git</h2>${gitSection()}
+        ${window.LCOwnership && D.ownership ? `<h2 id="s-own">Ownership</h2>${LCOwnership.render(UI(), D)}` : ''}
         <h2 id="s-fun">Fun facts</h2>${funSection()}
         <h2 id="s-ids">Words & connections</h2>
         <div class="grid-2">
