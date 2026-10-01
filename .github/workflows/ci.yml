@@ -20,8 +20,8 @@ jobs:
       - run: npm ci
       - run: npm test
       - name: Package (check that the extension builds)
-        run: npx vsce package --out /tmp/linecounter-ci.vsix
+        run: npx vsce package --out /tmp/locomotive-ci.vsix
       - uses: actions/upload-artifact@v4
         with:
-          name: linecounter-vsix
-          path: /tmp/linecounter-ci.vsix
+          name: locomotive-vsix
+          path: /tmp/locomotive-ci.vsix

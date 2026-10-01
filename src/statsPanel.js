@@ -17,7 +17,7 @@ class StatsPanel {
     StatsPanel.maximize();
   }
 
-  /** Makes the statistics page take the whole window, depending on `linecounter.statisticsLayout`. */
+  /** Makes the statistics page take the whole window, depending on `locomotive.statisticsLayout`. */
   static async maximize() {
     const layout = StatsPanel.config ? StatsPanel.config.get('statisticsLayout', 'maximized') : 'maximized';
     if (layout === 'normal') return;
@@ -47,7 +47,7 @@ class StatsPanel {
     this.handlers = handlers;
     this.data = data;
     const media = vscode.Uri.joinPath(context.extensionUri, 'media');
-    this.panel = vscode.window.createWebviewPanel('linecounter.stats', 'Code Statistics', vscode.ViewColumn.One, {
+    this.panel = vscode.window.createWebviewPanel('locomotive.stats', 'Code Statistics', vscode.ViewColumn.One, {
       enableScripts: true,
       retainContextWhenHidden: true,
       localResourceRoots: [media],
@@ -85,8 +85,8 @@ class StatsPanel {
         StatsPanel.wentFullScreen = false;
         vscode.commands.executeCommand('workbench.action.toggleFullScreen');
       }
-      // bring the Line Counter sidebar back
-      vscode.commands.executeCommand('workbench.view.extension.linecounter');
+      // bring the LOComotive sidebar back
+      vscode.commands.executeCommand('workbench.view.extension.locomotive');
     });
   }
 
@@ -147,7 +147,7 @@ ${['vendor/d3.min.js', 'graphs.js', 'deps.js', 'health.js', 'trends.js', 'archit
         break;
       }
       case 'openSettings':
-        await vscode.commands.executeCommand('linecounter.openWorkspaceSettings');
+        await vscode.commands.executeCommand('locomotive.openWorkspaceSettings');
         break;
       case 'clearHistory':
         if (this.handlers.clearHistory) await this.handlers.clearHistory(msg.projectRoot || '');

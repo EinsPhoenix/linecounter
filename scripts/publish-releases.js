@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 'use strict';
-// Creates a GitHub Release (tag v<version>) for every releases/linecounter-<version>.vsix that has none yet.
+// Creates a GitHub Release (tag v<version>) for every releases/locomotive-<version>.vsix that has none yet.
 // Release notes come from the matching CHANGELOG.md section. Needs the gh CLI and GH_TOKEN (used by the Release workflow).
 const { execFileSync } = require('child_process');
 const fs = require('fs');
@@ -39,11 +39,13 @@ function existingTags() {
   return new Set(JSON.parse(json).map((r) => r.tagName));
 }
 
-const versions = fs.readdirSync(path.join(root, 'releases'))
-  .map((f) => /^linecounter-(\d+\.\d+\.\d+)\.vsix$/.exec(f))
-  .filter(Boolean)
-  .map((m) => m[1])
-  .sort(cmp);
+// versions before 2.0.0 were packaged as linecounter-<version>.vsix (the old name of the extension)
+const files = new Map();
+for (const f of fs.readdirSync(path.join(root, 'releases'))) {
+  const m = /^(locomotive|linecounter)-(\d+\.\d+\.\d+)\.vsix$/.exec(f);
+  if (m && (!files.has(m[2]) || m[1] === 'locomotive')) files.set(m[2], f);
+}
+const versions = [...files.keys()].sort(cmp);
 const latest = versions[versions.length - 1];
 const notes = changelogSections();
 const have = existingTags();
@@ -51,20 +53,20 @@ const have = existingTags();
 for (const v of versions) {
   const tag = `v${v}`;
   if (have.has(tag) && !update) continue;
-  const asset = path.join(root, 'releases', `linecounter-${v}.vsix`);
+  const asset = path.join(root, 'releases', files.get(v));
   const news = (notes[v] || '_Kein Changelog-Eintrag._');
   const overview = v === latest && features ? `\n\n${features}` : `\n\nAlle Funktionen: siehe [neuestes Release](https://github.com/EinsPhoenix/linecounter/releases/latest) und [FEATURES.md](https://github.com/EinsPhoenix/linecounter/blob/main/docs/FEATURES.md).`;
-  const body = `## Neu in ${v}\n\n${news}${overview}\n\n### Installation\n\n\`\`\`bash\ncode --install-extension linecounter-${v}.vsix\n\`\`\`\n\noder in VS Code: *Extensions → … → Install from VSIX…*`;
+  const body = `## Neu in ${v}\n\n${news}${overview}\n\n### Installation\n\n\`\`\`bash\ncode --install-extension ${files.get(v)}\n\`\`\`\n\noder in VS Code: *Extensions → … → Install from VSIX…*`;
   const notesFile = path.join(os.tmpdir(), `notes-${v}.md`);
   fs.writeFileSync(notesFile, body);
-  // Same file under a fixed name, so .../releases/latest/download/linecounter.vsix always works.
+  // Same file under a fixed name, so .../releases/latest/download/locomotive.vsix always works.
   const stableDir = fs.mkdtempSync(path.join(os.tmpdir(), `lc-${v}-`));
-  const stable = path.join(stableDir, 'linecounter.vsix');
+  const stable = path.join(stableDir, files.get(v).startsWith('locomotive') ? 'locomotive.vsix' : 'linecounter.vsix');
   fs.copyFileSync(asset, stable);
-  const args = ['release', 'create', tag, asset, stable, '--title', `Code Statistics ${v}`, '--notes-file', notesFile,
+  const args = ['release', 'create', tag, asset, stable, '--title', `LOComotive ${v}`, '--notes-file', notesFile,
     '--target', process.env.GITHUB_SHA || 'main', `--latest=${v === latest}`];
   if (have.has(tag)) {
-    const edit = ['release', 'edit', tag, '--title', `Code Statistics ${v}`, '--notes-file', notesFile, `--latest=${v === latest}`];
+    const edit = ['release', 'edit', tag, '--title', `LOComotive ${v}`, '--notes-file', notesFile, `--latest=${v === latest}`];
     console.log(`${dryRun ? '[dry-run] ' : ''}gh ${edit.join(' ')}`);
     if (!dryRun) execFileSync('gh', edit, { cwd: root, stdio: 'inherit' });
     continue;

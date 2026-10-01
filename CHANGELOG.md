@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.0
+- **New name: LOComotive – Code Statistics, Lines of Code & Complexity** (formerly "Line Counter"). New extension id `einsphoenix.locomotive`; settings and commands are now `locomotive.*`, the project folder is `.locomotive/`, the CLI `bin/locomotive.js`, the MCP server `bin/locomotive-mcp.js` (`LOCOMOTIVE_ROOT`)
+- Migration: an existing `.linecounter/` folder is still used as long as there is no `.locomotive/`; `linecounter.*` keys in that folder and in the VS Code settings are still read when the new key is not set
+- Release files are now `locomotive-<version>.vsix` / `locomotive.vsix`
+
 ## 1.15.2
 - New display name "Code Statistics – Lines of Code, Complexity & Git Insights" and a description and tags that are found when searching for code, statistics, lines, LOC, complexity … (the extension id `linecounter`, settings and commands stay the same)
 

@@ -85,7 +85,7 @@ async function runPipeline(config, roots, selection, options = {}, progress = { 
     progress.report({ message: 'Dating TODOs with git blame…' });
     try { data.todos = await buildTodos(results.filter(f => !f.binary && !f.skipped), repos); } catch { data.todos = null; }
   }
-  // TODO pinboard (.linecounter/pinboard.json next to the settings): priority order of TODOs and notes
+  // TODO pinboard (.locomotive/pinboard.json next to the settings): priority order of TODOs and notes
   if (options.configRoot) {
     try { data.pinboard = pinboard.resolve(pinboard.load(options.configRoot), data.todos, options.configRoot); } catch { data.pinboard = null; }
   }

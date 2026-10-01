@@ -1,24 +1,24 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * Line Counter MCP server (Model Context Protocol over stdio, JSON-RPC 2.0, no dependencies).
+ * LOComotive MCP server (Model Context Protocol over stdio, JSON-RPC 2.0, no dependencies).
  * Gives LLM agents tools for the import graph, impact of changes, risk hotspots, vulnerabilities, licenses,
  * ownership, TODOs, architecture rules, quality gate and branch comparison of a project.
  *
- *   node bin/linecounter-mcp.js [--root FOLDER] [--offline] [--preset NAME]
+ *   node bin/locomotive-mcp.js [--root FOLDER] [--offline] [--preset NAME]
  *
- * Claude Code:     claude mcp add linecounter -- node /path/to/linecounter/bin/linecounter-mcp.js --root /path/to/project
- * Claude Desktop:  { "mcpServers": { "linecounter": { "command": "node", "args": ["/path/to/bin/linecounter-mcp.js", "--root", "/path/to/project"] } } }
+ * Claude Code:     claude mcp add locomotive -- node /path/to/locomotive/bin/locomotive-mcp.js --root /path/to/project
+ * Claude Desktop:  { "mcpServers": { "locomotive": { "command": "node", "args": ["/path/to/bin/locomotive-mcp.js", "--root", "/path/to/project"] } } }
  */
 const path = require('path');
 const readline = require('readline');
 const { listTools, callTool } = require('../src/mcp/tools');
-const { analyze } = require('./linecounter.js');
+const { analyze } = require('./locomotive.js');
 
 const argv = process.argv.slice(2);
 const flag = (name, def) => { const i = argv.indexOf('--' + name); return i < 0 ? def : argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : true; };
-const root = path.resolve(flag('root', process.env.LINECOUNTER_ROOT || process.cwd()));
-const offline = !!flag('offline', process.env.LINECOUNTER_OFFLINE === '1');
+const root = path.resolve(flag('root', process.env.LOCOMOTIVE_ROOT || process.cwd()));
+const offline = !!flag('offline', process.env.LOCOMOTIVE_OFFLINE === '1');
 const preset = flag('preset', undefined);
 const PROTOCOL = '2025-06-18';
 
@@ -69,7 +69,7 @@ async function handle(msg) {
     return reply(id, {
       protocolVersion: params && params.protocolVersion ? params.protocolVersion : PROTOCOL,
       capabilities: { tools: { listChanged: false } },
-      serverInfo: { name: 'linecounter', title: 'Line Counter – code statistics, dependencies & risk', version: require('../package.json').version },
+      serverInfo: { name: 'locomotive', title: 'LOComotive – code statistics, dependencies & risk', version: require('../package.json').version },
       instructions: `Code analysis of ${root}. Start with project_overview. Before changing a file, call impact_of_change / file_dependencies; for risky areas use risk_hotspots; for dependency questions use vulnerabilities, licenses and dependency_usage. The first call analyzes the project (may take a while); call refresh_analysis after big changes.`,
     });
   }
@@ -97,4 +97,4 @@ rl.on('line', line => {
   handle(msg).catch(e => msg.id !== undefined && fail(msg.id, -32603, e.message));
 });
 // start analysing right away so the first tool call is fast
-if (!flag('lazy', false)) data().catch(e => process.stderr.write(`[linecounter-mcp] analysis failed: ${e.message}\n`));
+if (!flag('lazy', false)) data().catch(e => process.stderr.write(`[locomotive-mcp] analysis failed: ${e.message}\n`));

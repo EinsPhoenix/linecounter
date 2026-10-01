@@ -10,7 +10,7 @@ const { sniffLicenseText, normalizeLicense } = require('./licenses');
  */
 function download(url, { timeoutMs = 15000, maxBytes = 30e6, headers = {} } = {}) {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, { headers: { 'User-Agent': 'linecounter-vscode (license check)', ...headers }, timeout: timeoutMs }, res => {
+    const req = https.get(url, { headers: { 'User-Agent': 'locomotive-vscode (license check)', ...headers }, timeout: timeoutMs }, res => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         res.resume();
         return resolve(download(new URL(res.headers.location, url).toString(), { timeoutMs, maxBytes, headers }));

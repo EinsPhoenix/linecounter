@@ -1,7 +1,7 @@
 // @ts-check
 // "Architecture" section: configurable import rules / layers and their violations.
 (function () {
-  const EXAMPLE = `// .linecounter/settings.json
+  const EXAMPLE = `// .locomotive/settings.json
 {
   "architecture.rules": [
     { "name": "UI never talks to the database", "from": "src/ui/**", "disallow": ["src/db/**"], "allow": ["src/db/types.ts"] },
@@ -33,7 +33,7 @@
     if (!A || !A.configured) {
       return card('Architecture rules', `<p>Describe which parts of the code may import which – violations show up here and in red in the import graph, and the quality gate can fail on them.</p>
         <pre class="arch-example">${esc(EXAMPLE)}</pre>
-        <button class="btn" data-arch-settings>Open .linecounter/settings.json</button>`);
+        <button class="btn" data-arch-settings>Open .locomotive/settings.json</button>`);
     }
     const errors = A.violations.filter(v => v.severity === 'error').length;
     return `<div id="arch-body">${tiles([

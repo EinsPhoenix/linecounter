@@ -658,14 +658,14 @@
     treemap = null;
   }
 
-  /** quality gate result (same checks as the CI command "node bin/linecounter.js gate") */
+  /** quality gate result (same checks as the CI command "node bin/locomotive.js gate") */
   function gateHtml() {
     const g = D.gate;
     if (!g) return '';
     const on = g.checks.filter(c => c.enabled);
     return `<div class="gate ${g.passed ? 'pass' : 'fail'}">
       <div class="gate-head"><span class="gate-badge">${g.passed ? '✓ Quality gate passed' : '✗ Quality gate failed'}</span>
-        <span class="muted">${on.length} checks · configure in <code>linecounter.gate</code> · same result in CI with <code>node bin/linecounter.js gate</code></span></div>
+        <span class="muted">${on.length} checks · configure in <code>locomotive.gate</code> · same result in CI with <code>node bin/locomotive.js gate</code></span></div>
       <div class="gate-checks">${g.checks.map(c => `<span class="gate-check ${!c.enabled ? 'off' : c.passed ? 'ok' : 'bad'}" ${tipAttr(`<b>${esc(c.label)}</b><br>${esc(c.detail)}${c.items.length && !c.passed ? '<br>' + c.items.slice(0, 6).map(esc).join('<br>') : ''}`)}>${!c.enabled ? '–' : c.passed ? '✓' : '✗'} ${esc(c.label)}${c.enabled && !c.passed ? ` <b>${fmt(c.count)}</b>` : ''}</span>`).join('')}</div>
     </div>`;
   }
@@ -1038,7 +1038,7 @@
       </div>
       ${card('🎁 Bonus rants', bonusRants(), { sub: 'Things nobody asked about' })}
       ${(D.repos || []).map(commitRant).join('')}
-      <p class="muted rant-note">Limits come from the settings <code>linecounter.rant.maxFileLines</code> and <code>linecounter.rant.maxBlankPercent</code>.</p>`;
+      <p class="muted rant-note">Limits come from the settings <code>locomotive.rant.maxFileLines</code> and <code>locomotive.rant.maxBlankPercent</code>.</p>`;
   }
 
   // ---------- roasts ----------
@@ -1347,7 +1347,7 @@
           ${card('Word cloud of names in your code', identifierCloud())}
           ${card('Word web – most used words and the files that use them', D.wordGraph && D.wordGraph.words.length ? '<div id="wordweb" class="graph"></div>' : '<p class="muted">No identifiers found.</p>', { sub: 'drag, zoom, hover', tools: graphTools('wordweb') })}
         </div>
-        ${card('File connections – who imports whom', importSection(), { sub: D.importGraph ? `${fmt(D.importGraph.edgeCount)} imports between ${fmt(D.importGraph.nodes.length)} files${D.importGraph.truncated ? ` (limit ${fmt(D.importGraph.limits ? D.importGraph.limits.maxNodes : 0)} nodes / ${fmt(D.importGraph.limits ? D.importGraph.limits.maxLinks : 0)} relations – linecounter.graphs.maxNodes / maxLinks)` : ''}` : '', tools: D.importGraph && D.importGraph.nodes.length ? `<span class="graph-tools"><button class="gbtn" data-graph="importgraph" data-gact="pause" title="Pause / resume">${icon('pause')}</button><button class="gbtn" data-graph="importgraph" data-gact="shake" title="Re-run the layout">${icon('shake')}</button><button class="gbtn" data-graph="importgraph" data-gact="reset" title="Fit to view">${icon('target')}</button></span>` : '' })}
+        ${card('File connections – who imports whom', importSection(), { sub: D.importGraph ? `${fmt(D.importGraph.edgeCount)} imports between ${fmt(D.importGraph.nodes.length)} files${D.importGraph.truncated ? ` (limit ${fmt(D.importGraph.limits ? D.importGraph.limits.maxNodes : 0)} nodes / ${fmt(D.importGraph.limits ? D.importGraph.limits.maxLinks : 0)} relations – locomotive.graphs.maxNodes / maxLinks)` : ''}` : '', tools: D.importGraph && D.importGraph.nodes.length ? `<span class="graph-tools"><button class="gbtn" data-graph="importgraph" data-gact="pause" title="Pause / resume">${icon('pause')}</button><button class="gbtn" data-graph="importgraph" data-gact="shake" title="Re-run the layout">${icon('shake')}</button><button class="gbtn" data-graph="importgraph" data-gact="reset" title="Fit to view">${icon('target')}</button></span>` : '' })}
         <h2 id="s-rank">File ranking</h2>${tableSection()}
         <h2 id="s-struct">Project structure</h2>
         ${card('Folders and files as a living graph', '<div id="structure" class="graph graph-tall"></div>', { sub: 'click a folder to collapse / expand · click a file to open it', tools: graphTools('structure') })}

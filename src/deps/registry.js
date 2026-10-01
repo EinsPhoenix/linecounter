@@ -14,7 +14,7 @@ const { download, licenseFromArchive } = require('./archive');
  */
 function getJson(url, timeoutMs, headers = {}) {
   return new Promise((resolve, reject) => {
-    const req = https.get(url, { headers: { Accept: 'application/json', 'User-Agent': 'linecounter-vscode (license check)', ...headers }, timeout: timeoutMs }, res => {
+    const req = https.get(url, { headers: { Accept: 'application/json', 'User-Agent': 'locomotive-vscode (license check)', ...headers }, timeout: timeoutMs }, res => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) { res.resume(); return resolve(getJson(new URL(res.headers.location, url).toString(), timeoutMs, headers)); }
       let buf = '';
       res.setEncoding('utf8');

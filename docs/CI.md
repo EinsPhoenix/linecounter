@@ -1,22 +1,22 @@
 # Quality gate in CI
 
 The extension ships a command line tool that runs the **same analysis** as the statistics page and fails the build
-when a check of `linecounter.gate` fails.
+when a check of `locomotive.gate` fails.
 
 ```bash
-node bin/linecounter.js gate [folder] [--preset NAME] [--json gate.json] [--markdown gate.md] [--offline] [--quiet]
-node bin/linecounter.js report [folder] --json data.json      # the full data model (all statistics) as JSON
+node bin/locomotive.js gate [folder] [--preset NAME] [--json gate.json] [--markdown gate.md] [--offline] [--quiet]
+node bin/locomotive.js report [folder] --json data.json      # the full data model (all statistics) as JSON
 ```
 
 - **Exit codes:** `0` = passed, `1` = a check failed, `2` = error.
-- **Settings** come from `<folder>/.linecounter/settings.json` plus the defaults. Filters come from the active preset in `.linecounter/presets.json` (or `--preset NAME`), including its exclusions and project root, and from `.linecounter/filters.json`.
+- **Settings** come from `<folder>/.locomotive/settings.json` plus the defaults. Filters come from the active preset in `.locomotive/presets.json` (or `--preset NAME`), including its exclusions and project root, and from `.locomotive/filters.json`.
 - **`--offline`** skips OSV.dev and the registries (no network).
 - **GitHub Actions:** the Markdown summary is appended to `$GITHUB_STEP_SUMMARY` automatically.
 
 ## Configuration
 
 ```jsonc
-// .linecounter/settings.json
+// .locomotive/settings.json
 {
   "gate": {
     "vulnerabilities": "critical",   // critical | high | medium | low | off
@@ -34,7 +34,7 @@ node bin/linecounter.js report [folder] --json data.json      # the full data mo
 
 ## GitHub Actions example
 
-The CLI is part of the extension package. `linecounter.vsix` is a zip file, so the CI can unpack it:
+The CLI is part of the extension package. `locomotive.vsix` is a zip file, so the CI can unpack it:
 
 ```yaml
 name: quality-gate
@@ -47,16 +47,16 @@ jobs:
         with: { fetch-depth: 0 }          # full history for churn / ownership statistics
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - name: Get Line Counter
+      - name: Get LOComotive
         run: |
-          # latest release; pin a version with .../releases/download/v1.14.3/linecounter-1.14.3.vsix
-          curl -sSL -o lc.vsix https://github.com/EinsPhoenix/linecounter/releases/latest/download/linecounter.vsix
+          # latest release; pin a version with .../releases/download/v1.14.3/locomotive-1.14.3.vsix
+          curl -sSL -o lc.vsix https://github.com/EinsPhoenix/linecounter/releases/latest/download/locomotive.vsix
           unzip -q lc.vsix -d lc
       - name: Quality gate
-        run: node lc/extension/bin/linecounter.js gate . --json gate.json
+        run: node lc/extension/bin/locomotive.js gate . --json gate.json
       - uses: actions/upload-artifact@v4
         if: always()
         with: { name: quality-gate, path: gate.json }
 ```
 
-Inside VS Code the same checks run with **Line Counter: Run Quality Gate**. The result is also shown at the top of the statistics page.
+Inside VS Code the same checks run with **LOComotive: Run Quality Gate**. The result is also shown at the top of the statistics page.

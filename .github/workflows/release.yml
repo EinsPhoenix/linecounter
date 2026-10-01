@@ -37,7 +37,7 @@ jobs:
       - name: Build the current version if it is not packaged yet
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          if [ ! -f "releases/linecounter-$VERSION.vsix" ]; then
+          if [ ! -f "releases/locomotive-$VERSION.vsix" ]; then
             npm ci
             npm run release
           fi

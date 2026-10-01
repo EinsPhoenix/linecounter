@@ -192,7 +192,7 @@ const TOOLS = [
   },
   {
     name: 'todo_pinboard',
-    description: 'The team\'s TODO priorities from .linecounter/pinboard.json: TODO comments and notes ordered by priority column (e.g. High, Medium, Low) and rank. Use it to decide what to work on next. Code cards point to the current file and line; state "gone" means the comment is no longer in the code (probably done).',
+    description: 'The team\'s TODO priorities from .locomotive/pinboard.json: TODO comments and notes ordered by priority column (e.g. High, Medium, Low) and rank. Use it to decide what to work on next. Code cards point to the current file and line; state "gone" means the comment is no longer in the code (probably done).',
     inputSchema: { type: 'object', properties: { priority: { type: 'string', description: 'only this column, e.g. High' }, limit: { type: 'number', default: 50 } } },
     run(D, a) {
       const B = D.pinboard;
@@ -204,9 +204,9 @@ const TOOLS = [
   },
   {
     name: 'architecture_violations',
-    description: 'Imports that break the configured architecture rules / layers (linecounter.architecture.*).',
+    description: 'Imports that break the configured architecture rules / layers (locomotive.architecture.*).',
     inputSchema: { type: 'object', properties: {} },
-    run(D) { const A = D.architecture; return A && A.configured ? { rules: A.rules, violations: A.violations.map(v => ({ rule: v.rule, severity: v.severity, from: v.from.path, to: v.to.path, detail: v.detail })) } : { configured: false, hint: 'add "architecture.rules" / "architecture.layers" to .linecounter/settings.json' }; },
+    run(D) { const A = D.architecture; return A && A.configured ? { rules: A.rules, violations: A.violations.map(v => ({ rule: v.rule, severity: v.severity, from: v.from.path, to: v.to.path, detail: v.detail })) } : { configured: false, hint: 'add "architecture.rules" / "architecture.layers" to .locomotive/settings.json' }; },
   },
   {
     name: 'unused_functions',

@@ -40,7 +40,7 @@
 
     const vulnTile = R.vulns.enabled
       ? (R.vulns.error ? { label: 'Vulnerabilities', value: 'n/a', sub: 'OSV.dev not reachable' } : { label: 'Vulnerabilities', html: `<span class="${vulns.length ? 'dep-bad' : ''}">${fmt(vulns.length)}</span>`, sub: SEV_ORDER.filter(s => bySev[s]).map(s => `${bySev[s]} ${s.toLowerCase()}`).join(' · ') || `${fmt(R.vulns.checked)} packages checked` })
-      : { label: 'Vulnerabilities', value: 'off', sub: 'linecounter.vulnerabilities.enabled' };
+      : { label: 'Vulnerabilities', value: 'off', sub: 'locomotive.vulnerabilities.enabled' };
 
     return `
       <div class="dep-manifests muted">${R.manifests.map(m => `<a class="file" href="#" data-abs="${esc(m.abs)}">${esc(m.file)}</a> <span class="dep-eco ${ecoCls(m.ecosystem)}">${m.ecosystem}</span> ${fmt(m.deps)} deps`).join(' &nbsp;·&nbsp; ')}
@@ -48,7 +48,7 @@
       ${tiles([
         { label: 'Direct dependencies', value: fmt(direct.length), sub: Object.keys(ECO_LABEL).map(e => [e, direct.filter(p => p.ecosystem === e).length]).filter(([, n]) => n).map(([e, n]) => `${fmt(n)} ${ECO_LABEL[e]}`).join(' · ') || '–' },
         { label: 'Packages in total', value: fmt(P.length), sub: `${fmt(P.filter(p => !p.direct).length)} transitive` },
-        { label: 'Problematic licenses', html: `<span class="${flagged('problematic').length ? 'dep-bad' : ''}">${fmt(flagged('problematic').length)}</span>`, sub: 'linecounter.licenses.problematic' },
+        { label: 'Problematic licenses', html: `<span class="${flagged('problematic').length ? 'dep-bad' : ''}">${fmt(flagged('problematic').length)}</span>`, sub: 'locomotive.licenses.problematic' },
         { label: 'Needs review', value: fmt(flagged('review').length), sub: 'unknown, custom or weak copyleft' },
         vulnTile,
         { label: 'Unused packages', value: fmt(unused), sub: `${fmt(undeclared)} imported but not declared` },
@@ -111,7 +111,7 @@
     const { esc, fmt, card } = ui;
     const list = R.packages.filter(p => p.license === 'Unknown' || p.license === 'Custom');
     const reg = R.registry || {};
-    const info = reg.looked != null ? `${fmt(reg.looked)} packages looked up online · ${fmt(reg.resolved || 0)} resolved` : 'online lookup off (linecounter.licenses.fetchFromRegistry)';
+    const info = reg.looked != null ? `${fmt(reg.looked)} packages looked up online · ${fmt(reg.resolved || 0)} resolved` : 'online lookup off (locomotive.licenses.fetchFromRegistry)';
     if (!list.length) return card('Unknown & custom licenses', `<p class="dep-okmsg">Every package has a recognised license.</p><p class="muted">${esc(info)}</p>`, { sub: 'checked: metadata, registry, package archive, deps.dev, GitHub' });
     const SRC = { registry: 'registry', archive: 'package archive', 'deps.dev': 'deps.dev' };
     const trail = p => (p.licenseTrail && p.licenseTrail.length
@@ -130,7 +130,7 @@
 
   function vulnsHtml(ui, R) {
     const { esc, fmt } = ui;
-    if (!R.vulns.enabled) return '<p class="muted">Vulnerability check is disabled (<code>linecounter.vulnerabilities.enabled</code>).</p>';
+    if (!R.vulns.enabled) return '<p class="muted">Vulnerability check is disabled (<code>locomotive.vulnerabilities.enabled</code>).</p>';
     if (R.vulns.error) return `<p class="dep-warn">Could not reach OSV.dev: ${esc(R.vulns.error)}. Check your network / proxy settings or disable the check.</p>`;
     const items = R.vulns.items.filter(v => !state.sev || v.severity === state.sev);
     if (!R.vulns.items.length) return `<p class="dep-okmsg">No known vulnerabilities in ${fmt(R.vulns.checked)} checked packages.</p>${R.vulns.unresolved && R.vulns.unresolved.length ? `<p class="muted">${fmt(R.vulns.unresolved.length)} direct dependencies could not be checked because no exact version is installed or pinned.</p>` : ''}`;

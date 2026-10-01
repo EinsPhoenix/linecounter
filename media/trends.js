@@ -52,7 +52,7 @@
   function render(ui, D) {
     const { esc, fmt, card } = ui;
     const list = D.history || [];
-    if (!list.length) return card('Trends', '<p class="muted">History is off (<code>linecounter.history.enabled</code>).</p>');
+    if (!list.length) return card('Trends', '<p class="muted">History is off (<code>locomotive.history.enabled</code>).</p>');
     if (list.length < 2) return card('Trends', `<p class="muted">This is the first run for this ${D.projectRoot ? 'project root' : 'workspace'}. Create the statistics again later (or after some commits) and you'll see how lines, complexity, health score, vulnerabilities and more develop over time.</p>`);
     const prev = list[list.length - 2], cur = list[list.length - 1];
     const chips = METRICS.map(m => {

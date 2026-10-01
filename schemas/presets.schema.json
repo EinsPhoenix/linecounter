@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Line Counter filter presets (.linecounter/presets.json)",
+  "title": "LOComotive filter presets (.locomotive/presets.json)",
   "type": "object",
   "properties": {
     "active": {

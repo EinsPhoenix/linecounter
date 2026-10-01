@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 'use strict';
 /**
- * Line Counter CLI – the same analysis as the VS Code extension, for CI pipelines.
+ * LOComotive CLI – the same analysis as the VS Code extension, for CI pipelines.
  *
- *   node bin/linecounter.js gate   [folder] [--preset NAME] [--json report.json] [--markdown summary.md] [--offline]
- *   node bin/linecounter.js report [folder] --json data.json
+ *   node bin/locomotive.js gate   [folder] [--preset NAME] [--json report.json] [--markdown summary.md] [--offline]
+ *   node bin/locomotive.js report [folder] --json data.json
  *
- * gate: exits with code 1 if a check of linecounter.gate fails (critical vulnerabilities, secrets, problematic licenses,
- * architecture violations, …). Settings come from <folder>/.linecounter/settings.json (+ defaults), the active filter
- * preset (or --preset) from .linecounter/presets.json, own filters from .linecounter/filters.json.
+ * gate: exits with code 1 if a check of locomotive.gate fails (critical vulnerabilities, secrets, problematic licenses,
+ * architecture violations, …). Settings come from <folder>/.locomotive/settings.json (+ defaults), the active filter
+ * preset (or --preset) from .locomotive/presets.json, own filters from .locomotive/filters.json.
  */
 const fs = require('fs');
 const path = require('path');
+const { configDir } = require('../src/configDir');
 const { scanRoot, DEFAULT_PRESETS } = require('../src/scanner');
 const { runPipeline } = require('../src/pipeline');
 const { evaluateGate, gateMarkdown } = require('../src/gate');
@@ -29,14 +30,14 @@ function headlessConfig(root, overrides) {
   const pkg = require('../package.json');
   const conf = pkg.contributes.configuration;
   const props = Array.isArray(conf) ? Object.assign({}, ...conf.map(c => c.properties)) : conf.properties;
-  const defaults = Object.fromEntries(Object.entries(props).map(([k, v]) => [k.replace(/^linecounter\./, ''), v.default]));
-  const file = readJson(path.join(root, '.linecounter', 'settings.json')) || {};
+  const defaults = Object.fromEntries(Object.entries(props).map(([k, v]) => [k.replace(/^locomotive\./, ''), v.default]));
+  const file = readJson(path.join(configDir(root), 'settings.json')) || {};
   const nested = (obj, key) => key.split('.').reduce((o, k) => (o && typeof o === 'object' && k in o ? o[k] : undefined), obj);
   return {
-    dir: path.join(root, '.linecounter'),
+    dir: configDir(root),
     get(key, def) {
       if (overrides[key] !== undefined) return overrides[key];
-      const v = file[key] ?? file['linecounter.' + key] ?? nested(file, key);
+      const v = file[key] ?? file['locomotive.' + key] ?? file['linecounter.' + key] ?? nested(file, key);
       if (v !== undefined) return v;
       return defaults[key] !== undefined ? defaults[key] : def;
     },
@@ -53,11 +54,11 @@ function parseArgs(argv) {
 }
 
 async function collectFiles(root, config, presetName) {
-  const store = readJson(path.join(root, '.linecounter', 'presets.json')) || { presets: {} };
+  const store = readJson(path.join(configDir(root), 'presets.json')) || { presets: {} };
   const preset = presetName ? store.presets[presetName] : store.active ? store.presets[store.active] : null;
-  if (presetName && !preset) throw new Error(`preset "${presetName}" not found in .linecounter/presets.json`);
+  if (presetName && !preset) throw new Error(`preset "${presetName}" not found in .locomotive/presets.json`);
   const enabled = preset ? preset.presets : config.get('defaultFilters', [...DEFAULT_PRESETS, 'gitignore', 'custom']);
-  const filterFile = readJson(path.join(root, '.linecounter', 'filters.json')) || { filters: [] };
+  const filterFile = readJson(path.join(configDir(root), 'filters.json')) || { filters: [] };
   const userFilters = [...(filterFile.filters || []), ...(config.get('customFilters', []) || [])].map(f => {
     const label = String(f.label || (f.patterns || []).join(', ')).trim();
     return { id: 'cf:' + label.toLowerCase().replace(/[^\w*./-]+/g, '-'), res: (f.patterns || []).map(p => globToRegExp(String(p).trim().replace(/^\*\//, '**/'))) };
@@ -94,7 +95,7 @@ async function analyze(folder, opts = {}) {
   const root = path.resolve(folder);
   const overrides = opts.offline ? { 'vulnerabilities.enabled': false, 'licenses.fetchFromRegistry': false } : {};
   const config = headlessConfig(root, overrides);
-  const log = msg => { if (!opts.quiet) process.stderr.write(`[linecounter] ${msg}\n`); };
+  const log = msg => { if (!opts.quiet) process.stderr.write(`[locomotive] ${msg}\n`); };
   const { roots, files, base } = await collectFiles(root, config, opts.preset);
   const data = await runPipeline(config, roots, files, { base, workspaceName: path.basename(root), configRoot: root }, { report: m => m && m.message && log(m.message) });
   return data;
@@ -103,19 +104,19 @@ async function analyze(folder, opts = {}) {
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.flags.help || !['gate', 'report'].includes(args.cmd)) {
-    console.log('Usage: linecounter gate|report [folder] [--preset NAME] [--json FILE] [--markdown FILE] [--offline]');
+    console.log('Usage: locomotive gate|report [folder] [--preset NAME] [--json FILE] [--markdown FILE] [--offline]');
     process.exit(args.flags.help ? 0 : 2);
   }
   const root = path.resolve(args.folder);
   const overrides = args.flags.offline ? { 'vulnerabilities.enabled': false, 'licenses.fetchFromRegistry': false } : {};
   const config = headlessConfig(root, overrides);
-  const log = msg => { if (!args.flags.quiet) process.stderr.write(`[linecounter] ${msg}\n`); };
+  const log = msg => { if (!args.flags.quiet) process.stderr.write(`[locomotive] ${msg}\n`); };
   log(`scanning ${root}`);
   const { roots, files, base, preset } = await collectFiles(root, config, args.flags.preset);
   log(`${files.length} files${preset ? ` (preset "${preset}")` : ''}${base ? ` · project root ${base.p}` : ''}`);
   const data = await runPipeline(config, roots, files, { base, workspaceName: path.basename(root), configRoot: root }, { report: m => m && m.message && log(m.message) });
   if (args.cmd === 'report') {
-    const out = args.flags.json || 'linecounter-report.json';
+    const out = args.flags.json || 'locomotive-report.json';
     fs.writeFileSync(out, JSON.stringify(data));
     log(`report written to ${out}`);
     return;
@@ -129,6 +130,6 @@ async function main() {
   process.exitCode = res.passed ? 0 : 1;
 }
 
-if (require.main === module) main().catch(e => { console.error(`[linecounter] ${e.stack || e.message}`); process.exit(2); });
+if (require.main === module) main().catch(e => { console.error(`[locomotive] ${e.stack || e.message}`); process.exit(2); });
 
 module.exports = { analyze, headlessConfig, collectFiles };

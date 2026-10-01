@@ -1,17 +1,19 @@
-<p align="center"><img src="media/icon.png" width="96" alt="Line Counter"></p>
+<p align="center"><img src="media/icon.png" width="96" alt="LOComotive"></p>
 
-# Code Statistics – Lines of Code, Complexity & Git Insights
+# LOComotive – Code Statistics, Lines of Code & Complexity
 
-*(Line Counter für VS Code)*
+*Zählt **L**ines **o**f **C**ode und fährt mit dir durch dein Projekt: Statistiken, Komplexität, Git, Abhängigkeiten, TODO-Pinboard und ein 3D-Zug durch deine Imports.*
 
-[![Release](https://img.shields.io/badge/release-v1.15.2-e0621b)](https://github.com/EinsPhoenix/linecounter/releases/latest)
-[![Download vsix](https://img.shields.io/badge/download-linecounter.vsix-2ea44f?logo=visualstudiocode&logoColor=white)](https://github.com/EinsPhoenix/linecounter/releases/latest/download/linecounter.vsix)
+> Früher „Line Counter“. Bestehende `.linecounter/`-Ordner werden weiter gelesen, siehe [Umstieg von Line Counter](#umstieg-von-line-counter).
+
+[![Release](https://img.shields.io/badge/release-v2.0.0-e0621b)](https://github.com/EinsPhoenix/linecounter/releases/latest)
+[![Download vsix](https://img.shields.io/badge/download-locomotive.vsix-2ea44f?logo=visualstudiocode&logoColor=white)](https://github.com/EinsPhoenix/linecounter/releases/latest/download/locomotive.vsix)
 [![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)](https://github.com/EinsPhoenix/linecounter/actions/workflows/ci.yml)
 [![Changelog](https://img.shields.io/badge/changelog-CHANGELOG.md-555)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![VS Code](https://img.shields.io/badge/VS%20Code-%E2%89%A5%201.74-007ACC?logo=visualstudiocode&logoColor=white)](#installation)
 
-**⬇️ [Neueste Version herunterladen (`linecounter.vsix`)](https://github.com/EinsPhoenix/linecounter/releases/latest/download/linecounter.vsix)** · [Alle Releases](https://github.com/EinsPhoenix/linecounter/releases) · [Changelog](CHANGELOG.md)
+**⬇️ [Neueste Version herunterladen (`locomotive.vsix`)](https://github.com/EinsPhoenix/linecounter/releases/latest/download/locomotive.vsix)** · [Alle Releases](https://github.com/EinsPhoenix/linecounter/releases) · [Changelog](CHANGELOG.md)
 
 VS-Code-Extension, die alle Dateien und Ordner des Workspaces rekursiv als Baum in der Sidebar anzeigt. Dort filterst du die Auswahl und erzeugst mit einem Klick eine Statistik-Seite im Vollbild.
 
@@ -29,19 +31,19 @@ VS-Code-Extension, die alle Dateien und Ordner des Workspaces rekursiv als Baum 
 | Dependencies | Lizenzen aller Pakete (npm, PyPI, crates.io, Go), Schwachstellen (OSV), ungenutzte und nicht deklarierte Pakete | [FEATURES](docs/FEATURES.md#dependencies-lizenzen-und-schwachstellen) |
 | Architecture | Regeln wie „`ui/` darf nicht `db/` importieren“ und Schichten; Verstöße rot im Graphen | [FEATURES](docs/FEATURES.md#architecture) |
 | Git | mehrere Repos mit Übersicht, Ownership und Bus-Factor, verwaiste Dateien, TODO-Tracker mit Alter, Branch-Vergleich | [FEATURES](docs/FEATURES.md#branch-comparison) |
-| TODO-Pinboard | TODOs per Drag & Drop nach Priorität ordnen, Klick springt zur Code-Zeile, gespeichert in `.linecounter/pinboard.json` | [FEATURES](docs/FEATURES.md#pinboard--todos-nach-priorität) |
+| TODO-Pinboard | TODOs per Drag & Drop nach Priorität ordnen, Klick springt zur Code-Zeile, gespeichert in `.locomotive/pinboard.json` | [FEATURES](docs/FEATURES.md#pinboard--todos-nach-priorität) |
 | Graphen | Importgraph mit Zyklen, Ketten, Funktionen, Ordner-Clustern und Suche; bis 20.000 Knoten; 3D-Zug durch das Projekt | [FEATURES](docs/FEATURES.md#graphen-2d) |
-| Quality Gate | gleiche Checks in VS Code und im CI (`node bin/linecounter.js gate`, Exit-Code 1) | [CI.md](docs/CI.md) |
+| Quality Gate | gleiche Checks in VS Code und im CI (`node bin/locomotive.js gate`, Exit-Code 1) | [CI.md](docs/CI.md) |
 | MCP-Server | 22 Tools für LLM-Agenten (Copilot, Claude Code …): Impact einer Änderung, Risiko, Schwachstellen, Lizenzen … | [MCP.md](docs/MCP.md) |
-| Filter & Presets | eigene Filter wie `*/data`, Presets und Einstellungen in `.linecounter/`, Projekt-Root | [FEATURES](docs/FEATURES.md#sidebar-filter-und-presets) |
+| Filter & Presets | eigene Filter wie `*/data`, Presets und Einstellungen in `.locomotive/`, Projekt-Root | [FEATURES](docs/FEATURES.md#sidebar-filter-und-presets) |
 
 ## Schnellstart
 
-1. **Installieren:** [`linecounter.vsix` herunterladen](https://github.com/EinsPhoenix/linecounter/releases/latest/download/linecounter.vsix) und `code --install-extension linecounter.vsix` ausführen (oder *Extensions → … → Install from VSIX…*).
-2. **Öffnen:** In der Activity Bar auf das Line-Counter-Symbol klicken. Die Sidebar zeigt den Dateibaum deines Workspaces.
+1. **Installieren:** [`locomotive.vsix` herunterladen](https://github.com/EinsPhoenix/linecounter/releases/latest/download/locomotive.vsix) und `code --install-extension locomotive.vsix` ausführen (oder *Extensions → … → Install from VSIX…*).
+2. **Öffnen:** In der Activity Bar auf das LOComotive-Symbol klicken. Die Sidebar zeigt den Dateibaum deines Workspaces.
 3. **Filtern:** Ordner und Dateien per Klick ausschließen, Dateitypen ausblenden oder ein Preset laden.
 4. **Auswerten:** **Create Statistics** klicken. Die Statistik-Seite öffnet sich im Vollbild. Über die Navigation oben springst du zu Sprachen, Dependencies, Code health, Git, Graphen …
-5. **Teilen:** Oben rechts exportierst du CSV, JSON, HTML oder PDF. Einstellungen und Presets liegen in `.linecounter/` und können ins Repo.
+5. **Teilen:** Oben rechts exportierst du CSV, JSON, HTML oder PDF. Einstellungen und Presets liegen in `.locomotive/` und können ins Repo.
 
 ## Screenshots
 
@@ -55,7 +57,7 @@ VS-Code-Extension, die alle Dateien und Ordner des Workspaces rekursiv als Baum 
 | ![Lizenzen](docs/images/licenses.png) | **Lizenzen:** alle Pakete aus npm, PyPI, crates.io und Go nach Lizenz und Kategorie. |
 | ![Ownership](docs/images/ownership.png) | **Ownership:** wem der Code gehört, Bus-Factor und Wissen, das mit inaktiven Autoren verloren geht. |
 | ![Commit-Heatmap](docs/images/commit-heatmap.png) | **Git:** wann Code geschrieben wird, Commits pro Monat, Hotspots und Fun Facts. |
-| ![Pinboard](docs/images/pinboard.png) | **Pinboard:** TODOs nach Priorität ordnen (Drag & Drop), mit Sprung zur Code-Zeile; gespeichert in `.linecounter/pinboard.json`. |
+| ![Pinboard](docs/images/pinboard.png) | **Pinboard:** TODOs nach Priorität ordnen (Drag & Drop), mit Sprung zur Code-Zeile; gespeichert in `.locomotive/pinboard.json`. |
 | ![Project roast](docs/images/roast.png) | **Project roast:** die Statistik mit Humor. |
 
 Mehr Bilder und alle Details: [`docs/FEATURES.md`](docs/FEATURES.md)
@@ -73,11 +75,11 @@ Ist in VS Code ein Sammelordner geöffnet (z. B. `D:\CodingThings\Graphoenix`) u
 
 ## Installation
 
-1. Lade die neueste `linecounter.vsix` von der [Release-Seite](https://github.com/EinsPhoenix/linecounter/releases/latest) herunter (oder direkt: [linecounter.vsix](https://github.com/EinsPhoenix/linecounter/releases/latest/download/linecounter.vsix)).
+1. Lade die neueste `locomotive.vsix` von der [Release-Seite](https://github.com/EinsPhoenix/linecounter/releases/latest) herunter (oder direkt: [locomotive.vsix](https://github.com/EinsPhoenix/linecounter/releases/latest/download/locomotive.vsix)).
 2. Installiere sie:
 
 ```bash
-code --install-extension linecounter.vsix
+code --install-extension locomotive.vsix
 ```
 
 Alternativ in VS Code: *Extensions → „…“ → Install from VSIX…*
@@ -88,12 +90,12 @@ Alternativ in VS Code: *Extensions → „…“ → Install from VSIX…*
 |---|---|
 | Neueste Version | [Releases → latest](https://github.com/EinsPhoenix/linecounter/releases/latest) |
 | Ältere Versionen | [alle Releases](https://github.com/EinsPhoenix/linecounter/releases) (Tag `v<version>`, Release Notes aus dem Changelog) |
-| Direkt im Repo | [`linecounter.vsix`](linecounter.vsix) (aktuell) und [`releases/`](releases/) |
-| Für CI | `https://github.com/EinsPhoenix/linecounter/releases/latest/download/linecounter.vsix`, siehe [CI.md](docs/CI.md) |
+| Direkt im Repo | [`locomotive.vsix`](locomotive.vsix) (aktuell) und [`releases/`](releases/) |
+| Für CI | `https://github.com/EinsPhoenix/linecounter/releases/latest/download/locomotive.vsix`, siehe [CI.md](docs/CI.md) |
 
-Releases entstehen automatisch: Landet auf `main` eine neue Version (`package.json` + `releases/linecounter-<version>.vsix`), legt der Workflow [`release.yml`](.github/workflows/release.yml) Tag und Release mit der `.vsix` an.
+Releases entstehen automatisch: Landet auf `main` eine neue Version (`package.json` + `releases/locomotive-<version>.vsix`), legt der Workflow [`release.yml`](.github/workflows/release.yml) Tag und Release mit der `.vsix` an.
 
-## Sidebar („Line Counter“ in der Activity Bar)
+## Sidebar („LOComotive“ in der Activity Bar)
 
 - **Baum aller Dateien und Ordner** (rekursiv, Multi-Root-Workspaces werden unterstützt)
 - **Klick auf eine Datei oder einen Ordner schließt ihn aus** (durchgestrichen). Ein erneuter Klick nimmt ihn wieder auf. Mit dem Pfeil klappst du Ordner auf und zu, das Pfeil-Symbol rechts öffnet die Datei.
@@ -102,8 +104,8 @@ Releases entstehen automatisch: Landet auf `main` eine neue Version (`package.js
   Ausgeschlossene Preset-Ordner werden nicht gescannt. Das hält große Workspaces schnell. Klickst du einen solchen Ordner an, wird er nachgeladen und eingeschlossen.
 - **Dateitypen**: alle erkannten Endungen mit Anzahl als Chips. Ein Klick blendet einen Typ aus oder ein, dazu gibt es *All*, *None* und *Invert*.
 - Die Auswahl wird pro Workspace gespeichert.
-- **Filter-Presets:** Über die Preset-Leiste speicherst du die aktuelle Auswahl als benanntes Preset: ausgeschlossene Dateien und Ordner, ausgeblendete Dateitypen und aktive vordefinierte Filter. Du kannst Presets laden oder löschen. Sie liegen in `.linecounter/presets.json` im Workspace und lassen sich committen und im Team teilen. Das aktive Preset ist der Startzustand für neue Checkouts.
-- **Eigene Ausschluss-Muster:** `linecounter.excludePatterns` nimmt Glob-Muster wie in `.gitignore` (`*.generated.ts`, `docs/`, `/build`, `src/**/*.spec.ts`). Sie erscheinen als Filter „Custom patterns“.
+- **Filter-Presets:** Über die Preset-Leiste speicherst du die aktuelle Auswahl als benanntes Preset: ausgeschlossene Dateien und Ordner, ausgeblendete Dateitypen und aktive vordefinierte Filter. Du kannst Presets laden oder löschen. Sie liegen in `.locomotive/presets.json` im Workspace und lassen sich committen und im Team teilen. Das aktive Preset ist der Startzustand für neue Checkouts.
+- **Eigene Ausschluss-Muster:** `locomotive.excludePatterns` nimmt Glob-Muster wie in `.gitignore` (`*.generated.ts`, `docs/`, `/build`, `src/**/*.spec.ts`). Sie erscheinen als Filter „Custom patterns“.
 - **Create Statistics** startet die Auswertung.
 
 ## Statistik-Seite (öffnet maximiert oder im Vollbild)
@@ -121,7 +123,7 @@ Die Seite nutzt ein festes Farbschema aus dunklem Orange und Grau mit SVG-Icons.
   - **Lizenzen aller Pakete:** Ist eine Lizenz lokal unbekannt, wird nacheinander die Registry, das **Paket-Archiv** (LICENSE-Dateien darin), deps.dev und das GitHub-Repository geprüft. Was geprüft wurde, zeigt die Karte *Unknown & custom licenses* und das Lizenz-PDF.
   - **Installierte Pakete:** npm aus `package-lock.json` oder `node_modules`, Python aus der virtuellen Umgebung (`.venv`, `venv` oder jeder Ordner mit `pyvenv.cfg`) über `METADATA`, Classifier und Lizenzdateien. Ohne venv kommen die Versionen aus `Pipfile.lock`, `poetry.lock` oder `uv.lock`.
   - **Lizenz-Report:** jedes Paket (direkt und transitiv) mit normalisierter SPDX-Lizenz, Kategorie (permissive, weak/strong/network copyleft, restricted, unknown) und Status *problematic*, *review* oder *ok*. Filter und Export als CSV sind dabei. Welche Lizenzen problematisch sind, legst du in den Einstellungen fest.
-  - **Vulnerability-Report** über [OSV.dev](https://osv.dev): Schweregrad (auch aus CVSS v3 berechnet), Advisory-Link, CVE, Zusammenfassung und korrigierte Version. Gesendet werden nur Paketname und Version, abschaltbar über `linecounter.vulnerabilities.enabled`.
+  - **Vulnerability-Report** über [OSV.dev](https://osv.dev): Schweregrad (auch aus CVSS v3 berechnet), Advisory-Link, CVE, Zusammenfassung und korrigierte Version. Gesendet werden nur Paketname und Version, abschaltbar über `locomotive.vulnerabilities.enabled`.
   - **Unused & undeclared:** deklarierte Pakete, die nie importiert werden, und Imports von Paketen, die nicht deklariert sind. Heuristiken gibt es für CLI-Tools, Plugins, `@types`, Konfigurationsdateien, npm-Skripte und abweichende Python-Importnamen (`PyYAML` → `yaml`, `Pillow` → `PIL`, …).
  lästert über Dateien über der Zeilengrenze (Standard **500**) und über Dateien mit mehr als **10 %** Leerzeilen.
   - **Rant-o-Meter** (0–100) mit Stimmung von 😇 Zen bis 🌋 Volcanic
@@ -159,7 +161,7 @@ Die Seite nutzt ein festes Farbschema aus dunklem Orange und Grau mit SVG-Icons.
       - **S dreht um:** Der Zug hebt kurz ab, dreht sich mit allen Waggons und der Kamera um 180° und setzt auf dem Gegengleis wieder auf. Im Chain-Modus bleibt der Zug auf der Kette.
       - **Auto:** konstante Geschwindigkeit. Im Free Roam wählt der Zug an Kreuzungen zufällig eine Beziehung und nimmt bevorzugt nicht den Weg, auf dem er gekommen ist. In Sackgassen dreht er um. Der Regler **Stop** stellt die Haltezeit an jedem Planeten ein (0–5 s). Bei 0 fährt der Zug ohne Bremsen durch.
       - **Fly (X):** Der Zug löst sich von den Gleisen. **W** gibt Schub, **S** bremst, **A**/**D** lenken, **Q**/**E** steigen oder sinken. **R** rastet auf der nächstgelegenen Beziehung wieder ein; der Zug gleitet dabei auf einer Kurve zurück auf das Gleis.
-      - **Tasten** lassen sich mit `linecounter.train.keys` ändern (z. B. `{ "up": "r", "down": "f", "snap": "e" }`).
+      - **Tasten** lassen sich mit `locomotive.train.keys` ändern (z. B. `{ "up": "r", "down": "f", "snap": "e" }`).
       - **Kameras:** Chase, Cab (Führerstand, dreht sich mit dem Zug statt mit der Welt) und Free cam. **C** wechselt, Ziehen mit der Maus schaut umher, das Mausrad zoomt, ↑/↓ ändert die Geschwindigkeit, Leertaste pausiert, **Esc** beendet.
     - **Motion:** *Wiggle*, *Calm* (kommt zur Ruhe) oder *Still* (statisch, ohne Animation). Gezogene Knoten bleiben in Calm und Still dort liegen, wo man sie ablegt. Gegenseitige Imports werden als Bögen gezeichnet.
   - Alle Graphen lassen sich zoomen, verschieben und per Drag bewegen. Hover hebt die Nachbarn hervor. Die Buttons oben rechts pausieren die Animation, schalten das Wackeln ein und aus, schütteln den Graphen durch und setzen den Zoom zurück. Die Einblend-Animation startet, sobald ein Graph ins Bild scrollt.
@@ -182,10 +184,10 @@ Die Seite nutzt ein festes Farbschema aus dunklem Orange und Grau mit SVG-Icons.
 
 ## Einstellungen
 
-Alle Einstellungen lassen sich auch pro Projekt in **`.linecounter/settings.json`** setzen. Diese Werte haben Vorrang vor den VS-Code-Einstellungen. Der Befehl *Line Counter: Open Workspace Settings* (Zahnrad in der Sidebar) legt die Datei mit den aktuellen Werten an. Autovervollständigung und Validierung liefert ein JSON-Schema. Schlüssel funktionieren mit oder ohne Präfix `linecounter.`, auch verschachtelt, und Kommentare sind erlaubt. Änderungen an der Datei werden sofort übernommen.
+Alle Einstellungen lassen sich auch pro Projekt in **`.locomotive/settings.json`** setzen. Diese Werte haben Vorrang vor den VS-Code-Einstellungen. Der Befehl *LOComotive: Open Workspace Settings* (Zahnrad in der Sidebar) legt die Datei mit den aktuellen Werten an. Autovervollständigung und Validierung liefert ein JSON-Schema. Schlüssel funktionieren mit oder ohne Präfix `locomotive.`, auch verschachtelt, und Kommentare sind erlaubt. Änderungen an der Datei werden sofort übernommen.
 
 ```jsonc
-// .linecounter/settings.json
+// .locomotive/settings.json
 {
   "rant.maxFileLines": 400,
   "rant.maxBlankPercent": 15,
@@ -195,36 +197,36 @@ Alle Einstellungen lassen sich auch pro Projekt in **`.linecounter/settings.json
 
 | Setting | Default | Beschreibung |
 |---|---|---|
-| `linecounter.statisticsLayout` | `maximized` | `maximized` blendet Sidebars und Panel aus, `fullscreen` schaltet zusätzlich das Fenster in den Vollbildmodus, `normal` öffnet die Seite als normalen Tab |
-| `linecounter.rant.enabled` | `true` | Abschnitt „Code Rant“ anzeigen |
-| `linecounter.rant.maxFileLines` | `500` | Rant über Dateien, die länger als diese Zeilenzahl sind |
-| `linecounter.rant.maxBlankPercent` | `10` | Rant, wenn mehr als dieser Prozentsatz der Zeilen leer ist (Dateien ab 10 Zeilen und das gesamte Projekt) |
-| `linecounter.rant.commitMinLength` | `10` | Commit-Messages, die kürzer sind, bekommen einen Rant |
-| `linecounter.rant.commitMaxLength` | `72` | Commit-Messages, die länger sind, bekommen einen Rant |
-| `linecounter.rant.commitWords` | `[]` | Begriffe, die in Commit-Messages einen Rant auslösen (leer bedeutet die eingebaute Liste) |
-| `linecounter.excludePatterns` | `[]` | Zusätzliche Glob-Muster zum Ausschließen |
-| `linecounter.defaultFilters` | alle | Vordefinierte Filter, die in einem neuen Workspace aktiv sind |
-| `linecounter.graphs.motion` | `auto` | `auto` (Word Web wackelt, die anderen Graphen sind ruhig), `wiggle`, `calm` oder `still` |
-| `linecounter.dependencies.enabled` | `true` | Abhängigkeits-, Lizenz- und Schwachstellen-Report |
-| `linecounter.licenses.problematic` | `GPL*`, `AGPL*`, `SSPL*`, `CC-BY-NC*`, `BUSL*`, `Proprietary` | Lizenzen, die als problematisch markiert werden (SPDX mit `*`) |
-| `linecounter.licenses.review` | `LGPL*`, `MPL*`, `EPL*`, `CDDL*`, `EUPL*`, `CC-BY-SA*`, `Unknown`, `Custom` | Lizenzen, die ein Review brauchen |
-| `linecounter.licenses.allowed` | `[]` | Optionale Allowlist; alles andere gilt dann als problematisch |
-| `linecounter.licenses.ignorePackages` | `[]` | Akzeptierte Ausnahmen |
-| `linecounter.licenses.includeTransitive` | `true` | Transitive Pakete in den Lizenz-Report aufnehmen |
-| `linecounter.vulnerabilities.enabled` | `true` | Schwachstellen über OSV.dev prüfen |
-| `linecounter.vulnerabilities.includeTransitive` | `true` | Auch transitive Pakete prüfen |
-| `linecounter.licenses.fetchFromRegistry` | `true` | Lizenz nicht installierter Pakete aus der npm- bzw. PyPI-Registry holen |
-| `linecounter.health.enabled` | `true` | Code health: Komplexität, lange Funktionen, duplizierter Code |
-| `linecounter.health.maxComplexity` | `15` | Ab dieser zyklomatischen Komplexität gilt eine Funktion als zu komplex |
-| `linecounter.health.maxFunctionLines` | `80` | Ab dieser Länge gilt eine Funktion als zu lang |
-| `linecounter.health.duplicateMinLines` | `6` | Mindestlänge duplizierter Blöcke |
-| `linecounter.secrets.enabled` | `true` | Nach hart codierten Secrets suchen |
-| `linecounter.secrets.ignore` | Tests, Beispiele | Glob-Muster für Dateien, die nicht nach Secrets durchsucht werden |
-| `linecounter.graphs.maxFunctions` | `600` | Maximale Anzahl Funktionen im Graphen und im 3D-Zug |
-| `linecounter.train.keys` | W/S/A/D, Q/E, R, X, C | Tastenbelegung des 3D-Zugs (`forward`, `back`, `left`, `right`, `up`, `down`, `snap`, `fly`, `camera`) |
-| `linecounter.maxFileSizeKB` | `2048` | Größere Dateien zählen nur mit ihrer Größe |
-| `linecounter.maxEntries` | `200000` | Maximale Anzahl gescannter Einträge |
-| `linecounter.maxCommits` | `20000` | Maximale Anzahl gelesener Commits pro Repo |
+| `locomotive.statisticsLayout` | `maximized` | `maximized` blendet Sidebars und Panel aus, `fullscreen` schaltet zusätzlich das Fenster in den Vollbildmodus, `normal` öffnet die Seite als normalen Tab |
+| `locomotive.rant.enabled` | `true` | Abschnitt „Code Rant“ anzeigen |
+| `locomotive.rant.maxFileLines` | `500` | Rant über Dateien, die länger als diese Zeilenzahl sind |
+| `locomotive.rant.maxBlankPercent` | `10` | Rant, wenn mehr als dieser Prozentsatz der Zeilen leer ist (Dateien ab 10 Zeilen und das gesamte Projekt) |
+| `locomotive.rant.commitMinLength` | `10` | Commit-Messages, die kürzer sind, bekommen einen Rant |
+| `locomotive.rant.commitMaxLength` | `72` | Commit-Messages, die länger sind, bekommen einen Rant |
+| `locomotive.rant.commitWords` | `[]` | Begriffe, die in Commit-Messages einen Rant auslösen (leer bedeutet die eingebaute Liste) |
+| `locomotive.excludePatterns` | `[]` | Zusätzliche Glob-Muster zum Ausschließen |
+| `locomotive.defaultFilters` | alle | Vordefinierte Filter, die in einem neuen Workspace aktiv sind |
+| `locomotive.graphs.motion` | `auto` | `auto` (Word Web wackelt, die anderen Graphen sind ruhig), `wiggle`, `calm` oder `still` |
+| `locomotive.dependencies.enabled` | `true` | Abhängigkeits-, Lizenz- und Schwachstellen-Report |
+| `locomotive.licenses.problematic` | `GPL*`, `AGPL*`, `SSPL*`, `CC-BY-NC*`, `BUSL*`, `Proprietary` | Lizenzen, die als problematisch markiert werden (SPDX mit `*`) |
+| `locomotive.licenses.review` | `LGPL*`, `MPL*`, `EPL*`, `CDDL*`, `EUPL*`, `CC-BY-SA*`, `Unknown`, `Custom` | Lizenzen, die ein Review brauchen |
+| `locomotive.licenses.allowed` | `[]` | Optionale Allowlist; alles andere gilt dann als problematisch |
+| `locomotive.licenses.ignorePackages` | `[]` | Akzeptierte Ausnahmen |
+| `locomotive.licenses.includeTransitive` | `true` | Transitive Pakete in den Lizenz-Report aufnehmen |
+| `locomotive.vulnerabilities.enabled` | `true` | Schwachstellen über OSV.dev prüfen |
+| `locomotive.vulnerabilities.includeTransitive` | `true` | Auch transitive Pakete prüfen |
+| `locomotive.licenses.fetchFromRegistry` | `true` | Lizenz nicht installierter Pakete aus der npm- bzw. PyPI-Registry holen |
+| `locomotive.health.enabled` | `true` | Code health: Komplexität, lange Funktionen, duplizierter Code |
+| `locomotive.health.maxComplexity` | `15` | Ab dieser zyklomatischen Komplexität gilt eine Funktion als zu komplex |
+| `locomotive.health.maxFunctionLines` | `80` | Ab dieser Länge gilt eine Funktion als zu lang |
+| `locomotive.health.duplicateMinLines` | `6` | Mindestlänge duplizierter Blöcke |
+| `locomotive.secrets.enabled` | `true` | Nach hart codierten Secrets suchen |
+| `locomotive.secrets.ignore` | Tests, Beispiele | Glob-Muster für Dateien, die nicht nach Secrets durchsucht werden |
+| `locomotive.graphs.maxFunctions` | `600` | Maximale Anzahl Funktionen im Graphen und im 3D-Zug |
+| `locomotive.train.keys` | W/S/A/D, Q/E, R, X, C | Tastenbelegung des 3D-Zugs (`forward`, `back`, `left`, `right`, `up`, `down`, `snap`, `fly`, `camera`) |
+| `locomotive.maxFileSizeKB` | `2048` | Größere Dateien zählen nur mit ihrer Größe |
+| `locomotive.maxEntries` | `200000` | Maximale Anzahl gescannter Einträge |
+| `locomotive.maxCommits` | `20000` | Maximale Anzahl gelesener Commits pro Repo |
 
 ## Entwicklung
 
@@ -233,7 +235,7 @@ Reines JavaScript, kein Build-Schritt. d3 (ISC-Lizenz) liegt fertig in `media/ve
 ```bash
 npm install
 npm test          # Smoke-Test (Scanner, Analyzer, Git, Aggregation)
-npm run release   # erzeugt releases/linecounter-<version>.vsix und aktualisiert linecounter.vsix
+npm run release   # erzeugt releases/locomotive-<version>.vsix und aktualisiert locomotive.vsix
 ```
 
 Neue Version veröffentlichen: Version in `package.json` erhöhen, Eintrag in `CHANGELOG.md`, `npm run release`, committen und auf `main` pushen. Den Rest (Tag, GitHub Release, Assets) erledigt GitHub Actions.
@@ -242,7 +244,7 @@ Zum Debuggen öffnest du den Ordner in VS Code und startest mit `F5` einen Exten
 
 ```
 src/extension.js       Aktivierung und Befehle
-src/config.js          .linecounter/settings.json + presets.json (Overrides, Presets, File-Watcher)
+src/config.js          .locomotive/settings.json + presets.json (Overrides, Presets, File-Watcher)
 src/sidebarProvider.js Sidebar-Webview, Scan, Presets
 src/statistics.js      Ablauf „Create Statistics“ (Analyse, Git, Aggregation)
 src/util.js            Datei öffnen, Glob → RegExp
@@ -260,3 +262,13 @@ media/             Webview-UI (Sidebar, Statistik-Seite, graphs.js = Canvas-Tree
 ## Lizenz
 
 [MIT](LICENSE)
+
+## Umstieg von Line Counter
+
+Seit Version 2.0.0 heißt die Extension **LOComotive** (ID `einsphoenix.locomotive`). Weil sich die ID geändert hat, ist sie für VS Code eine neue Extension:
+
+1. Alte Extension „Line Counter“ deinstallieren, LOComotive installieren.
+2. **Projekt-Ordner:** Ein bestehender `.linecounter/` (Einstellungen, Presets, Filter, Pinboard, Verlauf) wird automatisch weiter benutzt, solange es keinen `.locomotive/` gibt. Zum Umstellen den Ordner einfach in `.locomotive` umbenennen. Schlüssel mit altem Präfix (`"linecounter.train.maxNodes"`) in der `settings.json` des Ordners funktionieren weiter.
+3. **VS-Code-Einstellungen:** Werte mit altem Präfix `linecounter.*` in den User-/Workspace-Settings werden weiter gelesen, solange der neue Schlüssel nicht gesetzt ist. Am besten trotzdem umbenennen (z. B. `linecounter.graphs.maxNodes` → `locomotive.graphs.maxNodes`), dann erscheinen sie auch im Settings-Editor.
+4. **CLI und MCP:** `bin/linecounter.js` heißt jetzt `bin/locomotive.js`, der MCP-Server `bin/locomotive-mcp.js`, die Umgebungsvariable `LOCOMOTIVE_ROOT`.
+

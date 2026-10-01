@@ -386,7 +386,7 @@
       if (session) close();
       document.querySelectorAll('#train3d').forEach(el => el.remove());
       document.body.classList.remove('has-train');
-      notice(`3D view could not be built: ${e && e.message ? e.message : e}. Try fewer nodes (linecounter.train.maxNodes) or hide libraries / functions.`);
+      notice(`3D view could not be built: ${e && e.message ? e.message : e}. Try fewer nodes (locomotive.train.maxNodes) or hide libraries / functions.`);
     }
   }
 
@@ -440,7 +440,7 @@
       ev.preventDefault();
       const msg = document.createElement('div');
       msg.className = 't3-lost';
-      msg.innerHTML = '<b>The 3D view lost its graphics context</b><br>The graph is probably too big for the GPU. Press Esc and lower <code>linecounter.train.maxNodes</code> or hide libraries / functions.';
+      msg.innerHTML = '<b>The 3D view lost its graphics context</b><br>The graph is probably too big for the GPU. Press Esc and lower <code>locomotive.train.maxNodes</code> or hide libraries / functions.';
       root.appendChild(msg);
     });
 
@@ -889,7 +889,7 @@
       camLook: new THREE.Vector3(),
     };
     const keys = new Set();
-    // key bindings (setting linecounter.train.keys)
+    // key bindings (setting locomotive.train.keys)
     const K = { forward: 'w', back: 's', left: 'a', right: 'd', up: 'q', down: 'e', snap: 'r', fly: 'x', camera: 'c' };
     for (const [k, v] of Object.entries(D.trainKeys || {})) if (k in K && typeof v === 'string' && v.trim()) K[k] = v.trim().toLowerCase() === 'space' ? ' ' : v.trim().toLowerCase();
     const KB = k => `<b>${esc(K[k] === ' ' ? 'Space' : K[k].length === 1 ? K[k].toUpperCase() : K[k])}</b>`;

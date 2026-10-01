@@ -5,20 +5,20 @@ const fs = require('fs');
 const path = require('path');
 
 /**
- * Workspace configuration stored in a `.linecounter/` folder next to the code, so it can be committed and shared:
+ * Workspace configuration stored in a `.locomotive/` folder next to the code, so it can be committed and shared:
  *
- *   .linecounter/settings.json  – overrides for the `linecounter.*` VS Code settings
- *                                 (keys with or without the "linecounter." prefix)
- *   .linecounter/presets.json   – named filter presets (excluded files/folders, hidden file types, predefined filters)
+ *   .locomotive/settings.json  – overrides for the `locomotive.*` VS Code settings
+ *                                 (keys with or without the "locomotive." prefix)
+ *   .locomotive/presets.json   – named filter presets (excluded files/folders, hidden file types, predefined filters)
  *
- * Values in .linecounter/settings.json win over user/workspace settings.
+ * Values in .locomotive/settings.json win over user/workspace settings.
  */
-const DIR = '.linecounter';
+const { DIR, LEGACY_DIR, configDir, configDirName } = require('./configDir');
 const SETTINGS_FILE = 'settings.json';
 const PRESETS_FILE = 'presets.json';
 const FILTERS_FILE = 'filters.json';
 
-class LineCounterConfig {
+class LocomotiveConfig {
   constructor() {
     this.fileSettings = {};
     this.presetStore = { presets: {} };
@@ -27,13 +27,14 @@ class LineCounterConfig {
     this.reload();
   }
 
-  /** Folder that holds .linecounter (the first workspace folder). */
+  /** Folder that holds .locomotive (the first workspace folder). */
   get root() {
     const f = (vscode.workspace.workspaceFolders || [])[0];
     return f ? f.uri.fsPath : null;
   }
 
-  get dir() { return this.root ? path.join(this.root, DIR) : null; }
+  get dir() { return configDir(this.root); }
+  get dirName() { return configDirName(this.root); }
   get settingsPath() { return this.dir ? path.join(this.dir, SETTINGS_FILE) : null; }
   get presetsPath() { return this.dir ? path.join(this.dir, PRESETS_FILE) : null; }
   get filtersPath() { return this.dir ? path.join(this.dir, FILTERS_FILE) : null; }
@@ -46,7 +47,7 @@ class LineCounterConfig {
     this.filterStore = filters && Array.isArray(filters.filters) ? filters : { filters: [] };
   }
 
-  // ---------- custom filters (.linecounter/filters.json + linecounter.customFilters) ----------
+  // ---------- custom filters (.locomotive/filters.json + locomotive.customFilters) ----------
   /** [{ id, label, patterns, source }] – every filter becomes its own checkbox in the sidebar */
   listCustomFilters() {
     const out = [];
@@ -56,13 +57,13 @@ class LineCounterConfig {
       const id = 'cf:' + label.toLowerCase().replace(/[^\w*./-]+/g, '-');
       if (!out.some(x => x.id === id)) out.push({ id, label, patterns: f.patterns.map(String).filter(Boolean), source });
     };
-    for (const f of this.filterStore.filters || []) add(f, DIR + '/' + FILTERS_FILE);
+    for (const f of this.filterStore.filters || []) add(f, this.dirName + '/' + FILTERS_FILE);
     for (const f of this.get('customFilters', []) || []) add(f, 'settings');
     return out;
   }
 
   async addCustomFilter(label, patterns) {
-    if (!this.dir) throw new Error('Open a folder first – filters are stored in .linecounter/filters.json');
+    if (!this.dir) throw new Error('Open a folder first – filters are stored in .locomotive/filters.json');
     const list = (this.filterStore.filters || []).filter(f => String(f.label).trim() !== label);
     list.push({ label, patterns });
     this.filterStore = { filters: list };
@@ -76,16 +77,24 @@ class LineCounterConfig {
     if (this.dir) await fs.promises.writeFile(this.filtersPath, JSON.stringify(this.filterStore, null, 2) + '\n', 'utf8');
   }
 
-  /** Effective value: .linecounter/settings.json > VS Code settings > default. */
+  /** Effective value: .locomotive/settings.json > VS Code settings > default. */
   get(key, def) {
-    const fsVal = this.fileSettings[key] ?? this.fileSettings['linecounter.' + key] ?? nested(this.fileSettings, key);
+    const fsVal = this.fileSettings[key] ?? this.fileSettings['locomotive.' + key] ?? this.fileSettings['linecounter.' + key] ?? nested(this.fileSettings, key);
     if (fsVal !== undefined) return fsVal;
-    return vscode.workspace.getConfiguration('linecounter').get(key, def);
+    const cfg = vscode.workspace.getConfiguration('locomotive');
+    // settings from before the rename (linecounter.*) still count as long as the new key is not set
+    const i = cfg.inspect ? cfg.inspect(key) : null;
+    const own = i && [i.globalValue, i.workspaceValue, i.workspaceFolderValue].some(v => v !== undefined);
+    if (i && !own) {
+      const legacy = vscode.workspace.getConfiguration('linecounter').get(key);
+      if (legacy !== undefined) return legacy;
+    }
+    return cfg.get(key, def);
   }
 
   /** Where a value comes from – shown in the UI. */
   source(key) {
-    if (this.fileSettings[key] !== undefined || this.fileSettings['linecounter.' + key] !== undefined || nested(this.fileSettings, key) !== undefined) return DIR;
+    if (this.fileSettings[key] !== undefined || this.fileSettings['locomotive.' + key] !== undefined || nested(this.fileSettings, key) !== undefined) return this.dirName;
     return 'settings';
   }
 
@@ -120,12 +129,12 @@ class LineCounterConfig {
   }
 
   async writePresets() {
-    if (!this.dir) throw new Error('Open a folder first – presets are stored in .linecounter/presets.json');
+    if (!this.dir) throw new Error('Open a folder first – presets are stored in .locomotive/presets.json');
     await fs.promises.mkdir(this.dir, { recursive: true });
     await fs.promises.writeFile(this.presetsPath, JSON.stringify(this.presetStore, null, 2) + '\n', 'utf8');
   }
 
-  /** Creates .linecounter/settings.json with the current effective values (if missing) and returns its path. */
+  /** Creates .locomotive/settings.json with the current effective values (if missing) and returns its path. */
   async ensureSettingsFile(defaults) {
     if (!this.dir) throw new Error('Open a folder first');
     await fs.promises.mkdir(this.dir, { recursive: true });
@@ -138,11 +147,11 @@ class LineCounterConfig {
     return this.settingsPath;
   }
 
-  /** Watch .linecounter/*.json and notify listeners on change. */
+  /** Watch .locomotive/*.json and notify listeners on change. */
   watch(onChange) {
     this.listeners.push(onChange);
     if (this.watchers.length || !this.root) return;
-    const pattern = new vscode.RelativePattern(this.root, `${DIR}/*.json`);
+    const pattern = new vscode.RelativePattern(this.root, `{${DIR},${LEGACY_DIR}}/*.json`);
     const w = vscode.workspace.createFileSystemWatcher(pattern);
     let timer = null;
     const fire = () => {
@@ -182,4 +191,4 @@ function nested(obj, key) {
   return cur;
 }
 
-module.exports = { LineCounterConfig, readJson, DIR };
+module.exports = { LocomotiveConfig, readJson, DIR };
