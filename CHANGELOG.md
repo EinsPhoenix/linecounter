@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.14.6
+- 3D train: new settings `linecounter.train.maxLinks` (relations drawn as rails, default 2400) and `linecounter.train.detail` (`auto` / `high` / `low` level of detail)
+
 ## 1.14.5
 - 3D train: fixed the grey screen on big projects – hubs such as libraries imported by hundreds of files made the 3D layout explode to infinite coordinates, and the rail sampling then used up all memory of the webview
 - 3D train: level of detail for big universes (coarser rails, planets and turntables; at most 3 relations per node on average are drawn as rails), about 3× fewer triangles

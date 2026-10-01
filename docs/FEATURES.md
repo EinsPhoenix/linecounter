@@ -256,7 +256,11 @@ Alle Grenzwerte (z. B. ab wie vielen Zeilen eine Datei „zu lang“ ist) stehen
 - **Große Graphen.**
   - Die Limits sind einstellbar: `linecounter.graphs.maxNodes` (Standard **20.000**) und `linecounter.graphs.maxLinks` (Standard **40.000**). Zyklen werden immer gezeigt.
   - Ab etwa 2.500 Knoten wird nur noch der sichtbare Ausschnitt gezeichnet, Beschriftungen erscheinen beim Hineinzoomen, und ab 4.000 Knoten wird das Layout einmal berechnet statt animiert. Ein Test mit 20.000 Knoten und 40.000 Relationen lief flüssig.
-  - Der 3D-Zug hat ein eigenes Limit: `linecounter.train.maxNodes`, Standard 800, weil das 3D-Layout quadratisch wächst.
+  - Der 3D-Zug hat eigene Limits, weil das 3D-Layout quadratisch wächst und jede Schiene GPU-Speicher kostet:
+    - `linecounter.train.maxNodes`: Planeten, Standard **800**. Behalten werden die am stärksten vernetzten Dateien.
+    - `linecounter.train.maxLinks`: Relationen als Schienen, Standard **2.400**. Vorrang haben Zyklen, Abhängigkeitsketten und Relationen zu verwundbaren Bibliotheken, danach die am stärksten vernetzten.
+    - `linecounter.train.detail`: `auto` (Standard; ab 300 Planeten oder 900 Relationen gröbere Schienen, Planeten und Drehscheiben), `high` (immer volle Details) oder `low` (immer reduziert, für schwache GPUs).
+  - Bleibt die 3D-Ansicht grau oder langsam, senke `train.maxLinks` / `train.maxNodes` oder stelle `train.detail` auf `low`.
 - **Bewegung.** *Wiggle*, *Calm* oder *Still*, einstellbar über `linecounter.graphs.motion`.
 
 ---

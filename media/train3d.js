@@ -327,8 +327,8 @@
   }
 
   /** keeps the 3D universe fast: at most `cap` nodes – cycles, chains, the selected file and the most connected ones */
-  function capGraph(G, cap, selectedAbs) {
-    return capLinks(capNodes(G, cap, selectedAbs), Math.max(600, cap * 3));
+  function capGraph(G, cap, selectedAbs, maxLinks) {
+    return capLinks(capNodes(G, cap, selectedAbs), maxLinks || 2400);
   }
 
   /** every relation becomes a 3D guideway – too many of them exhaust the GPU memory of the webview, so keep the important ones */
@@ -394,7 +394,7 @@
     if (!window.THREE) { notice('3D view not available (three.js failed to load).'); return; }
     const G0 = D.importGraph;
     if (!G0 || !G0.nodes.length) return;
-    const G = capGraph(opts.functions && window.LCGraphs && D.functionGraph ? LCGraphs.withFunctions(G0, D.functionGraph) : G0, (D.graphLimits && D.graphLimits.train3d) || 800, opts.selectedAbs);
+    const G = capGraph(opts.functions && window.LCGraphs && D.functionGraph ? LCGraphs.withFunctions(G0, D.functionGraph) : G0, (D.graphLimits && D.graphLimits.train3d) || 800, opts.selectedAbs, D.graphLimits && D.graphLimits.trainLinks);
     close();
     const { esc } = ui;
     const routes = routesFor(G, opts.selectedAbs);
@@ -488,7 +488,8 @@
     let skullTexCache = null;
     const skullTex = () => skullTexCache || (skullTexCache = skullTexture());
     // level of detail for big universes: fewer polygons per planet, ring and rail (the GPU of a webview is limited)
-    const big = G.nodes.length > 300 || G.links.length > 900;
+    const lod = (D.graphLimits && D.graphLimits.trainDetail) || 'auto';
+    const big = lod === 'low' || (lod === 'auto' && (G.nodes.length > 300 || G.links.length > 900));
     let skullLights = 0;
     const planetGeo = big ? new THREE.SphereGeometry(1, 20, 12) : new THREE.SphereGeometry(1, 32, 20);
     // colors: files of the same folder share a planet color, functions are colored by their file
