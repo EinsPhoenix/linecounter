@@ -2,6 +2,7 @@
 
 const { buildWordGraph, buildImportGraph, buildFunctionGraph } = require('./graphs');
 const { buildHealth } = require('./scanners/health');
+const { checkArchitecture } = require('./scanners/architecture');
 
 /** Aggregates per-file analysis results into the data model shown on the statistics page. */
 function aggregate(files, meta) {
@@ -84,6 +85,13 @@ function aggregate(files, meta) {
   const limits = meta.graphLimits || {};
   const importGraph = buildImportGraph(text, { libraries: !!meta.includeLibraries, deps: meta.dependencies, edgesOut: fileEdges, maxNodes: limits.maxNodes, maxLinks: limits.maxLinks });
   const graphFiles = new Set(importGraph.nodes.filter(n => !n.library).map(n => n.abs));
+  // architecture rules on every import edge; violating edges are marked in the graph
+  const pathByAbs = new Map(text.map(f => [f.abs, f.path]));
+  const architecture = checkArchitecture(fileEdges, abs => pathByAbs.get(abs), meta.architecture || {});
+  if (architecture.total) {
+    const bad = new Set(architecture.violations.map(v => v.from.abs + '\n' + v.to.abs));
+    for (const l of importGraph.links) if (bad.has(importGraph.nodes[l.s].abs + '\n' + importGraph.nodes[l.t].abs)) l.viol = true;
+  }
   const churn = new Map();
   for (const r of meta.repos || []) {
     for (const [abs, c] of r.churnAll || []) churn.set(abs, (churn.get(abs) || 0) + c);
@@ -93,7 +101,7 @@ function aggregate(files, meta) {
   return {
     generated: now, ...meta, multiRoot,
     totals, languages, extensions, folders, histogram, identifiers, ages, table,
-    wordGraph: buildWordGraph(text), importGraph,
+    wordGraph: buildWordGraph(text), importGraph, architecture,
     functionGraph: meta.maxFunctions === 0 ? null : buildFunctionGraph(text, fileEdges, graphFiles, meta.maxFunctions || 600),
     health: hopts.enabled === false ? null : buildHealth(text, hopts),
   };

@@ -622,3 +622,6 @@ body.print-light .dep-catseg { color: #111; }
 .gzoom button { width: 26px; height: 24px; border: none; border-radius: 5px; background: transparent; color: var(--fg); font-size: 16px; line-height: 1; cursor: pointer; }
 .gzoom button:hover { background: var(--accent); color: #fff; }
 .gzoom-lvl { font-size: 10px; color: var(--muted); min-width: 34px; text-align: center; }
+.arch-example { background: var(--card-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 12px; overflow: auto; }
+.arch-arrow { color: #ff2d6f; font-weight: 700; }
+.arch-tools { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }

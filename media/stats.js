@@ -341,8 +341,8 @@
       ringColor: n => (n.f.cycle >= 0 ? RED : null),
       label: n => (n.f.fn ? n.f.path : n.f.library ? n.f.path + (n.f.version ? '@' + n.f.version : '') : n.f.path.split('/').pop()),
       showLabel: (n, k) => (n.f.fn ? k > 2.2 || n.f.in >= 3 : n.f.in >= Math.max(3, maxIn * 0.25) || n.f.cycle >= 0 || (n.f.library && n.f.vulns) || k > 1.7),
-      linkColor: l => (l.cyc ? RED : l.call ? AMBER : l.def ? '#5a5a5a' : '#7c7c7c'),
-      linkWidth: l => (l.cyc ? 2.2 : l.call ? 1.1 : l.def ? 0.6 : 0.9),
+      linkColor: l => (l.viol ? '#ff2d6f' : l.cyc ? RED : l.call ? AMBER : l.def ? '#5a5a5a' : '#7c7c7c'),
+      linkWidth: l => (l.viol ? 2.6 : l.cyc ? 2.2 : l.call ? 1.1 : l.def ? 0.6 : 0.9),
       linkAlpha: 0.5,
       distance: l => (l.def ? 16 : l.call ? 30 : 45),
       charge: n => (n.f && n.f.fn ? -25 : -90),
@@ -381,8 +381,21 @@
   let impRecolor = () => {};
   function importGraphData() {
     const src = impFns && window.LCGraphs ? LCGraphs.withFunctions(D.importGraph, D.functionGraph) : D.importGraph;
-    return { nodes: src.nodes.map(n => ({ id: n.abs, f: n })), links: src.links.map(l => ({ source: l.s, target: l.t, cyc: l.cyc, call: l.call, def: l.def })) };
+    return { nodes: src.nodes.map(n => ({ id: n.abs, f: n })), links: src.links.map(l => ({ source: l.s, target: l.t, cyc: l.cyc, call: l.call, def: l.def, viol: l.viol })) };
   }
+
+  /** architecture violations: red links + involved files, zoomed into view */
+  window.LCStatsGraphs = {
+    highlightViolations() {
+      const g = graphs.importgraph;
+      if (!g) return;
+      const nodesHl = new Map(), linksHl = new Map();
+      for (const l of g.links) if (l.viol) { linksHl.set(l, '#ff2d6f'); nodesHl.set(l.source.index, '#ff2d6f'); nodesHl.set(l.target.index, RED_SOFT); }
+      g.setHighlight({ nodes: nodesHl, links: linksHl, labels: new Set(nodesHl.keys()) }, true);
+      document.getElementById('importgraph').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setImpStatus(`<b style="color:#ff2d6f">${fmt(linksHl.size)}</b> imports break an architecture rule`);
+    },
+  };
 
   const libraryTip = f => `<b>${esc(f.path)}</b>${f.version ? '@' + esc(f.version) : ''} <span style="opacity:.7">${esc(f.ecosystem)} library</span>
     ${f.license ? `<br>license: ${esc(f.license)}${f.licenseStatus && f.licenseStatus !== 'ok' ? ` (<b style="color:${f.licenseStatus === 'problematic' ? RED : AMBER}">${esc(f.licenseStatus)}</b>)` : ''}` : ''}
@@ -1077,6 +1090,7 @@
     }
     if (window.LCDeps && D.dependencies) out.push(...LCDeps.rants(UI(), D));
     if (window.LCHealth && D.health) out.push(...LCHealth.rants(UI(), D));
+    if (window.LCArch) out.push(...LCArch.rants(UI(), D));
     if (!out.length) out.push(['😇', 'We tried to roast this project and found nothing. Suspicious. Very suspicious.']);
     return `<ul class="roast-list">${out.map(([e, t2]) => `<li><span class="rant-emoji">${e}</span><span>${t2}</span></li>`).join('')}</ul>`;
   }
@@ -1244,7 +1258,7 @@
       </header>
       <nav class="toc">
         <a href="#s-overview">Overview</a>${D.history ? '<a href="#s-trends">Trends</a>' : ''}<a href="#s-lang">Languages</a><a href="#s-files">Files</a>
-        <a href="#s-fame">Hall of Fame</a>${D.dependencies ? '<a href="#s-deps">Dependencies</a>' : ''}${D.health ? '<a href="#s-health">Code health</a>' : ''}${rantCfg().enabled ? '<a href="#s-rant">Code Rant</a>' : ''}<a href="#s-git">Git</a><a href="#s-fun">Fun facts</a><a href="#s-ids">Words & connections</a><a href="#s-rank">Ranking</a><a href="#s-struct">Structure</a>
+        <a href="#s-fame">Hall of Fame</a>${D.dependencies ? '<a href="#s-deps">Dependencies</a>' : ''}${D.architecture ? '<a href="#s-arch">Architecture</a>' : ''}${D.health ? '<a href="#s-health">Code health</a>' : ''}${rantCfg().enabled ? '<a href="#s-rant">Code Rant</a>' : ''}<a href="#s-git">Git</a><a href="#s-fun">Fun facts</a><a href="#s-ids">Words & connections</a><a href="#s-rank">Ranking</a><a href="#s-struct">Structure</a>
       </nav>
       <main>
         <h2 id="s-overview">Overview</h2>${overview()}
@@ -1253,6 +1267,7 @@
         <h2 id="s-files">Files & folders</h2>${filesSection()}
         <h2 id="s-fame">Hall of Fame</h2>${hallOfFame()}
         ${D.dependencies && window.LCDeps ? `<h2 id="s-deps">Dependencies, licenses & vulnerabilities</h2>${LCDeps.render(UI(), D)}` : ''}
+        ${window.LCArch && D.architecture ? `<h2 id="s-arch">Architecture</h2>${LCArch.render(UI(), D)}` : ''}
         ${D.health && window.LCHealth ? `<h2 id="s-health">Code health</h2>${LCHealth.render(UI(), D)}` : ''}
         ${rantSection()}
         <h2 id="s-git">Git</h2>${gitSection()}
@@ -1295,6 +1310,7 @@
     }
     if (window.LCDeps && D.dependencies && LCDeps.handleClick(UI(), D, t)) { ev.preventDefault(); return; }
     if (window.LCHealth && D.health && LCHealth.handleClick(UI(), D, t)) { ev.preventDefault(); return; }
+    if (window.LCArch && LCArch.handleClick(UI(), D, t)) { ev.preventDefault(); return; }
     if (t.closest('[data-trend-clear]')) { vscode.postMessage({ type: 'clearHistory', projectRoot: D.projectRoot || '' }); const s = document.getElementById('s-trends'); if (s && s.nextElementSibling) s.nextElementSibling.innerHTML = '<div class="card-body muted">History cleared.</div>'; return; }
     const gb = t.closest('[data-gact]');
     if (gb) {
