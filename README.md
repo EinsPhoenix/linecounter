@@ -1,4 +1,14 @@
+<p align="center"><img src="media/icon.png" width="96" alt="Line Counter"></p>
+
 # Line Counter & Code Statistics
+
+[![CI](https://github.com/EinsPhoenix/linecounter/actions/workflows/ci.yml/badge.svg)](https://github.com/EinsPhoenix/linecounter/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/EinsPhoenix/linecounter?label=release)](https://github.com/EinsPhoenix/linecounter/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/EinsPhoenix/linecounter/total)](https://github.com/EinsPhoenix/linecounter/releases)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+![VS Code](https://img.shields.io/badge/VS%20Code-%E2%89%A5%201.74-007ACC)
+
+**⬇️ [Neueste Version herunterladen (`linecounter.vsix`)](https://github.com/EinsPhoenix/linecounter/releases/latest/download/linecounter.vsix)** · [Alle Releases](https://github.com/EinsPhoenix/linecounter/releases) · [Changelog](CHANGELOG.md)
 
 VS-Code-Extension, die alle Dateien und Ordner des Workspaces rekursiv als Baum in der Sidebar anzeigt. Dort filterst du die Auswahl und erzeugst mit einem Klick eine Statistik-Seite im Vollbild.
 
@@ -32,7 +42,8 @@ Ist in VS Code ein Sammelordner geöffnet (z. B. `D:\CodingThings\Graphoenix`) u
 
 ## Installation
 
-Die fertig gepackte Extension liegt im Repo: **`linecounter.vsix`**
+1. Lade die neueste `linecounter.vsix` von der [Release-Seite](https://github.com/EinsPhoenix/linecounter/releases/latest) herunter (oder direkt: [linecounter.vsix](https://github.com/EinsPhoenix/linecounter/releases/latest/download/linecounter.vsix)).
+2. Installiere sie:
 
 ```bash
 code --install-extension linecounter.vsix
@@ -42,9 +53,14 @@ Alternativ in VS Code: *Extensions → „…“ → Install from VSIX…*
 
 ## Downloads
 
-- Neueste Version: [`linecounter.vsix`](linecounter.vsix)
-- Alle Versionen: Ordner [`releases/`](releases/), jede Version hat außerdem ein Git-Tag (`v1.4.0`, …)
-- Änderungen: [`CHANGELOG.md`](CHANGELOG.md)
+| Was | Wo |
+|---|---|
+| Neueste Version | [Releases → latest](https://github.com/EinsPhoenix/linecounter/releases/latest) |
+| Ältere Versionen | [alle Releases](https://github.com/EinsPhoenix/linecounter/releases) (Tag `v<version>`, Release Notes aus dem Changelog) |
+| Direkt im Repo | [`linecounter.vsix`](linecounter.vsix) (aktuell) und [`releases/`](releases/) |
+| Für CI | `https://github.com/EinsPhoenix/linecounter/releases/latest/download/linecounter.vsix`, siehe [CI.md](docs/CI.md) |
+
+Releases entstehen automatisch: Landet auf `main` eine neue Version (`package.json` + `releases/linecounter-<version>.vsix`), legt der Workflow [`release.yml`](.github/workflows/release.yml) Tag und Release mit der `.vsix` an.
 
 ## Sidebar („Line Counter“ in der Activity Bar)
 
@@ -189,6 +205,8 @@ npm test          # Smoke-Test (Scanner, Analyzer, Git, Aggregation)
 npm run release   # erzeugt releases/linecounter-<version>.vsix und aktualisiert linecounter.vsix
 ```
 
+Neue Version veröffentlichen: Version in `package.json` erhöhen, Eintrag in `CHANGELOG.md`, `npm run release`, committen und auf `main` pushen. Den Rest (Tag, GitHub Release, Assets) erledigt GitHub Actions.
+
 Zum Debuggen öffnest du den Ordner in VS Code und startest mit `F5` einen Extension Development Host.
 
 ```
@@ -207,3 +225,7 @@ src/stats.js       Aggregation für die Statistik-Seite
 src/statsPanel.js  Webview-Panel (Vollbild, Datei öffnen, Export)
 media/             Webview-UI (Sidebar, Statistik-Seite, graphs.js = Canvas-Treemap + Force-Graphen)
 ```
+
+## Lizenz
+
+[MIT](LICENSE)

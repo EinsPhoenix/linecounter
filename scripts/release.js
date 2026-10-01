@@ -9,6 +9,6 @@ const root = path.resolve(__dirname, '..');
 const { version } = require(path.join(root, 'package.json'));
 const out = path.join(root, 'releases', `linecounter-${version}.vsix`);
 fs.mkdirSync(path.dirname(out), { recursive: true });
-execSync(`npx vsce package --skip-license --out "${out}"`, { cwd: root, stdio: 'inherit' });
+execSync(`npx vsce package --out "${out}"`, { cwd: root, stdio: 'inherit' });
 fs.copyFileSync(out, path.join(root, 'linecounter.vsix'));
 console.log(`\nReleased ${path.relative(root, out)} and updated linecounter.vsix`);

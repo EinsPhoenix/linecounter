@@ -49,8 +49,8 @@ jobs:
         with: { node-version: 20 }
       - name: Get Line Counter
         run: |
-          # adjust the branch / tag to the one that holds the linecounter.vsix you want
-          curl -sSL -o lc.vsix https://raw.githubusercontent.com/EinsPhoenix/linecounter/main/linecounter.vsix
+          # latest release; pin a version with .../releases/download/v1.14.3/linecounter-1.14.3.vsix
+          curl -sSL -o lc.vsix https://github.com/EinsPhoenix/linecounter/releases/latest/download/linecounter.vsix
           unzip -q lc.vsix -d lc
       - name: Quality gate
         run: node lc/extension/bin/linecounter.js gate . --json gate.json
