@@ -3,6 +3,7 @@
 const vscode = require('vscode');
 const { LineCounterConfig } = require('./config');
 const { SidebarProvider } = require('./sidebarProvider');
+const history = require('./history');
 const { computeStatistics } = require('./statistics');
 const { StatsPanel } = require('./statsPanel');
 const { openFile } = require('./util');
@@ -20,10 +21,14 @@ function activate(context) {
     lastRun = { roots, selection, options };
     const data = await computeStatistics(config, roots, selection, options);
     if (!data) return;
+    if (config.get('history.enabled', true)) {
+      try { data.history = await history.record(context, config, data); } catch { data.history = null; }
+    }
     StatsPanel.show(context, config, data, {
       open: openFile,
       refresh: () => lastRun && createStatistics(lastRun.roots, lastRun.selection, lastRun.options),
       deleted: () => provider.scan(),
+      clearHistory: root => history.clear(context, root),
     });
   };
 

@@ -113,6 +113,8 @@ async function repoStats(root, maxCommits, rantOpts = {}) {
   }
   const hotspots = [...churn.entries()].sort((a, b) => b[1] - a[1]).slice(0, 25)
     .map(([file, count]) => ({ file, abs: path.join(root, file), count }));
+  // churn of every file (used for the risk matrix, removed before the data goes to the page)
+  const churnAll = [...churn.entries()].map(([file, count]) => [path.join(root, file), count]);
 
   // Time distributions
   const weekdayHour = Array.from({ length: 7 }, () => new Array(24).fill(0));
@@ -195,7 +197,7 @@ async function repoStats(root, maxCommits, rantOpts = {}) {
     insertions: commits.reduce((s, c) => s + c.ins, 0),
     deletions: commits.reduce((s, c) => s + c.del, 0),
     authors: authors.slice(0, 30), authorCount: authors.length,
-    hotspots, weekdayHour, months: monthList,
+    hotspots, churnAll, weekdayHour, months: monthList,
     streak: best, streakEnd: bestEnd, busiestDay,
     activeDays: days.size,
     topWords, night, weekend, fixes, lazy, busFactor: bus,

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.13.0
+- Trends: every run stores a snapshot (per workspace / project root); "since the last run" deltas and trend charts for lines, functions, complexity, health score, duplicates, unused functions, TODOs, vulnerabilities, licenses, secrets, cycles; optional shared `.linecounter/history.json`
+- Risk hotspots: git churn × complexity scatter with a "refactor first" zone and a risk score per file
+- Possibly unused functions (dead code) with exported / internal marking; methods, decorated handlers, tests and entry points are skipped
+- both in the Code health PDF and in the rants
+
 ## 1.12.0
 - Project root: pick any folder in the sidebar (target icon) as the root of the analysis – paths, folder charts, colors, clusters and planets are relative to it; stored per workspace and in presets
 - 3D train: the streamlined body was mounted backwards – the nose now points forward and the headlights, nose ring and lamp sit on the hull instead of floating in front of it

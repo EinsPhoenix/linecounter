@@ -79,6 +79,14 @@ Alle Grenzwerte (z. B. ab wie vielen Zeilen eine Datei „zu lang“ ist) stehen
 
 ---
 
+## Trends
+
+- **Snapshot pro Lauf.** Jeder Lauf speichert die Kennzahlen pro Workspace bzw. Projekt-Root: Zeilen, Funktionen, Komplexität, Health-Score, Duplikate, ungenutzte Funktionen, TODOs, Schwachstellen, Lizenzprobleme, Secrets, Zyklen und Commits.
+- **„Since the last run“.** Zeigt die Änderungen seit dem letzten Lauf. Grün heißt besser, rot heißt schlechter.
+- **Kurven.** Für jede Kennzahl, die sich verändert hat, gibt es eine Verlaufskurve.
+- **Zusammenfassen.** Läufe innerhalb von 10 Minuten werden zusammengefasst.
+- **Speicherort.** Gespeichert wird lokal im Workspace-State (`linecounter.history.enabled`). Mit `linecounter.history.saveToFile` landet die Historie zusätzlich in `.linecounter/history.json` und kann mit dem Team geteilt werden. *Clear history* setzt sie zurück.
+
 ## Code health
 
 - **Note A–F und Score 0–100.**
@@ -92,6 +100,14 @@ Alle Grenzwerte (z. B. ab wie vielen Zeilen eine Datei „zu lang“ ist) stehen
   - Grenzwert: `linecounter.health.maxFunctionLines`, Standard 80.
   - Funktionen mit 6 oder mehr Parametern werden ebenfalls gelistet.
 - **Hotspots.** Dateien mit der höchsten Gesamtkomplexität. Ein Klick öffnet die Datei, ein Klick auf eine Funktion springt direkt zur Zeile.
+- **Risiko-Hotspots (Churn × Komplexität).**
+  - Ein Streudiagramm zeigt, wie oft eine Datei in Git geändert wurde (x) und wie komplex sie ist (y); die Punktgröße steht für die Dateilänge.
+  - Rechts oben liegen die Dateien, die am wahrscheinlichsten den nächsten Bug enthalten.
+  - Score 0–100, ein Klick öffnet die Datei. Dafür braucht es ein Git-Repo mit Historie.
+- **Möglicherweise ungenutzte Funktionen.**
+  - Gemeldet werden freistehende Funktionen, deren Name sonst nirgends im analysierten Code vorkommt.
+  - Ausgelassen werden Methoden und Objekt-Properties (oft von Frameworks aufgerufen), Funktionen mit Decorator oder Annotation (Route-Handler, `@Override`), Tests sowie bekannte Einstiegspunkte (`main`, `activate`, Lifecycle-Hooks).
+  - Exportierte Funktionen sind markiert, weil sie öffentliche API einer Bibliothek sein können.
 - **Duplizierter Code.**
   - Gefunden werden Blöcke ab 6 identischen Zeilen; dabei werden Leerraum und Kommentare ignoriert und triviale Zeilen übersprungen.
   - Beide Fundstellen sind anklickbar.

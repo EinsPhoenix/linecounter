@@ -440,6 +440,25 @@
         { label: 'Worst', w: 0.15, get: r => r.maxComplexity, style: r => cxStyle({ complexity: r.maxComplexity }) },
       ], H.hotspots);
     }
+    if (H.risk && H.risk.files.length) {
+      ctx.heading('Risk hotspots – often changed AND complex');
+      drawTable(pdf, ctx, [
+        { label: 'Risk', w: 0.1, get: r => r.risk, style: r => (r.risk >= 60 ? { fill: [255, 77, 79], color: [255, 255, 255], bold: true } : r.risk >= 35 ? { fill: [247, 174, 98], color: [40, 25, 10], bold: true } : null) },
+        { label: 'File', w: 0.5, get: r => r.path },
+        { label: 'Commits', w: 0.13, get: r => r.churn },
+        { label: 'Complexity', w: 0.14, get: r => r.complexity },
+        { label: 'Lines', w: 0.13, get: r => r.lines },
+      ], H.risk.files.slice(0, 25));
+    }
+    if (H.deadCode && H.deadCode.items.length) {
+      ctx.heading(`Possibly unused functions (${H.deadCode.total})`);
+      drawTable(pdf, ctx, [
+        { label: 'Function', w: 0.3, get: r => r.name + '()', style: () => ({ bold: true }) },
+        { label: 'File', w: 0.5, get: r => `${r.path}:${r.line}` },
+        { label: 'Lines', w: 0.08, get: r => r.lines },
+        { label: 'Scope', w: 0.12, get: r => (r.exported ? 'exported' : 'internal') },
+      ], H.deadCode.items.slice(0, 80));
+    }
     if (H.duplicates) {
       ctx.heading(`Duplicated code (${H.duplicates.total} blocks, ${H.duplicates.duplicatedLines} lines)`);
       if (!H.duplicates.groups.length) ctx.para('No duplicated blocks found.');

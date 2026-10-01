@@ -2,7 +2,7 @@
   "name": "linecounter",
   "displayName": "Line Counter & Code Statistics",
   "description": "Browse your workspace as a filterable tree, exclude files and folders with a click and generate full-screen code statistics with charts, git insights, fun facts and a file ranking.",
-  "version": "1.12.0",
+  "version": "1.13.0",
   "publisher": "einsphoenix",
   "icon": "media/icon.png",
   "repository": {
@@ -419,6 +419,16 @@
             "**/*.sample"
           ],
           "description": "Glob patterns of files that are not scanned for secrets."
+        },
+        "linecounter.history.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Remember the key numbers of every run (per workspace) and show trends on the statistics page."
+        },
+        "linecounter.history.saveToFile": {
+          "type": "boolean",
+          "default": false,
+          "description": "Also store the history in .linecounter/history.json so that it can be committed and shared with the team."
         }
       }
     },

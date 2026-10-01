@@ -1243,11 +1243,12 @@
         </nav>
       </header>
       <nav class="toc">
-        <a href="#s-overview">Overview</a><a href="#s-lang">Languages</a><a href="#s-files">Files</a>
+        <a href="#s-overview">Overview</a>${D.history ? '<a href="#s-trends">Trends</a>' : ''}<a href="#s-lang">Languages</a><a href="#s-files">Files</a>
         <a href="#s-fame">Hall of Fame</a>${D.dependencies ? '<a href="#s-deps">Dependencies</a>' : ''}${D.health ? '<a href="#s-health">Code health</a>' : ''}${rantCfg().enabled ? '<a href="#s-rant">Code Rant</a>' : ''}<a href="#s-git">Git</a><a href="#s-fun">Fun facts</a><a href="#s-ids">Words & connections</a><a href="#s-rank">Ranking</a><a href="#s-struct">Structure</a>
       </nav>
       <main>
         <h2 id="s-overview">Overview</h2>${overview()}
+        ${window.LCTrends && D.history ? `<h2 id="s-trends">Trends</h2>${LCTrends.render(UI(), D)}` : ''}
         <h2 id="s-lang">Languages</h2>${languageSection()}
         <h2 id="s-files">Files & folders</h2>${filesSection()}
         <h2 id="s-fame">Hall of Fame</h2>${hallOfFame()}
@@ -1294,6 +1295,7 @@
     }
     if (window.LCDeps && D.dependencies && LCDeps.handleClick(UI(), D, t)) { ev.preventDefault(); return; }
     if (window.LCHealth && D.health && LCHealth.handleClick(UI(), D, t)) { ev.preventDefault(); return; }
+    if (t.closest('[data-trend-clear]')) { vscode.postMessage({ type: 'clearHistory', projectRoot: D.projectRoot || '' }); const s = document.getElementById('s-trends'); if (s && s.nextElementSibling) s.nextElementSibling.innerHTML = '<div class="card-body muted">History cleared.</div>'; return; }
     const gb = t.closest('[data-gact]');
     if (gb) {
       const g = graphs[/** @type {HTMLElement} */ (gb).dataset.graph];
