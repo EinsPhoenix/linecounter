@@ -2,15 +2,18 @@
 
 # Line Counter & Code Statistics
 
-[![CI](https://github.com/EinsPhoenix/linecounter/actions/workflows/ci.yml/badge.svg)](https://github.com/EinsPhoenix/linecounter/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/EinsPhoenix/linecounter?label=release)](https://github.com/EinsPhoenix/linecounter/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/EinsPhoenix/linecounter/total)](https://github.com/EinsPhoenix/linecounter/releases)
+[![Release](https://img.shields.io/badge/release-v1.14.4-e0621b)](https://github.com/EinsPhoenix/linecounter/releases/latest)
+[![Download vsix](https://img.shields.io/badge/download-linecounter.vsix-2ea44f?logo=visualstudiocode&logoColor=white)](https://github.com/EinsPhoenix/linecounter/releases/latest/download/linecounter.vsix)
+[![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)](https://github.com/EinsPhoenix/linecounter/actions/workflows/ci.yml)
+[![Changelog](https://img.shields.io/badge/changelog-CHANGELOG.md-555)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![VS Code](https://img.shields.io/badge/VS%20Code-%E2%89%A5%201.74-007ACC)
+[![VS Code](https://img.shields.io/badge/VS%20Code-%E2%89%A5%201.74-007ACC?logo=visualstudiocode&logoColor=white)](#installation)
 
 **⬇️ [Neueste Version herunterladen (`linecounter.vsix`)](https://github.com/EinsPhoenix/linecounter/releases/latest/download/linecounter.vsix)** · [Alle Releases](https://github.com/EinsPhoenix/linecounter/releases) · [Changelog](CHANGELOG.md)
 
 VS-Code-Extension, die alle Dateien und Ordner des Workspaces rekursiv als Baum in der Sidebar anzeigt. Dort filterst du die Auswahl und erzeugst mit einem Klick eine Statistik-Seite im Vollbild.
+
+![Statistik-Seite mit Quality Gate, Kennzahlen und Sprachen](docs/images/overview.png)
 
 **Ausführliche Beschreibung aller Funktionen, was du erwarten kannst und wo die Grenzen liegen: [`docs/FEATURES.md`](docs/FEATURES.md)**
 
@@ -28,6 +31,30 @@ VS-Code-Extension, die alle Dateien und Ordner des Workspaces rekursiv als Baum 
 | Quality Gate | gleiche Checks in VS Code und im CI (`node bin/linecounter.js gate`, Exit-Code 1) | [CI.md](docs/CI.md) |
 | MCP-Server | 21 Tools für LLM-Agenten (Copilot, Claude Code …): Impact einer Änderung, Risiko, Schwachstellen, Lizenzen … | [MCP.md](docs/MCP.md) |
 | Filter & Presets | eigene Filter wie `*/data`, Presets und Einstellungen in `.linecounter/`, Projekt-Root | [FEATURES](docs/FEATURES.md#sidebar-filter-und-presets) |
+
+## Schnellstart
+
+1. **Installieren:** [`linecounter.vsix` herunterladen](https://github.com/EinsPhoenix/linecounter/releases/latest/download/linecounter.vsix) und `code --install-extension linecounter.vsix` ausführen (oder *Extensions → … → Install from VSIX…*).
+2. **Öffnen:** In der Activity Bar auf das Line-Counter-Symbol klicken. Die Sidebar zeigt den Dateibaum deines Workspaces.
+3. **Filtern:** Ordner und Dateien per Klick ausschließen, Dateitypen ausblenden oder ein Preset laden.
+4. **Auswerten:** **Create Statistics** klicken. Die Statistik-Seite öffnet sich im Vollbild. Über die Navigation oben springst du zu Sprachen, Dependencies, Code health, Git, Graphen …
+5. **Teilen:** Oben rechts exportierst du CSV, JSON, HTML oder PDF. Einstellungen und Presets liegen in `.linecounter/` und können ins Repo.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Sidebar](docs/images/sidebar.png) | **Sidebar:** Dateibaum mit Suche, vordefinierten und eigenen Filtern, Dateitypen, Presets und „Create Statistics“. |
+| ![Import-Graph](docs/images/import-graph.png) | **Import-Graph:** wer importiert wen, nach Ordner gefärbt, mit Zyklen, längsten Ketten und „Blast Radius“. |
+| ![3D-Zug](docs/images/train-3d.png) | **Dependency Express:** ein 3D-Zug fährt über die Importe durch dein Projekt, jeder Planet ist eine Datei. |
+| ![Treemap](docs/images/treemap.png) | **Treemap:** jedes Rechteck ist eine Datei, gruppiert nach Ordnern, Größe = Zeilen. |
+| ![Risiko-Hotspots](docs/images/risk-hotspots.png) | **Risiko-Hotspots:** Git-Churn × Komplexität zeigt, wo der nächste Bug entsteht. |
+| ![Lizenzen](docs/images/licenses.png) | **Lizenzen:** alle Pakete aus npm, PyPI, crates.io und Go nach Lizenz und Kategorie. |
+| ![Ownership](docs/images/ownership.png) | **Ownership:** wem der Code gehört, Bus-Factor und Wissen, das mit inaktiven Autoren verloren geht. |
+| ![Commit-Heatmap](docs/images/commit-heatmap.png) | **Git:** wann Code geschrieben wird, Commits pro Monat, Hotspots und Fun Facts. |
+| ![Project roast](docs/images/roast.png) | **Project roast:** die Statistik mit Humor. |
+
+Mehr Bilder und alle Details: [`docs/FEATURES.md`](docs/FEATURES.md)
 
 ## Projekt-Root wählen
 
