@@ -658,6 +658,18 @@
     treemap = null;
   }
 
+  /** quality gate result (same checks as the CI command "node bin/linecounter.js gate") */
+  function gateHtml() {
+    const g = D.gate;
+    if (!g) return '';
+    const on = g.checks.filter(c => c.enabled);
+    return `<div class="gate ${g.passed ? 'pass' : 'fail'}">
+      <div class="gate-head"><span class="gate-badge">${g.passed ? '✓ Quality gate passed' : '✗ Quality gate failed'}</span>
+        <span class="muted">${on.length} checks · configure in <code>linecounter.gate</code> · same result in CI with <code>node bin/linecounter.js gate</code></span></div>
+      <div class="gate-checks">${g.checks.map(c => `<span class="gate-check ${!c.enabled ? 'off' : c.passed ? 'ok' : 'bad'}" ${tipAttr(`<b>${esc(c.label)}</b><br>${esc(c.detail)}${c.items.length && !c.passed ? '<br>' + c.items.slice(0, 6).map(esc).join('<br>') : ''}`)}>${!c.enabled ? '–' : c.passed ? '✓' : '✗'} ${esc(c.label)}${c.enabled && !c.passed ? ` <b>${fmt(c.count)}</b>` : ''}</span>`).join('')}</div>
+    </div>`;
+  }
+
   // ---------- sections ----------
   function overview() {
     const t = D.totals;
@@ -1261,7 +1273,7 @@
         <a href="#s-fame">Hall of Fame</a>${D.dependencies ? '<a href="#s-deps">Dependencies</a>' : ''}${D.architecture ? '<a href="#s-arch">Architecture</a>' : ''}${D.health ? '<a href="#s-health">Code health</a>' : ''}${rantCfg().enabled ? '<a href="#s-rant">Code Rant</a>' : ''}<a href="#s-git">Git</a><a href="#s-fun">Fun facts</a><a href="#s-ids">Words & connections</a><a href="#s-rank">Ranking</a><a href="#s-struct">Structure</a>
       </nav>
       <main>
-        <h2 id="s-overview">Overview</h2>${overview()}
+        <h2 id="s-overview">Overview</h2>${gateHtml()}${overview()}
         ${window.LCTrends && D.history ? `<h2 id="s-trends">Trends</h2>${LCTrends.render(UI(), D)}` : ''}
         <h2 id="s-lang">Languages</h2>${languageSection()}
         <h2 id="s-files">Files & folders</h2>${filesSection()}

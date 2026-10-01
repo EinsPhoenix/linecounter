@@ -225,6 +225,13 @@ Ein Zug fährt durch dein Projekt als Universum.
 
 ---
 
+## Quality Gate (CI)
+
+- **Checks:** kritische Schwachstellen, Secrets, problematische (optional auch unbekannte) Lizenzen und Architektur-Verstöße. Optional dazu maximale Komplexität, minimaler Health-Score, Duplikat-Anteil und zirkuläre Imports. Was zählt, stellst du in `linecounter.gate` ein.
+- **Statistikseite:** zeigt das Ergebnis ganz oben.
+- **In VS Code:** *Line Counter: Run Quality Gate* meldet das Ergebnis.
+- **Im CI:** `node bin/linecounter.js gate .` scheitert mit Exit-Code 1. Details und ein GitHub-Actions-Beispiel stehen in [CI.md](CI.md).
+
 ## Exporte und PDFs
 
 | Export | Inhalt |

@@ -13,6 +13,7 @@ let lastRun = null;
 function activate(context) {
   const config = new LineCounterConfig();
 
+  let gateRequested = false;
   const createStatistics = async (roots, selection, options = {}) => {
     if (!selection || !selection.length) {
       vscode.window.showWarningMessage('Line Counter: no files selected – every file is excluded by your filters.');
@@ -21,6 +22,13 @@ function activate(context) {
     lastRun = { roots, selection, options };
     const data = await computeStatistics(config, roots, selection, options);
     if (!data) return;
+    if (gateRequested) {
+      gateRequested = false;
+      const g = data.gate;
+      const failed = g ? g.checks.filter(c => c.enabled && !c.passed) : [];
+      if (g && g.passed) vscode.window.showInformationMessage(`Line Counter quality gate passed (${g.checks.filter(c => c.enabled).length} checks).`);
+      else if (g) vscode.window.showErrorMessage(`Line Counter quality gate FAILED: ${failed.map(c => `${c.label} (${c.detail})`).join(' · ')}`);
+    }
     if (config.get('history.enabled', true)) {
       try { data.history = await history.record(context, config, data); } catch { data.history = null; }
     }
@@ -45,6 +53,11 @@ function activate(context) {
       provider.requestStats();
     }),
     vscode.commands.registerCommand('linecounter.savePreset', () => provider.savePreset()),
+    vscode.commands.registerCommand('linecounter.runGate', async () => {
+      gateRequested = true;
+      if (!provider.view) await vscode.commands.executeCommand('linecounter.explorer.focus');
+      provider.requestStats();
+    }),
     vscode.commands.registerCommand('linecounter.loadPreset', async () => {
       const items = config.listPresets().map(p => ({ label: p.name, description: p.name === config.activePreset ? 'active' : '', detail: `${p.excluded} exclusions · ${p.hiddenExt} hidden types${p.savedAt ? ' · saved ' + new Date(p.savedAt).toLocaleString() : ''}` }));
       if (!items.length) { vscode.window.showInformationMessage('No presets yet – use "Line Counter: Save Filter Preset" first.'); return; }
