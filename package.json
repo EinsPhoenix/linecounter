@@ -1,8 +1,8 @@
 {
   "name": "locomotive",
   "displayName": "LOComotive – Code Statistics, Lines of Code & Complexity",
-  "description": "Count lines of code and get full code statistics: lines per language, code complexity, git history and ownership, dependency licenses and vulnerabilities, a TODO pinboard, interactive import graphs and a 3D train through your dependencies.",
-  "version": "2.0.1",
+  "description": "Count lines of code and ride through your project: full code statistics, cyclomatic complexity, code health (A–F), secrets scanner, dependency licenses and vulnerability scanner (OSV), architecture rules, git ownership, TODO pinboard, interactive import graphs, a 3D train through your imports, MCP server with 22 LLM tools, quality gate for CI and PDF/HTML reports.",
+  "version": "2.0.2",
   "license": "MIT",
   "publisher": "einsphoenix",
   "icon": "media/icon.png",

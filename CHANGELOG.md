@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.2
+- README, FEATURES.md and all documentation translated to English
+- Updated description to comprehensively cover all features (MCP server, vulnerability scanner, secrets detection, code health, quality gate for CI)
+
 ## 2.0.1
 - README: PayPal donation button
 
