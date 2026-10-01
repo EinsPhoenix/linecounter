@@ -7,6 +7,7 @@ const git = require('./git');
 const { scanDependencies } = require('./deps');
 const { globToRegExp } = require('./glob');
 const { evaluateGate } = require('./gate');
+const { buildTodos } = require('./scanners/todos');
 
 /**
  * The whole analysis without any VS Code dependency (used by the extension and by the CLI).
@@ -78,6 +79,10 @@ async function runPipeline(config, roots, selection, options = {}, progress = { 
       maxBlankPercent: Math.max(0, config.get('rant.maxBlankPercent', 10)),
     },
   });
+  if (config.get('todos.enabled', true)) {
+    progress.report({ message: 'Dating TODOs with git blame…' });
+    try { data.todos = await buildTodos(results.filter(f => !f.binary && !f.skipped), repos); } catch { data.todos = null; }
+  }
   data.gate = evaluateGate(data, config.get('gate', {}));
   return data;
 }

@@ -232,4 +232,22 @@ async function repoStats(root, maxCommits, rantOpts = {}) {
   };
 }
 
-module.exports = { repoRoot, repoStats, ignoredPaths };
+/** author + time of the given (1-based) lines of a file: Map(line -> { author, time }) */
+async function blameLines(repoRoot, relFile, wanted) {
+  const out = await git(repoRoot, ['blame', '--line-porcelain', '-w', '--', relFile]);
+  const res = new Map();
+  if (!out) return res;
+  const want = new Set(wanted);
+  let cur = null;
+  for (const l of out.split('\n')) {
+    const h = /^[0-9a-f]{40} \d+ (\d+)/.exec(l);
+    if (h) { cur = { line: Number(h[1]) }; continue; }
+    if (!cur) continue;
+    if (l.startsWith('author ')) cur.author = l.slice(7);
+    else if (l.startsWith('author-time ')) cur.time = Number(l.slice(12)) * 1000;
+    else if (l.startsWith('\t')) { if (want.has(cur.line)) res.set(cur.line, { author: cur.author, time: cur.time }); cur = null; }
+  }
+  return res;
+}
+
+module.exports = { repoRoot, repoStats, ignoredPaths, blameLines };
