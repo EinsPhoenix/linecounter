@@ -449,7 +449,7 @@
       const { w, h } = cv.state;
       const k = Math.max(0.02, Math.min(list ? 3 : 2.5, 0.9 * Math.min(w / (x1 - x0 || 1), h / (y1 - y0 || 1))));
       const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-      const t = d3.zoomIdentity.translate(-cx * k, -cy * k).scale(k);
+      const t = d3.zoomIdentity.translate(w / 2 - cx * k, h / 2 - cy * k).scale(k);
       const sel = d3.select(canvas);
       if (duration) sel.transition().duration(duration).call(zoom.transform, t); else sel.call(zoom.transform, t);
     }
@@ -485,7 +485,7 @@
       const { w, h } = cv.state;
       ctx.save();
       ctx.clearRect(0, 0, w, h);
-      ctx.translate(w / 2 + transform.x, h / 2 + transform.y);
+      ctx.translate(transform.x, transform.y); // same convention as d3.zoom: screen = t + k · graph
       ctx.scale(transform.k, transform.k);
       const k = transform.k;
       const nb = hovered ? adj.get(hovered.index) || new Set() : null;
@@ -502,8 +502,8 @@
       };
       drawHulls(k);
       // visible area in graph coordinates (+ margin) – everything outside is skipped (big graphs stay fluid)
-      const vx0 = (-w / 2 - transform.x) / k - 40, vx1 = (w / 2 - transform.x) / k + 40;
-      const vy0 = (-h / 2 - transform.y) / k - 40, vy1 = (h / 2 - transform.y) / k + 40;
+      const vx0 = -transform.x / k - 40, vx1 = (w - transform.x) / k + 40;
+      const vy0 = -transform.y / k - 40, vy1 = (h - transform.y) / k + 40;
       const inView = n => n.x >= vx0 && n.x <= vx1 && n.y >= vy0 && n.y <= vy1;
       const big = nodes.length > 2500;
       // links – normal ones first, highlighted ones on top
@@ -588,8 +588,8 @@
 
     const toGraph = ev => {
       const b = canvas.getBoundingClientRect();
-      const x = (ev.clientX - b.left - cv.state.w / 2 - transform.x) / transform.k;
-      const y = (ev.clientY - b.top - cv.state.h / 2 - transform.y) / transform.k;
+      const x = (ev.clientX - b.left - transform.x) / transform.k;
+      const y = (ev.clientY - b.top - transform.y) / transform.k;
       return [x, y];
     };
     const findNode = ev => {
@@ -608,6 +608,8 @@
       .filter(ev => (ev.type === 'wheel' || ev.type === 'dblclick' || !findNode(ev)) && !ev.button)
       .on('zoom', ev => { transform = ev.transform; requestDraw(); });
     d3.select(canvas).call(zoom).on('dblclick.zoom', null);
+    // start with the graph origin in the middle of the canvas (zooming then always happens around the mouse pointer)
+    d3.select(canvas).call(zoom.transform, d3.zoomIdentity.translate((cv.state.w || container.clientWidth) / 2, (cv.state.h || container.clientHeight) / 2));
     // zoom controls (+, −, fit, level) in the corner of every graph; keyboard +/−/0 while the mouse is over the graph
     const zoomBy = (f, at) => d3.select(canvas).transition().duration(220).call(zoom.scaleBy, f, at);
     const zctl = document.createElement('div');
@@ -670,7 +672,7 @@
       if (!clusters) return null;
       const r = canvas.getBoundingClientRect();
       const { w, h } = cv.state;
-      const x = (ev.clientX - r.left - w / 2 - transform.x) / transform.k, y = (ev.clientY - r.top - h / 2 - transform.y) / transform.k;
+      const x = (ev.clientX - r.left - transform.x) / transform.k, y = (ev.clientY - r.top - transform.y) / transform.k;
       for (const e of groups.values()) if (e.hull && d3.polygonContains(e.hull, [x, y])) return e;
       return null;
     };
