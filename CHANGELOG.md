@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.15.1
+- Packaging: declares `@types/vscode` 1.74.0 (matching `engines.vscode`) – the Marketplace analysis failed with "Value cannot be null. Parameter name: v1" without it
+
 ## 1.15.0
 - TODO pinboard: order TODOs by priority (High / Medium / Low columns) with drag & drop or arrow buttons, pin TODOs from the code, add notes; every code card links to its file and line
 - Stored in `.linecounter/pinboard.json` (shareable via git); cards follow their comment when lines move, and are marked "done?" when the comment is gone

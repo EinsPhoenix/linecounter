@@ -2,7 +2,7 @@
   "name": "linecounter",
   "displayName": "Line Counter & Code Statistics",
   "description": "Browse your workspace as a filterable tree, exclude files and folders with a click and generate full-screen code statistics with charts, git insights, fun facts and a file ranking.",
-  "version": "1.15.0",
+  "version": "1.15.1",
   "license": "MIT",
   "publisher": "einsphoenix",
   "icon": "media/icon.png",
@@ -471,7 +471,11 @@
         },
         "linecounter.train.detail": {
           "type": "string",
-          "enum": ["auto", "high", "low"],
+          "enum": [
+            "auto",
+            "high",
+            "low"
+          ],
           "enumDescriptions": [
             "Full detail for small projects, coarser rails, planets and turntables from 300 planets or 900 relations on",
             "Always full detail (can be slow on big projects)",
@@ -683,6 +687,7 @@
     "gate": "node bin/linecounter.js gate"
   },
   "devDependencies": {
+    "@types/vscode": "1.74.0",
     "@vscode/vsce": "^3.2.0",
     "d3": "^7.9.0",
     "html2canvas": "^1.4.1",
