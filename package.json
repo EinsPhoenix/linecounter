@@ -2,7 +2,7 @@
   "name": "locomotive",
   "displayName": "LOComotive – Code Statistics, Lines of Code & Complexity",
   "description": "Count lines of code and get full code statistics: lines per language, code complexity, git history and ownership, dependency licenses and vulnerabilities, a TODO pinboard, interactive import graphs and a 3D train through your dependencies.",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "license": "MIT",
   "publisher": "einsphoenix",
   "icon": "media/icon.png",

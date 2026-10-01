@@ -6,7 +6,7 @@
 
 > Früher „Line Counter“. Bestehende `.linecounter/`-Ordner werden weiter gelesen, siehe [Umstieg von Line Counter](#umstieg-von-line-counter).
 
-[![Release](https://img.shields.io/badge/release-v2.0.0-e0621b)](https://github.com/EinsPhoenix/linecounter/releases/latest)
+[![Release](https://img.shields.io/badge/release-v2.0.1-e0621b)](https://github.com/EinsPhoenix/linecounter/releases/latest)
 [![Download vsix](https://img.shields.io/badge/download-locomotive.vsix-2ea44f?logo=visualstudiocode&logoColor=white)](https://github.com/EinsPhoenix/linecounter/releases/latest/download/locomotive.vsix)
 [![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)](https://github.com/EinsPhoenix/linecounter/actions/workflows/ci.yml)
 [![Changelog](https://img.shields.io/badge/changelog-CHANGELOG.md-555)](CHANGELOG.md)
@@ -271,4 +271,10 @@ Seit Version 2.0.0 heißt die Extension **LOComotive** (ID `einsphoenix.locomoti
 2. **Projekt-Ordner:** Ein bestehender `.linecounter/` (Einstellungen, Presets, Filter, Pinboard, Verlauf) wird automatisch weiter benutzt, solange es keinen `.locomotive/` gibt. Zum Umstellen den Ordner einfach in `.locomotive` umbenennen. Schlüssel mit altem Präfix (`"linecounter.train.maxNodes"`) in der `settings.json` des Ordners funktionieren weiter.
 3. **VS-Code-Einstellungen:** Werte mit altem Präfix `linecounter.*` in den User-/Workspace-Settings werden weiter gelesen, solange der neue Schlüssel nicht gesetzt ist. Am besten trotzdem umbenennen (z. B. `linecounter.graphs.maxNodes` → `locomotive.graphs.maxNodes`), dann erscheinen sie auch im Settings-Editor.
 4. **CLI und MCP:** `bin/linecounter.js` heißt jetzt `bin/locomotive.js`, der MCP-Server `bin/locomotive-mcp.js`, die Umgebungsvariable `LOCOMOTIVE_ROOT`.
+
+## ☕ Unterstützen
+
+Wenn dir LOComotive hilft, freue ich mich über eine kleine Spende:
+
+[![PayPal](https://img.shields.io/badge/PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://www.paypal.com/donate/?hosted_button_id=JFUZJFFH5X97N)
 
