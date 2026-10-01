@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.14.2
+- README: overview table of all features with links to FEATURES, CI and MCP docs
+
 ## 1.14.1
 - Many git repositories: overview table (branch, commits, authors, last commit, 12-month activity, files, bus factor; sortable, inactive repos greyed out), combined commits-per-month chart, repository switcher instead of one long page, repository tag + filter in the file ranking, unique names for repos with the same folder name
 
