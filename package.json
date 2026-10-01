@@ -83,6 +83,11 @@
         "title": "Open Workspace Settings (.linecounter/settings.json)",
         "category": "Line Counter",
         "icon": "$(settings-gear)"
+      },
+      {
+        "command": "linecounter.runGate",
+        "title": "Run Quality Gate",
+        "category": "Line Counter"
       }
     ],
     "menus": {
@@ -530,6 +535,77 @@
             ]
           },
           "description": "Ordered layers from top to bottom; a layer may import lower layers but never higher ones, e.g. [{\"name\":\"ui\",\"pattern\":\"src/ui/**\"},{\"name\":\"services\",\"pattern\":\"src/services/**\"},{\"name\":\"db\",\"pattern\":\"src/db/**\"}]."
+        },
+        "linecounter.gate": {
+          "type": "object",
+          "default": {
+            "vulnerabilities": "critical",
+            "secrets": "high",
+            "problematicLicenses": true,
+            "unknownLicenses": false,
+            "architecture": "error",
+            "maxComplexity": null,
+            "minHealthScore": null,
+            "maxDuplicatedPercent": null,
+            "circularImports": false
+          },
+          "properties": {
+            "vulnerabilities": {
+              "type": "string",
+              "enum": [
+                "critical",
+                "high",
+                "medium",
+                "low",
+                "off"
+              ]
+            },
+            "secrets": {
+              "type": "string",
+              "enum": [
+                "critical",
+                "high",
+                "medium",
+                "off"
+              ]
+            },
+            "problematicLicenses": {
+              "type": "boolean"
+            },
+            "unknownLicenses": {
+              "type": "boolean"
+            },
+            "architecture": {
+              "type": "string",
+              "enum": [
+                "error",
+                "warning",
+                "off"
+              ]
+            },
+            "maxComplexity": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "minHealthScore": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "maxDuplicatedPercent": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "circularImports": {
+              "type": "boolean"
+            }
+          },
+          "description": "Quality gate (command \"Line Counter: Run Quality Gate\" and CLI \"node bin/linecounter.js gate\"): which findings make it fail."
         }
       }
     },
@@ -548,7 +624,8 @@
     "package": "vsce package --skip-license --out linecounter.vsix",
     "test": "node test/smoke.js && node test/graphs.test.js && node test/deps.test.js && node test/rustgo.test.js",
     "release": "node scripts/release.js",
-    "schema": "node scripts/schema.js"
+    "schema": "node scripts/schema.js",
+    "gate": "node bin/linecounter.js gate"
   },
   "devDependencies": {
     "@vscode/vsce": "^3.2.0",
@@ -556,5 +633,8 @@
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
     "three": "^0.159.0"
+  },
+  "bin": {
+    "linecounter": "bin/linecounter.js"
   }
 }

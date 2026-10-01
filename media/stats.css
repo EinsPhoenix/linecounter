@@ -625,3 +625,15 @@ body.print-light .dep-catseg { color: #111; }
 .arch-example { background: var(--card-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 12px; overflow: auto; }
 .arch-arrow { color: #ff2d6f; font-weight: 700; }
 .arch-tools { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.gate { border-radius: 10px; padding: 10px 14px; margin-bottom: 14px; border: 1px solid var(--border); background: var(--card); }
+.gate.pass { border-left: 4px solid #3ddc84; }
+.gate.fail { border-left: 4px solid #ff4d4f; background: rgba(255, 77, 79, .06); }
+.gate-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.gate-badge { font-weight: 800; font-size: 15px; }
+.gate.pass .gate-badge { color: #3ddc84; }
+.gate.fail .gate-badge { color: #ff6b6b; }
+.gate-checks { display: flex; flex-wrap: wrap; gap: 6px; }
+.gate-check { font-size: 12px; padding: 2px 10px; border-radius: 12px; background: var(--card-2); border: 1px solid var(--border); }
+.gate-check.ok { color: #8ee6b4; border-color: rgba(61, 220, 132, .45); }
+.gate-check.bad { color: #ff9a9a; border-color: rgba(255, 77, 79, .55); }
+.gate-check.off { opacity: .55; }
