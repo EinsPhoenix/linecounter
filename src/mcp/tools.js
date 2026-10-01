@@ -191,6 +191,18 @@ const TOOLS = [
     run(D, a) { const T = D.todos; if (!T) return { count: 0, todos: [] }; const list = T.items.filter(t => (!a.path || matches(t.path, a.path)) && (!a.tag || t.tag === String(a.tag).toUpperCase())); return { count: list.length, todos: list.slice(0, a.limit || 50).map(t => pick(t, ['tag', 'text', 'assignee', 'path', 'line', 'author', 'ageDays'])) }; },
   },
   {
+    name: 'todo_pinboard',
+    description: 'The team\'s TODO priorities from .linecounter/pinboard.json: TODO comments and notes ordered by priority column (e.g. High, Medium, Low) and rank. Use it to decide what to work on next. Code cards point to the current file and line; state "gone" means the comment is no longer in the code (probably done).',
+    inputSchema: { type: 'object', properties: { priority: { type: 'string', description: 'only this column, e.g. High' }, limit: { type: 'number', default: 50 } } },
+    run(D, a) {
+      const B = D.pinboard;
+      if (!B) return { count: 0, cards: [], hint: 'No pinboard – order TODOs on the statistics page (TODO tracker → Pinboard).' };
+      const list = require('../pinboard').prioritized(B).filter(c => !a.priority || c.priority.toLowerCase() === String(a.priority).toLowerCase());
+      return { file: B.file, columns: B.columns.map(c => c.title), count: list.length, unsorted: D.todos ? D.todos.items.filter(t => !t.pinnedBy).length : 0,
+        cards: list.slice(0, a.limit || 50).map(c => pick(c, ['priority', 'rank', 'kind', 'state', 'tag', 'text', 'path', 'line', 'author', 'ageDays', 'assignee', 'note'])) };
+    },
+  },
+  {
     name: 'architecture_violations',
     description: 'Imports that break the configured architecture rules / layers (linecounter.architecture.*).',
     inputSchema: { type: 'object', properties: {} },

@@ -154,6 +154,34 @@ Alle Grenzwerte (z. B. ab wie vielen Zeilen eine Datei „zu lang“ ist) stehen
   - Tabelle: älteste zuerst, filterbar nach Tag und Text; ein Klick springt zur Zeile.
 - **Abschalten:** `linecounter.todos.enabled`.
 
+### Pinboard – TODOs nach Priorität
+
+![Pinboard](images/pinboard.png)
+
+Oben im TODO-Bereich der Statistik-Seite liegt ein Pinboard mit den Spalten **High**, **Medium** und **Low**. Oben in einer Spalte steht das Wichtigste.
+
+- **Einsortieren.** Rechts stehen alle TODOs aus dem Code, die noch nicht auf dem Board sind („Unsorted from the code“, filterbar). Ziehe sie per Drag & Drop in eine Spalte oder klicke auf **H / M / L**.
+- **Reihenfolge ändern.** Karten per Drag & Drop verschieben oder über die Pfeile: ▲ ▼ ändert die Reihenfolge, ◀ ▶ die Spalte. ✕ nimmt ein TODO vom Board (zurück zu „Unsorted“) oder löscht eine Notiz.
+- **Sprung in den Code.** Jede Code-Karte zeigt `datei:zeile`; ein Klick öffnet die Datei an genau dieser Zeile.
+- **Notizen.** Über „+ Note“ legst du Aufgaben an, die nicht im Code stehen.
+- **Gespeichert in `.linecounter/pinboard.json`** im Workspace, direkt nach jeder Änderung. Die Datei kann ins Repo, dann teilt das Team dieselbe Reihenfolge.
+- **Robust gegen Code-Änderungen.** Karten werden über Datei, Tag und Text wiedererkannt, nicht über die Zeilennummer. Wandert ein TODO nach unten, zeigt die Karte die neue Zeile. Ist der Kommentar verschwunden, wird die Karte durchgestrichen („Not in the code anymore – done?“) und kann entfernt werden.
+- **Für LLM-Agenten.** Das MCP-Tool `todo_pinboard` liefert die Prioritäten, damit ein Agent weiß, woran als Nächstes gearbeitet werden soll.
+
+Aufbau der Datei:
+
+```json
+{
+  "columns": [{ "id": "high", "title": "High" }, { "id": "medium", "title": "Medium" }, { "id": "low", "title": "Low" }],
+  "cards": [
+    { "id": "todo-…", "column": "high", "kind": "code", "path": "src/parser.js", "tag": "TODO", "text": "handle empty input", "line": 42 },
+    { "id": "note-…", "column": "low", "kind": "note", "text": "Write release notes" }
+  ]
+}
+```
+
+Die Spalten lassen sich in der Datei umbenennen oder ergänzen (z. B. „Next sprint“).
+
 ## Ownership (Git)
 
 ![Wem gehört der Code](images/ownership.png)

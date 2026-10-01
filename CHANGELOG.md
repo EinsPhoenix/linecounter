@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.15.0
+- TODO pinboard: order TODOs by priority (High / Medium / Low columns) with drag & drop or arrow buttons, pin TODOs from the code, add notes; every code card links to its file and line
+- Stored in `.linecounter/pinboard.json` (shareable via git); cards follow their comment when lines move, and are marked "done?" when the comment is gone
+- MCP tool `todo_pinboard`: the team's priorities for LLM agents
+
 ## 1.14.6
 - 3D train: new settings `linecounter.train.maxLinks` (relations drawn as rails, default 2400) and `linecounter.train.detail` (`auto` / `high` / `low` level of detail)
 

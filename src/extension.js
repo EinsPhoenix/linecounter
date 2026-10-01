@@ -37,6 +37,7 @@ function activate(context) {
       refresh: () => lastRun && createStatistics(lastRun.roots, lastRun.selection, lastRun.options),
       deleted: () => provider.scan(),
       clearHistory: root => history.clear(context, root),
+      savePinboard: board => require('./pinboard').save(config.root, board),
     });
   };
 
