@@ -69,6 +69,7 @@ class StatsPanel {
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'architecture.js'))}"></script>
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'ownership.js'))}"></script>
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'todos.js'))}"></script>
+<script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'compare.js'))}"></script>
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'vendor', 'jspdf.umd.min.js'))}"></script>
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'vendor', 'html2canvas.min.js'))}"></script>
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'export.js'))}"></script>
@@ -121,7 +122,7 @@ window.acquireVsCodeApi = () => ({
   },
   getState() { return null; }, setState() {},
 });</script>
-${['vendor/d3.min.js', 'graphs.js', 'deps.js', 'health.js', 'trends.js', 'architecture.js', 'ownership.js', 'todos.js', 'vendor/jspdf.umd.min.js', 'vendor/html2canvas.min.js', 'export.js', 'vendor/three.min.js', 'train3d.js', 'stats.js'].map(f => `<script>${safe(read(f))}</script>`).join('\n')}
+${['vendor/d3.min.js', 'graphs.js', 'deps.js', 'health.js', 'trends.js', 'architecture.js', 'ownership.js', 'todos.js', 'compare.js', 'vendor/jspdf.umd.min.js', 'vendor/html2canvas.min.js', 'export.js', 'vendor/three.min.js', 'train3d.js', 'stats.js'].map(f => `<script>${safe(read(f))}</script>`).join('\n')}
 </body></html>`;
     await fs.promises.writeFile(uri.fsPath, html, 'utf8');
     const open = await vscode.window.showInformationMessage(`HTML report saved to ${uri.fsPath}`, 'Open in browser');
@@ -138,6 +139,12 @@ ${['vendor/d3.min.js', 'graphs.js', 'deps.js', 'health.js', 'trends.js', 'archit
       case 'ready':
         this.update(this.data);
         break;
+      case 'compare': {
+        const { compareBranches } = require('./compare');
+        const result = await compareBranches(msg.root, msg.base);
+        this.panel.webview.postMessage({ type: 'compareResult', result });
+        break;
+      }
       case 'openSettings':
         await vscode.commands.executeCommand('linecounter.openWorkspaceSettings');
         break;
