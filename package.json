@@ -429,6 +429,24 @@
           "type": "boolean",
           "default": false,
           "description": "Also store the history in .linecounter/history.json so that it can be committed and shared with the team."
+        },
+        "linecounter.graphs.maxNodes": {
+          "type": "number",
+          "default": 20000,
+          "minimum": 10,
+          "description": "Maximum number of nodes in the 2D graphs (import graph, structure graph). The most connected files are kept, cycles and chains always."
+        },
+        "linecounter.graphs.maxLinks": {
+          "type": "number",
+          "default": 40000,
+          "minimum": 10,
+          "description": "Maximum number of relations (edges) drawn in the import graph. Circular imports are always kept."
+        },
+        "linecounter.train.maxNodes": {
+          "type": "number",
+          "default": 800,
+          "minimum": 20,
+          "description": "Maximum number of planets in the 3D train view (the 3D layout gets slow with thousands of nodes). The most connected files are kept."
         }
       }
     },

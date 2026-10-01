@@ -152,6 +152,16 @@ Alle Grenzwerte (z. B. ab wie vielen Zeilen eine Datei „zu lang“ ist) stehen
   - **ƒ Functions.** Funktionen werden zu Rauten. Sie sind mit ihrer Datei verbunden und mit den Funktionen, die sie aufrufen; Aufrufe zählen nur entlang echter Imports, so bleibt die Zuordnung verlässlich.
   - **Suche.** Beim Tippen werden alle Treffer (Dateien und Funktionen) markiert, die Ansicht zoomt hin, und Enter wählt den Treffer aus.
 - **Structure.** Ordner und Dateien als Graph. Die Suche klappt automatisch die Ordner auf, in denen Treffer liegen.
+- **Zoom.**
+  - Mausrad und Touchpad zoomen fein zum Mauszeiger; Pinch-Zoom geht schneller.
+  - Rechts unten gibt es **+ / − / ⤢** und die aktuelle Zoomstufe.
+  - Tastatur über dem Graphen: **+**, **−** und **0** (alles einpassen).
+  - Doppelklick auf eine freie Fläche zoomt hinein, Shift + Doppelklick heraus.
+  - Der Zoombereich reicht von 2 % bis 4000 %.
+- **Große Graphen.**
+  - Die Limits sind einstellbar: `linecounter.graphs.maxNodes` (Standard **20.000**) und `linecounter.graphs.maxLinks` (Standard **40.000**). Zyklen werden immer gezeigt.
+  - Ab etwa 2.500 Knoten wird nur noch der sichtbare Ausschnitt gezeichnet, Beschriftungen erscheinen beim Hineinzoomen, und ab 4.000 Knoten wird das Layout einmal berechnet statt animiert. Ein Test mit 20.000 Knoten und 40.000 Relationen lief flüssig.
+  - Der 3D-Zug hat ein eigenes Limit: `linecounter.train.maxNodes`, Standard 800, weil das 3D-Layout quadratisch wächst.
 - **Bewegung.** *Wiggle*, *Calm* oder *Still*, einstellbar über `linecounter.graphs.motion`.
 
 ---
