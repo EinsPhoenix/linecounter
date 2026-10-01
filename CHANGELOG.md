@@ -1,5 +1,8 @@
 # Changelog
 
+## 1.15.2
+- New display name "Code Statistics – Lines of Code, Complexity & Git Insights" and a description and tags that are found when searching for code, statistics, lines, LOC, complexity … (the extension id `linecounter`, settings and commands stay the same)
+
 ## 1.15.1
 - Packaging: declares `@types/vscode` 1.74.0 (matching `engines.vscode`) – the Marketplace analysis failed with "Value cannot be null. Parameter name: v1" without it
 
