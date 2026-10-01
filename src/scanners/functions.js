@@ -114,7 +114,8 @@ function extractFunctions(text, langName, max = 400) {
       if (kind === 'py') { indent = m[1].replace(/\t/g, '    ').length; name = m[2]; } else name = m[1];
       break;
     }
-    if (!name || NOT_A_NAME.has(name)) continue;
+    // keyword-less patterns (JS methods, C-like) could match "if (…) {" – languages with fn / func / def don't need the filter
+    if (!name || ((kind === 'js' || kind === 'cish') && NOT_A_NAME.has(name))) continue;
     let end = i;
     if (kind === 'py') {
       // body = following lines indented deeper than the def (blank lines don't end it)
