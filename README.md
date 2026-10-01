@@ -4,6 +4,21 @@ VS-Code-Extension, die alle Dateien und Ordner des Workspaces rekursiv als Baum 
 
 **Ausführliche Beschreibung aller Funktionen, was du erwarten kannst und wo die Grenzen liegen: [`docs/FEATURES.md`](docs/FEATURES.md)**
 
+## Auf einen Blick
+
+| Bereich | Was du bekommst | Mehr |
+|---|---|---|
+| Statistik | Zeilen, Sprachen, Treemap, Hall of Fame, Rants, Fun Facts, Rangliste | [FEATURES](docs/FEATURES.md#statistik-seite) |
+| Trends | Kennzahlen jedes Laufs als Verlauf, Änderungen seit dem letzten Lauf | [FEATURES](docs/FEATURES.md#trends) |
+| Code health | Komplexität pro Funktion, Risiko-Hotspots (Churn × Komplexität), ungenutzte Funktionen, Duplikate, Secrets | [FEATURES](docs/FEATURES.md#code-health) |
+| Dependencies | Lizenzen aller Pakete (npm, PyPI, crates.io, Go), Schwachstellen (OSV), ungenutzte und nicht deklarierte Pakete | [FEATURES](docs/FEATURES.md#dependencies-lizenzen-und-schwachstellen) |
+| Architecture | Regeln wie „`ui/` darf nicht `db/` importieren“ und Schichten; Verstöße rot im Graphen | [FEATURES](docs/FEATURES.md#architecture) |
+| Git | mehrere Repos mit Übersicht, Ownership und Bus-Factor, verwaiste Dateien, TODO-Tracker mit Alter, Branch-Vergleich | [FEATURES](docs/FEATURES.md#branch-comparison) |
+| Graphen | Importgraph mit Zyklen, Ketten, Funktionen, Ordner-Clustern und Suche; bis 20.000 Knoten; 3D-Zug durch das Projekt | [FEATURES](docs/FEATURES.md#graphen-2d) |
+| Quality Gate | gleiche Checks in VS Code und im CI (`node bin/linecounter.js gate`, Exit-Code 1) | [CI.md](docs/CI.md) |
+| MCP-Server | 21 Tools für LLM-Agenten (Copilot, Claude Code …): Impact einer Änderung, Risiko, Schwachstellen, Lizenzen … | [MCP.md](docs/MCP.md) |
+| Filter & Presets | eigene Filter wie `*/data`, Presets und Einstellungen in `.linecounter/`, Projekt-Root | [FEATURES](docs/FEATURES.md#sidebar-filter-und-presets) |
+
 ## Projekt-Root wählen
 
 Ist in VS Code ein Sammelordner geöffnet (z. B. `D:\CodingThings\Graphoenix`) und liegen die eigentlichen Projekte in `Graphoenix\facgraph`, klickst du in der Sidebar auf einem Ordner auf das **Ziel-Symbol**. Dieser Ordner wird zum Projekt-Root: Die Statistik, alle Pfade, Ordnerfarben, Cluster und Planeten beziehen sich dann auf ihn. ↑ geht eine Ebene höher, ✕ setzt wieder auf den ganzen Workspace. Der Root wird im Workspace und in Presets gespeichert.
