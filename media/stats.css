@@ -637,3 +637,6 @@ body.print-light .dep-catseg { color: #111; }
 .gate-check.ok { color: #8ee6b4; border-color: rgba(61, 220, 132, .45); }
 .gate-check.bad { color: #ff9a9a; border-color: rgba(255, 77, 79, .55); }
 .gate-check.off { opacity: .55; }
+.own-bar { display: inline-flex; width: 160px; height: 10px; border-radius: 5px; overflow: hidden; vertical-align: middle; gap: 1px; background: var(--card-2); }
+.own-bar span { display: block; height: 100%; }
+.own-top { margin-left: 8px; font-size: 11.5px; }

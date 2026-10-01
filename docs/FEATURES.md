@@ -113,6 +113,14 @@ Alle Grenzwerte (z. B. ab wie vielen Zeilen eine Datei „zu lang“ ist) stehen
   - *Show in import graph* markiert die verletzenden Kanten pink-rot im Graphen.
   - Verstöße erzeugen einen Rant und können das Quality Gate scheitern lassen.
 
+## Ownership (Git)
+
+- **Who owns the code.** Pro Datei zählt als Hauptautor, wer die meisten Commits auf ihr hat. Gleiche Namen in anderer Schreibweise werden zusammengefasst, Bots (dependabot, renovate …) ignoriert. Daraus entsteht pro Person die Summe der Zeilen.
+- **Ownership pro Ordner.** Ein farbiger Balken zeigt die Anteile der Autoren, dazu den Bus-Factor (wie viele Personen die Hälfte geschrieben haben). Ordner mit Bus-Factor 1 sind rot.
+- **Stale files.** Dateien ohne Commit seit `linecounter.ownership.staleDays` Tagen (Standard 365). Werden sie noch gebraucht?
+- **Knowledge at risk.** Dateien, die zu mindestens 60 % von jemandem stammen, der seit mehr als 6 Monaten nicht mehr committet.
+- **Alter der letzten Änderung** pro Datei als Diagramm, dazu Rants.
+
 ## Code health
 
 - **Note A–F und Score 0–100.**

@@ -69,7 +69,7 @@ async function repoStats(root, maxCommits, rantOpts = {}) {
     git(root, ['branch', '-a', '--format=%(refname:short)']),
     git(root, ['tag']),
     git(root, ['log', `-n${maxCommits}`, '--no-color', `--format=${REC}%H${SEP}%an${SEP}%ae${SEP}%at${SEP}%P${SEP}%s`, '--shortstat']),
-    git(root, ['log', `-n${maxCommits}`, '--no-color', '--no-merges', '--format=', '--name-only']),
+    git(root, ['log', `-n${maxCommits}`, '--no-color', '--no-merges', `--format=${REC}%an${SEP}%at`, '--name-only']),
   ]);
   if (logOut === null) return null;
 
@@ -105,11 +105,36 @@ async function repoStats(root, maxCommits, rantOpts = {}) {
 
   // Hotspots
   const churn = new Map();
+  const history = new Map(); // file -> { authors: { name: commits }, first, last }
+  const canon = new Map(); // "tj holowaychuk" -> first spelling seen
+  const isBot = a => /\[bot\]|dependabot|renovate|github-actions|greenkeeper/i.test(a);
   if (nameOut) {
-    for (const f of nameOut.split('\n')) {
-      if (!f) continue;
-      churn.set(f, (churn.get(f) || 0) + 1);
+    for (const rec of nameOut.split(REC)) {
+      if (!rec.trim()) continue;
+      const lines = rec.split('\n');
+      const [rawAuthor, at] = lines[0].split(SEP);
+      const time = Number(at) * 1000;
+      const key = String(rawAuthor || '').trim().toLowerCase();
+      if (!canon.has(key)) canon.set(key, String(rawAuthor || '').trim());
+      const author = canon.get(key);
+      for (const f of lines.slice(1)) {
+        if (!f) continue;
+        churn.set(f, (churn.get(f) || 0) + 1);
+        if (isBot(author)) continue; // bots don't own code
+        let h = history.get(f);
+        if (!h) history.set(f, (h = { authors: {}, first: time, last: time }));
+        h.authors[author] = (h.authors[author] || 0) + 1;
+        if (time < h.first) h.first = time;
+        if (time > h.last) h.last = time;
+      }
     }
+  }
+  // per file history (used for ownership / stale files, removed before the data goes to the page)
+  const fileHistory = [...history.entries()].map(([file, h]) => [path.join(root, file), h]);
+  const lastByAuthor = {};
+  for (const c of commits) {
+    const a = canon.get(String(c.author || '').trim().toLowerCase()) || c.author;
+    if (!lastByAuthor[a] || c.time > lastByAuthor[a]) lastByAuthor[a] = c.time;
   }
   const hotspots = [...churn.entries()].sort((a, b) => b[1] - a[1]).slice(0, 25)
     .map(([file, count]) => ({ file, abs: path.join(root, file), count }));
@@ -197,7 +222,7 @@ async function repoStats(root, maxCommits, rantOpts = {}) {
     insertions: commits.reduce((s, c) => s + c.ins, 0),
     deletions: commits.reduce((s, c) => s + c.del, 0),
     authors: authors.slice(0, 30), authorCount: authors.length,
-    hotspots, churnAll, weekdayHour, months: monthList,
+    hotspots, churnAll, fileHistory, lastByAuthor, weekdayHour, months: monthList,
     streak: best, streakEnd: bestEnd, busiestDay,
     activeDays: days.size,
     topWords, night, weekend, fixes, lazy, busFactor: bus,

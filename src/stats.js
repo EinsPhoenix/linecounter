@@ -3,6 +3,7 @@
 const { buildWordGraph, buildImportGraph, buildFunctionGraph } = require('./graphs');
 const { buildHealth } = require('./scanners/health');
 const { checkArchitecture } = require('./scanners/architecture');
+const { buildOwnership } = require('./scanners/ownership');
 
 /** Aggregates per-file analysis results into the data model shown on the statistics page. */
 function aggregate(files, meta) {
@@ -92,8 +93,10 @@ function aggregate(files, meta) {
     const bad = new Set(architecture.violations.map(v => v.from.abs + '\n' + v.to.abs));
     for (const l of importGraph.links) if (bad.has(importGraph.nodes[l.s].abs + '\n' + importGraph.nodes[l.t].abs)) l.viol = true;
   }
+  const ownership = buildOwnership(text, meta.repos, { staleDays: meta.staleDays });
   const churn = new Map();
   for (const r of meta.repos || []) {
+    delete r.fileHistory; delete r.lastByAuthor; // large – summarised in `ownership`
     for (const [abs, c] of r.churnAll || []) churn.set(abs, (churn.get(abs) || 0) + c);
     delete r.churnAll; // large – not needed on the page
   }
@@ -101,7 +104,7 @@ function aggregate(files, meta) {
   return {
     generated: now, ...meta, multiRoot,
     totals, languages, extensions, folders, histogram, identifiers, ages, table,
-    wordGraph: buildWordGraph(text), importGraph, architecture,
+    wordGraph: buildWordGraph(text), importGraph, architecture, ownership,
     functionGraph: meta.maxFunctions === 0 ? null : buildFunctionGraph(text, fileEdges, graphFiles, meta.maxFunctions || 600),
     health: hopts.enabled === false ? null : buildHealth(text, hopts),
   };

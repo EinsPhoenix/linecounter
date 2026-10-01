@@ -70,6 +70,7 @@ async function runPipeline(config, roots, selection, options = {}, progress = { 
     maxFunctions: config.get('graphs.maxFunctions', 600),
     graphLimits: { maxNodes: Math.max(10, config.get('graphs.maxNodes', 20000)), maxLinks: Math.max(10, config.get('graphs.maxLinks', 40000)), train3d: Math.max(20, config.get('train.maxNodes', 800)) },
     health: healthOptions(config),
+    staleDays: Math.max(30, config.get('ownership.staleDays', 365)),
     architecture: { rules: config.get('architecture.rules', []), layers: config.get('architecture.layers', []) },
     rant: {
       enabled: config.get('rant.enabled', true),

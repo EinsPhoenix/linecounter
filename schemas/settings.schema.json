@@ -963,6 +963,18 @@
         }
       },
       "description": "Quality gate (command \"Line Counter: Run Quality Gate\" and CLI \"node bin/linecounter.js gate\"): which findings make it fail."
+    },
+    "ownership.staleDays": {
+      "type": "number",
+      "default": 365,
+      "minimum": 30,
+      "description": "Files without a commit for this many days count as stale (Ownership section)."
+    },
+    "linecounter.ownership.staleDays": {
+      "type": "number",
+      "default": 365,
+      "minimum": 30,
+      "description": "Files without a commit for this many days count as stale (Ownership section)."
     }
   }
 }
