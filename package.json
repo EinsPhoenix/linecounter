@@ -2,7 +2,7 @@
   "name": "linecounter",
   "displayName": "Line Counter & Code Statistics",
   "description": "Browse your workspace as a filterable tree, exclude files and folders with a click and generate full-screen code statistics with charts, git insights, fun facts and a file ranking.",
-  "version": "1.14.5",
+  "version": "1.14.6",
   "license": "MIT",
   "publisher": "einsphoenix",
   "icon": "media/icon.png",
@@ -462,6 +462,23 @@
           "default": 800,
           "minimum": 20,
           "description": "Maximum number of planets in the 3D train view (the 3D layout gets slow with thousands of nodes). The most connected files are kept."
+        },
+        "linecounter.train.maxLinks": {
+          "type": "number",
+          "default": 2400,
+          "minimum": 50,
+          "description": "Maximum number of relations drawn as rails in the 3D train view. Circular imports, dependency chains and relations to vulnerable libraries are kept first, then the most connected ones. Every rail costs GPU memory – lower it if the 3D view stays grey or slow."
+        },
+        "linecounter.train.detail": {
+          "type": "string",
+          "enum": ["auto", "high", "low"],
+          "enumDescriptions": [
+            "Full detail for small projects, coarser rails, planets and turntables from 300 planets or 900 relations on",
+            "Always full detail (can be slow on big projects)",
+            "Always reduced detail (fastest, for weak GPUs)"
+          ],
+          "default": "auto",
+          "description": "Level of detail of the 3D train view."
         },
         "linecounter.customFilters": {
           "type": "array",
