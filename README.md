@@ -4,6 +4,10 @@ VS-Code-Extension, die alle Dateien und Ordner des Workspaces rekursiv als Baum 
 
 **Ausführliche Beschreibung aller Funktionen, was du erwarten kannst und wo die Grenzen liegen: [`docs/FEATURES.md`](docs/FEATURES.md)**
 
+## Projekt-Root wählen
+
+Ist in VS Code ein Sammelordner geöffnet (z. B. `D:\CodingThings\Graphoenix`) und liegen die eigentlichen Projekte in `Graphoenix\facgraph`, klickst du in der Sidebar auf einem Ordner auf das **Ziel-Symbol**. Dieser Ordner wird zum Projekt-Root: Die Statistik, alle Pfade, Ordnerfarben, Cluster und Planeten beziehen sich dann auf ihn. ↑ geht eine Ebene höher, ✕ setzt wieder auf den ganzen Workspace. Der Root wird im Workspace und in Presets gespeichert.
+
 ## Sprachunterstützung (Kurzfassung)
 
 - **Zeilen zählen:** 74 Sprachen und Dateitypen

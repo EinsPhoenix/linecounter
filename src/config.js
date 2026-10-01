@@ -67,7 +67,7 @@ class LineCounterConfig {
 
   async savePreset(name, state) {
     this.presetStore.presets[name] = {
-      presets: state.presets, excluded: state.excluded, included: state.included, hiddenExt: state.hiddenExt, libraries: !!state.libraries,
+      presets: state.presets, excluded: state.excluded, included: state.included, hiddenExt: state.hiddenExt, libraries: !!state.libraries, base: state.base || null,
       savedAt: new Date().toISOString(),
     };
     this.presetStore.active = name;

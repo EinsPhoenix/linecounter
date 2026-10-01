@@ -44,6 +44,13 @@ Die tieferen Analysen unterscheiden sich je nach Sprache:
 - **Vordefinierte Filter.** Schließen typische Ordner aus, etwa `node_modules`, `venv`, `.git`, Build-Ordner und Caches.
 - **`.gitignore`** wird optional beachtet.
 - **Dateiendungen.** Alle erkannten Endungen lassen sich einzeln ein- und ausblenden.
+- **Projekt-Root.** Liegen die eigentlichen Projekte tiefer als der in VS Code geöffnete Ordner (z. B. `Graphoenix` ist geöffnet, die Projekte liegen in `Graphoenix/facgraph/…`), klickst du auf einem Ordner auf das Ziel-Symbol. Dann gilt:
+  - Der Baum zeigt nur noch diesen Ordner.
+  - Die Statistik zählt nur seine Dateien.
+  - Alle Pfade, Ordner-Diagramme, Ordnerfarben, Cluster und Planeten beziehen sich auf ihn. Die Unterordner werden so zu eigenen Gruppen, statt alles unter `facgraph/` zusammenzufassen.
+  - Die Leiste *Project root* zeigt den Pfad; ↑ geht eine Ebene höher, ✕ analysiert wieder den ganzen Workspace.
+  - Der Root wird im Workspace und in Presets gespeichert.
+  - Git-Repos werden weiterhin erkannt, auch wenn sie höher liegen.
 - **Presets.** Ausgeschlossene Dateien, Filter und Endungen speicherst du als benanntes Preset in `.linecounter/presets.json`. Die Datei kann ins Repo, damit das ganze Team dieselben Einstellungen nutzt.
 - **Bibliotheken als Graph-Knoten.** Externe Pakete erscheinen dann im Graphen und im 3D-Zug. In Statistiken zählen sie nicht.
 

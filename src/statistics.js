@@ -21,6 +21,20 @@ async function computeStatistics(config, roots, selection, options = {}) {
     title: 'Line Counter',
     cancellable: true,
   }, async (progress, token) => {
+    // optional project root: a folder inside the workspace (e.g. Graphoenix/facgraph) – paths, folders and
+    // the workspace name are then relative to it
+    const base = options.base && roots[options.base.r] && options.base.p ? options.base : null;
+    if (base) {
+      const parent = roots[base.r];
+      const basePath = path.join(parent.path, ...base.p.split('/'));
+      const prefix = base.p + '/';
+      selection = selection.filter(s => s.r === base.r && s.p.startsWith(prefix));
+      roots = roots.map((r, i) => (i === base.r ? {
+        ...r, name: path.basename(basePath), path: basePath,
+        gitRepos: (r.gitRepos || []).filter(g => path.resolve(g).startsWith(basePath) || basePath.startsWith(path.resolve(g))),
+      } : r));
+      selection = selection.map(s => ({ r: s.r, p: s.p.slice(prefix.length) }));
+    }
     const files = selection.map(s => {
       const root = roots[s.r];
       return { abs: path.join(root.path, ...s.p.split('/')), rel: s.p, root: root.path, rootName: root.name };
@@ -53,7 +67,8 @@ async function computeStatistics(config, roots, selection, options = {}) {
     return aggregate(results, {
       dependencies,
       includeLibraries: !!options.libraries,
-      workspace: vscode.workspace.name || roots.map(r => r.name).join(', '),
+      workspace: base ? roots[base.r].name : vscode.workspace.name || roots.map(r => r.name).join(', '),
+      projectRoot: base ? `${base.p}` : null,
       repos,
       graphMotion: config.get('graphs.motion', 'auto'),
       trainKeys: config.get('train.keys', {}),

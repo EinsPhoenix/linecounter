@@ -182,7 +182,7 @@
       for (let i = 1; i <= 8; i++) { const t = i / 8; pts.push(new THREE.Vector2(rad * (1 - 0.35 * t * t), len / 2 + tailLen * t)); }
       pts.push(new THREE.Vector2(0.001, len / 2 + tailLen));
       const g = new THREE.LatheGeometry(pts, 40);
-      g.rotateX(-Math.PI / 2); // lathe axis y -> z (nose at -z)
+      g.rotateX(Math.PI / 2); // lathe axis y -> z: profile y = -len/2 - noseLen becomes z = -…  (nose at -z, the travel direction)
       g.scale(1, 0.78, 1);
       return new THREE.Mesh(g, mat);
     };
@@ -194,12 +194,23 @@
       for (const z of [-len / 3, len / 3]) { const g = glowSprite(3.4, 0.5); g.position.set(0, -1.25, z); group.add(g); }
     };
 
+    /** radius of the loco body at a given z (same profile as body(4.2, 1.35, 3.6, 1.4)) – keeps lights on the surface */
+    const locoR = z => {
+      const len = 4.2, rad = 1.35, nose = 3.6, tail = 1.4;
+      if (z < -len / 2) { const t = Math.max(0, (z + len / 2 + nose) / nose); return rad * Math.sin(t * Math.PI / 2) ** 0.55; }
+      if (z <= len / 2) return rad;
+      const t = Math.min(1, (z - len / 2) / tail);
+      return rad * (1 - 0.35 * t * t);
+    };
     // ---- locomotive ----
     const loco = new THREE.Group();
     const lb = new THREE.Group(); loco.add(lb); bobs.push(lb);
     lb.add(body(4.2, 1.35, 3.6, 1.4, hull));
     // orange nose cap and a chrome collar
-    const cap = body(0.01, 1.36, 1.6, 0.01, accent); cap.position.z = -2.1 - 0.02; cap.scale.multiplyScalar(1.01); lb.add(cap);
+    // orange nose cap: same profile, slightly larger, only the tip part
+    const cap = body(0.01, 1.36, 3.6, 0.01, accent); cap.scale.set(1.012, 1.012, 1.0); cap.position.z = -2.1 + 0.005;
+    cap.geometry.translate(0, 0, 0);
+    lb.add(cap);
     const collar = new THREE.Mesh(new THREE.TorusGeometry(1.34, 0.06, 8, 40), chrome); collar.scale.set(1, 0.78, 1); collar.position.z = -2.05; lb.add(collar);
     // cockpit canopy
     const canopy = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 16, 0, Math.PI * 2, 0, Math.PI / 2), glass);
@@ -207,10 +218,18 @@
     const frame = new THREE.Mesh(new THREE.TorusGeometry(1, 0.035, 6, 40, Math.PI), chrome); frame.scale.set(0.9, 0.62, 1); frame.position.set(0, 0.55, -1.7); frame.rotation.y = Math.PI / 2; frame.scale.set(2.1, 0.62, 0.9); lb.add(frame);
     // light lines along the sides and a sweeping line over the nose
     for (const x of [-1.33, 1.33]) { lb.add(strip(x, 0.02, -2.2, 2.4, neon)); lb.add(strip(x * 0.985, -0.28, -1.2, 2.1, neonWhite, 0.03)); }
-    const noseLine = new THREE.Mesh(new THREE.TorusGeometry(1.1, 0.04, 6, 40, Math.PI), neon); noseLine.rotation.set(Math.PI / 2, 0, 0); noseLine.scale.set(1, 1, 0.78); noseLine.position.set(0, 0, -3.4); lb.add(noseLine);
-    // headlights: two slit lights in the nose
-    for (const x of [-0.55, 0.55]) { const h = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.1), neonWhite); h.position.set(x, -0.15, -4.95 + Math.abs(x) * 0.7); h.rotation.y = -x * 0.5; lb.add(h); }
-    const lamp = glowSprite(2.6, 0.9, 0xfff1c8); lamp.position.set(0, -0.1, -5.9); lb.add(lamp);
+    // light ring around the nose, sitting exactly on the hull
+    const ringZ = -3.3, ringR = locoR(ringZ) + 0.02;
+    const noseLine = new THREE.Mesh(new THREE.TorusGeometry(ringR, 0.04, 6, 48), neon); noseLine.scale.set(1, 0.78, 1); noseLine.position.set(0, 0, ringZ); lb.add(noseLine);
+    // headlights: two flat lenses on the nose surface
+    const hz = -4.9, hr = locoR(hz);
+    for (const x of [-1, 1]) {
+      const h = new THREE.Mesh(new THREE.SphereGeometry(1, 16, 10), neonWhite);
+      h.scale.set(0.28, 0.1, 0.32);
+      h.position.set(x * hr * 0.78, -0.12, hz);
+      lb.add(h);
+    }
+    const lamp = glowSprite(1.8, 0.85, 0xfff1c8); lamp.position.set(0, -0.12, -5.62); lb.add(lamp);
     // dorsal fin with a light at the tip, side winglets
     const finShape = new THREE.Shape(); finShape.moveTo(0, 0); finShape.lineTo(1.9, 0); finShape.lineTo(1.4, 1.1); finShape.lineTo(0.9, 1.1); finShape.closePath();
     const fin = new THREE.Mesh(new THREE.ExtrudeGeometry(finShape, { depth: 0.1, bevelEnabled: true, bevelSize: 0.03, bevelThickness: 0.03, bevelSegments: 2 }), accent);

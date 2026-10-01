@@ -1230,7 +1230,7 @@
       <header class="page-head">
         <div>
           <h1>${icon('chart', 'h1-ic')} Code Statistics <span class="ws">${esc(D.workspace || '')}</span></h1>
-          <div class="muted">${fmt(t.files)} files · ${fmt(t.lines)} lines · generated ${new Date(D.generated).toLocaleString()}</div>
+          <div class="muted">${D.projectRoot ? `project root <b>${esc(D.projectRoot)}</b> · ` : ''}${fmt(t.files)} files · ${fmt(t.lines)} lines · generated ${new Date(D.generated).toLocaleString()}</div>
         </div>
         <nav class="actions">
           <button class="btn" data-act="refresh" title="Recount with the same selection">${icon('refresh')} Refresh</button>
