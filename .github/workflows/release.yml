@@ -10,7 +10,13 @@ on:
       - package.json
       - CHANGELOG.md
       - 'releases/**'
+      - .github/release-features.md
   workflow_dispatch:
+    inputs:
+      update:
+        description: Also rewrite the notes of existing releases
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -38,4 +44,4 @@ jobs:
       - name: Create missing releases
         env:
           GH_TOKEN: ${{ github.token }}
-        run: node scripts/publish-releases.js
+        run: node scripts/publish-releases.js ${{ inputs.update && '--update' || '' }}
