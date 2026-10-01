@@ -6,7 +6,7 @@ const path = require('path');
 /**
  * Snapshots of the key numbers of every statistics run – the page draws trends from them
  * ("lines over time", "health score", "vulnerabilities" …) and shows what changed since the last run.
- * Stored per workspace (VS Code workspace state); optionally also in .linecounter/history.json (shareable).
+ * Stored per workspace (VS Code workspace state); optionally also in .locomotive/history.json (shareable).
  */
 const MAX = 200;
 
@@ -29,7 +29,7 @@ function snapshotOf(d) {
 
 /** Adds the snapshot of `data` and returns the history (oldest first). Runs within 10 minutes replace the last one. */
 async function record(context, config, data) {
-  const key = 'linecounter.history:' + (data.projectRoot || '');
+  const key = 'locomotive.history:' + (data.projectRoot || '');
   let list = context.workspaceState.get(key) || [];
   const file = config.dir ? path.join(config.dir, 'history.json') : null;
   const toFile = config.get('history.saveToFile', false);
@@ -58,7 +58,7 @@ async function record(context, config, data) {
 }
 
 async function clear(context, projectRoot) {
-  await context.workspaceState.update('linecounter.history:' + (projectRoot || ''), []);
+  await context.workspaceState.update('locomotive.history:' + (projectRoot || ''), []);
 }
 
 module.exports = { record, clear, snapshotOf };

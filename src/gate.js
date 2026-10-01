@@ -4,7 +4,7 @@
  * Quality gate: turns the statistics data into pass / fail checks (used by the CLI for CI pipelines,
  * the "Run Quality Gate" command and the card on the statistics page).
  *
- * linecounter.gate = {
+ * locomotive.gate = {
  *   vulnerabilities: "critical" | "high" | "medium" | "low" | "off",   // fail at this severity or worse
  *   secrets: "critical" | "high" | "medium" | "off",
  *   problematicLicenses: true,
@@ -56,7 +56,7 @@ function evaluateGate(D, cfg = {}) {
 }
 
 /** Markdown summary (e.g. for $GITHUB_STEP_SUMMARY or a PR comment) */
-function gateMarkdown(res, title = 'Line Counter quality gate') {
+function gateMarkdown(res, title = 'LOComotive quality gate') {
   const lines = [`## ${res.passed ? '✅' : '❌'} ${title}: ${res.passed ? 'passed' : 'FAILED'}`, '', '| Check | Result | Details |', '|---|---|---|'];
   for (const c of res.checks) lines.push(`| ${c.label} | ${!c.enabled ? '➖ off' : c.passed ? '✅ pass' : '❌ fail'} | ${String(c.detail).replace(/\|/g, '\\|')}${c.warning ? ' ⚠️ ' + c.warning : ''} |`);
   const failed = res.checks.filter(c => c.enabled && !c.passed);

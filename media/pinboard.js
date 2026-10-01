@@ -1,5 +1,5 @@
 // @ts-check
-// "Pinboard": TODOs and notes ordered by priority (drag & drop), stored in .linecounter/pinboard.json.
+// "Pinboard": TODOs and notes ordered by priority (drag & drop), stored in .locomotive/pinboard.json.
 (function () {
   const TAG_COLOR = { TODO: '#f7ae62', FIXME: '#e0621b', HACK: '#ff4d4f', XXX: '#b8480f', BUG: '#ff4d4f', NOTE: '#7aa2d6' };
   const state = { q: '', limit: 60, saveTimer: 0, status: '', installed: false, drag: null };
@@ -76,7 +76,7 @@
     const B = board(D);
     const gone = B.cards.filter(c => c.state === 'gone').length;
     return ui.card('Pinboard – TODOs by priority', `<div id="pinboard">${boardHtml(ui, D)}</div>`, {
-      sub: `drag cards to order them · top = most important · saved in ${ui.esc(B.file || '.linecounter/pinboard.json')}${gone ? ` · ${gone} done?` : ''} <span id="pb-status" class="muted">${ui.esc(state.status)}</span>`,
+      sub: `drag cards to order them · top = most important · saved in ${ui.esc(B.file || '.locomotive/pinboard.json')}${gone ? ` · ${gone} done?` : ''} <span id="pb-status" class="muted">${ui.esc(state.status)}</span>`,
     });
   }
 

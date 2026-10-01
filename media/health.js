@@ -59,7 +59,7 @@
   function dupsHtml(ui, H) {
     const { esc, fmt } = ui;
     const d = H.duplicates;
-    if (!d) return '<p class="muted">Duplicate detection is off (<code>linecounter.health.enabled</code>).</p>';
+    if (!d) return '<p class="muted">Duplicate detection is off (<code>locomotive.health.enabled</code>).</p>';
     if (!d.groups.length) return `<p class="dep-okmsg">No duplicated blocks of ${H.thresholds.duplicateMinLines}+ lines. Copy & paste has left the building.</p>`;
     const shown = state.showAllDups ? d.groups : d.groups.slice(0, 12);
     const loc = o => `<a href="#" class="file hl-loc" data-abs="${esc(o.abs)}" data-line="${o.line}" title="Open ${esc(o.path)} at line ${o.line}">${esc(o.path)}<span class="muted">:${o.line}–${o.end}</span></a>`;
@@ -72,7 +72,7 @@
   function secretsHtml(ui, H) {
     const { esc, fmt } = ui;
     const S = H.secrets;
-    if (!S) return '<p class="muted">Secret scanning is off (<code>linecounter.secrets.enabled</code>).</p>';
+    if (!S) return '<p class="muted">Secret scanning is off (<code>locomotive.secrets.enabled</code>).</p>';
     if (!S.items.length) return '<p class="dep-okmsg">No hard-coded secrets found. Your keys are where they belong: somewhere else.</p>';
     const shown = state.showAllSecrets ? S.items : S.items.slice(0, 25);
     return `<div class="table-scroll small"><table class="grid"><thead><tr><th>Severity</th><th>Type</th><th>Where</th><th>Match (masked)</th></tr></thead><tbody>
@@ -136,7 +136,7 @@
           { label: 'Functions', value: fmt(H.functions), sub: `avg. complexity ${H.avgComplexity.toFixed(1)}` },
           { label: 'Too complex', html: `<span class="${H.overComplex ? 'dep-bad' : ''}">${fmt(H.overComplex)}</span>`, sub: `complexity > ${H.thresholds.maxComplexity}` },
           { label: 'Too long', value: fmt(H.overLong), sub: `more than ${H.thresholds.maxFunctionLines} lines` },
-          { label: 'Duplicated code', value: H.duplicates ? H.duplicates.percent.toFixed(1) + '%' : 'off', sub: H.duplicates ? `${fmt(H.duplicates.total)} blocks · ${fmt(H.duplicates.duplicatedLines)} lines` : 'linecounter.health.enabled' },
+          { label: 'Duplicated code', value: H.duplicates ? H.duplicates.percent.toFixed(1) + '%' : 'off', sub: H.duplicates ? `${fmt(H.duplicates.total)} blocks · ${fmt(H.duplicates.duplicatedLines)} lines` : 'locomotive.health.enabled' },
           { label: 'Secrets', html: S ? `<span class="${S.total ? 'dep-bad' : ''}">${fmt(S.total)}</span>` : 'off', sub: secretSub },
         ])}
       </div>

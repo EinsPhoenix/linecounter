@@ -1,7 +1,7 @@
 'use strict';
 
 const vscode = require('vscode');
-const { LineCounterConfig } = require('./config');
+const { LocomotiveConfig } = require('./config');
 const { SidebarProvider } = require('./sidebarProvider');
 const history = require('./history');
 const { computeStatistics } = require('./statistics');
@@ -11,12 +11,12 @@ const { openFile } = require('./util');
 let lastRun = null;
 
 function activate(context) {
-  const config = new LineCounterConfig();
+  const config = new LocomotiveConfig();
 
   let gateRequested = false;
   const createStatistics = async (roots, selection, options = {}) => {
     if (!selection || !selection.length) {
-      vscode.window.showWarningMessage('Line Counter: no files selected – every file is excluded by your filters.');
+      vscode.window.showWarningMessage('LOComotive: no files selected – every file is excluded by your filters.');
       return;
     }
     lastRun = { roots, selection, options };
@@ -26,8 +26,8 @@ function activate(context) {
       gateRequested = false;
       const g = data.gate;
       const failed = g ? g.checks.filter(c => c.enabled && !c.passed) : [];
-      if (g && g.passed) vscode.window.showInformationMessage(`Line Counter quality gate passed (${g.checks.filter(c => c.enabled).length} checks).`);
-      else if (g) vscode.window.showErrorMessage(`Line Counter quality gate FAILED: ${failed.map(c => `${c.label} (${c.detail})`).join(' · ')}`);
+      if (g && g.passed) vscode.window.showInformationMessage(`LOComotive quality gate passed (${g.checks.filter(c => c.enabled).length} checks).`);
+      else if (g) vscode.window.showErrorMessage(`LOComotive quality gate FAILED: ${failed.map(c => `${c.label} (${c.detail})`).join(' · ')}`);
     }
     if (config.get('history.enabled', true)) {
       try { data.history = await history.record(context, config, data); } catch { data.history = null; }
@@ -49,10 +49,10 @@ function activate(context) {
     const lm = /** @type {any} */ (vscode).lm;
     const Def = /** @type {any} */ (vscode).McpStdioServerDefinition;
     if (lm && lm.registerMcpServerDefinitionProvider && Def) {
-      context.subscriptions.push(lm.registerMcpServerDefinitionProvider('linecounter.mcp', {
+      context.subscriptions.push(lm.registerMcpServerDefinitionProvider('locomotive.mcp', {
         provideMcpServerDefinitions: () => (vscode.workspace.workspaceFolders || []).map(f => new Def(
-          `Line Counter (${f.name})`, process.execPath,
-          [vscode.Uri.joinPath(context.extensionUri, 'bin', 'linecounter-mcp.js').fsPath, '--root', f.uri.fsPath],
+          `LOComotive (${f.name})`, process.execPath,
+          [vscode.Uri.joinPath(context.extensionUri, 'bin', 'locomotive-mcp.js').fsPath, '--root', f.uri.fsPath],
           { ELECTRON_RUN_AS_NODE: '1' }, context.extension.packageJSON.version)),
       }));
     }
@@ -60,51 +60,51 @@ function activate(context) {
 
   context.subscriptions.push(
     { dispose: () => config.dispose() },
-    vscode.window.registerWebviewViewProvider('linecounter.explorer', provider, { webviewOptions: { retainContextWhenHidden: true } }),
-    vscode.commands.registerCommand('linecounter.refresh', () => provider.scan()),
-    vscode.commands.registerCommand('linecounter.resetFilters', () => provider.resetFilters()),
-    vscode.commands.registerCommand('linecounter.createStatistics', async () => {
-      if (!provider.view) await vscode.commands.executeCommand('linecounter.explorer.focus');
+    vscode.window.registerWebviewViewProvider('locomotive.explorer', provider, { webviewOptions: { retainContextWhenHidden: true } }),
+    vscode.commands.registerCommand('locomotive.refresh', () => provider.scan()),
+    vscode.commands.registerCommand('locomotive.resetFilters', () => provider.resetFilters()),
+    vscode.commands.registerCommand('locomotive.createStatistics', async () => {
+      if (!provider.view) await vscode.commands.executeCommand('locomotive.explorer.focus');
       provider.requestStats();
     }),
-    vscode.commands.registerCommand('linecounter.savePreset', () => provider.savePreset()),
-    vscode.commands.registerCommand('linecounter.copyMcpConfig', async () => {
-      const script = vscode.Uri.joinPath(context.extensionUri, 'bin', 'linecounter-mcp.js').fsPath;
+    vscode.commands.registerCommand('locomotive.savePreset', () => provider.savePreset()),
+    vscode.commands.registerCommand('locomotive.copyMcpConfig', async () => {
+      const script = vscode.Uri.joinPath(context.extensionUri, 'bin', 'locomotive-mcp.js').fsPath;
       const root = (vscode.workspace.workspaceFolders || [])[0] ? vscode.workspace.workspaceFolders[0].uri.fsPath : '.';
-      const json = JSON.stringify({ mcpServers: { linecounter: { command: 'node', args: [script, '--root', root] } } }, null, 2);
-      const cli = `claude mcp add linecounter -- node "${script}" --root "${root}"`;
+      const json = JSON.stringify({ mcpServers: { locomotive: { command: 'node', args: [script, '--root', root] } } }, null, 2);
+      const cli = `claude mcp add locomotive -- node "${script}" --root "${root}"`;
       const pick = await vscode.window.showQuickPick([
         { label: 'Claude Code command', detail: cli, value: cli },
-        { label: 'JSON config (Claude Desktop, Cursor, …)', detail: 'mcpServers → linecounter', value: json },
-      ], { title: 'Copy the Line Counter MCP server configuration' });
+        { label: 'JSON config (Claude Desktop, Cursor, …)', detail: 'mcpServers → locomotive', value: json },
+      ], { title: 'Copy the LOComotive MCP server configuration' });
       if (!pick) return;
       await vscode.env.clipboard.writeText(pick.value);
-      vscode.window.showInformationMessage('Line Counter MCP configuration copied to the clipboard.');
+      vscode.window.showInformationMessage('LOComotive MCP configuration copied to the clipboard.');
     }),
-    vscode.commands.registerCommand('linecounter.runGate', async () => {
+    vscode.commands.registerCommand('locomotive.runGate', async () => {
       gateRequested = true;
-      if (!provider.view) await vscode.commands.executeCommand('linecounter.explorer.focus');
+      if (!provider.view) await vscode.commands.executeCommand('locomotive.explorer.focus');
       provider.requestStats();
     }),
-    vscode.commands.registerCommand('linecounter.loadPreset', async () => {
+    vscode.commands.registerCommand('locomotive.loadPreset', async () => {
       const items = config.listPresets().map(p => ({ label: p.name, description: p.name === config.activePreset ? 'active' : '', detail: `${p.excluded} exclusions · ${p.hiddenExt} hidden types${p.savedAt ? ' · saved ' + new Date(p.savedAt).toLocaleString() : ''}` }));
-      if (!items.length) { vscode.window.showInformationMessage('No presets yet – use "Line Counter: Save Filter Preset" first.'); return; }
+      if (!items.length) { vscode.window.showInformationMessage('No presets yet – use "LOComotive: Save Filter Preset" first.'); return; }
       const pick = await vscode.window.showQuickPick(items, { title: 'Load filter preset' });
       if (pick) await provider.loadPreset(pick.label);
     }),
-    vscode.commands.registerCommand('linecounter.openWorkspaceSettings', async () => {
+    vscode.commands.registerCommand('locomotive.openWorkspaceSettings', async () => {
       try {
         const defaults = {};
         const props = context.extension.packageJSON.contributes.configuration.properties;
-        for (const [k, v] of Object.entries(props)) defaults[k.replace(/^linecounter\./, '')] = v.default;
+        for (const [k, v] of Object.entries(props)) defaults[k.replace(/^locomotive\./, '')] = v.default;
         const file = await config.ensureSettingsFile(defaults);
         await openFile(file);
       } catch (e) {
-        vscode.window.showErrorMessage('Line Counter: ' + e.message);
+        vscode.window.showErrorMessage('LOComotive: ' + e.message);
       }
     }),
     vscode.workspace.onDidChangeWorkspaceFolders(() => { config.reload(); provider.scan(); }),
-    vscode.workspace.onDidChangeConfiguration(e => { if (e.affectsConfiguration('linecounter')) provider.scan(); }),
+    vscode.workspace.onDidChangeConfiguration(e => { if (e.affectsConfiguration('locomotive')) provider.scan(); }),
   );
 }
 

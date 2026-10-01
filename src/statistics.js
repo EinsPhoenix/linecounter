@@ -10,7 +10,7 @@ const { runPipeline } = require('./pipeline');
 async function computeStatistics(config, roots, selection, options = {}) {
   return vscode.window.withProgress({
     location: vscode.ProgressLocation.Notification,
-    title: 'Line Counter',
+    title: 'LOComotive',
     cancellable: true,
   }, (progress, token) => runPipeline(config, roots, selection, { ...options, workspaceName: vscode.workspace.name, configRoot: config.root }, progress, token));
 }

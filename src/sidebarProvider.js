@@ -6,9 +6,9 @@ const { PRESETS, DEFAULT_PRESETS, scanRoot } = require('./scanner');
 const git = require('./git');
 const { nonce, openFile, globToRegExp } = require('./util');
 
-const STATE_KEY = 'linecounter.state';
+const STATE_KEY = 'locomotive.state';
 const GITIGNORE_PRESET = { id: 'gitignore', label: 'Everything listed in .gitignore' };
-const CUSTOM_PRESET = { id: 'custom', label: 'Custom patterns (linecounter.excludePatterns)' };
+const CUSTOM_PRESET = { id: 'custom', label: 'Custom patterns (locomotive.excludePatterns)' };
 const ALL_DEFAULT_PRESETS = [...DEFAULT_PRESETS, GITIGNORE_PRESET.id, CUSTOM_PRESET.id];
 
 /** Webview view in the activity bar: file tree, filters, presets and the "Create Statistics" button. */
@@ -22,7 +22,7 @@ class SidebarProvider {
   }
 
   defaultState() {
-    // an active preset from .linecounter/presets.json is the starting point for new workspaces
+    // an active preset from .locomotive/presets.json is the starting point for new workspaces
     const active = this.config.activePreset && this.config.getPreset(this.config.activePreset);
     if (active) return normalizeState(active);
     return { presets: this.config.get('defaultFilters', ALL_DEFAULT_PRESETS), excluded: [], included: [], hiddenExt: [] };
@@ -47,9 +47,9 @@ class SidebarProvider {
 <html lang="en"><head><meta charset="UTF-8">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${view.webview.cspSource} 'unsafe-inline'; img-src data:; script-src 'nonce-${n}';">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="stylesheet" href="${css}"><title>Line Counter</title></head>
+<link rel="stylesheet" href="${css}"><title>LOComotive</title></head>
 <body><div id="app"></div><script nonce="${n}" src="${js}"></script></body></html>`;
-    view.webview.onDidReceiveMessage(msg => this.onMessage(msg).catch(e => vscode.window.showErrorMessage('Line Counter: ' + e.message)));
+    view.webview.onDidReceiveMessage(msg => this.onMessage(msg).catch(e => vscode.window.showErrorMessage('LOComotive: ' + e.message)));
   }
 
   post(msg) {
@@ -106,7 +106,7 @@ class SidebarProvider {
         break;
       }
       case 'openConfig':
-        await vscode.commands.executeCommand('linecounter.openWorkspaceSettings');
+        await vscode.commands.executeCommand('locomotive.openWorkspaceSettings');
         break;
     }
   }
@@ -115,13 +115,13 @@ class SidebarProvider {
     this.post({ type: 'requestStats' });
   }
 
-  // ---------- presets (.linecounter/presets.json) ----------
+  // ---------- presets (.locomotive/presets.json) ----------
   async savePreset(name) {
     let target = name;
     if (!target) {
       target = await vscode.window.showInputBox({
         title: 'Save filter preset',
-        prompt: 'Name of the preset (stored in .linecounter/presets.json)',
+        prompt: 'Name of the preset (stored in .locomotive/presets.json)',
         value: this.config.activePreset || '',
         validateInput: v => (v.trim() ? null : 'Please enter a name'),
       });
@@ -133,7 +133,7 @@ class SidebarProvider {
       }
     }
     await this.config.savePreset(target, this.state);
-    vscode.window.setStatusBarMessage(`Line Counter: preset "${target}" saved to .linecounter/presets.json`, 4000);
+    vscode.window.setStatusBarMessage(`LOComotive: preset "${target}" saved to .locomotive/presets.json`, 4000);
     await this.scan();
   }
 
@@ -166,7 +166,7 @@ class SidebarProvider {
 
   // ---------- scanning ----------
   async scan() {
-    this.config.reload(); // pick up manual edits of .linecounter/*.json
+    this.config.reload(); // pick up manual edits of .locomotive/*.json
     const folders = vscode.workspace.workspaceFolders || [];
     const state = this.state;
     this.post({ type: 'busy', text: 'Scanning workspace…' });

@@ -1,5 +1,5 @@
 'use strict';
-// Tests for the TODO pinboard (.linecounter/pinboard.json): matching cards to moved comments, gone cards, save/load. Run: node test/pinboard.test.js
+// Tests for the TODO pinboard (.locomotive/pinboard.json): matching cards to moved comments, gone cards, save/load. Run: node test/pinboard.test.js
 const assert = require('assert');
 const fs = require('fs');
 const os = require('os');
@@ -23,7 +23,7 @@ const abs = p => path.join(root, p);
       { id: 'e', column: 'low', kind: 'note', text: '   ' }, // empty note is dropped
     ],
   });
-  const saved = JSON.parse(fs.readFileSync(path.join(root, '.linecounter', 'pinboard.json'), 'utf8'));
+  const saved = JSON.parse(fs.readFileSync(path.join(root, '.locomotive', 'pinboard.json'), 'utf8'));
   assert.strictEqual(saved.cards.length, 4, 'empty note dropped');
   assert.strictEqual(saved.cards.find(c => c.id === 'd').column, 'high', 'unknown column falls back to the first');
   assert.strictEqual(saved.cards[0].tag, 'TODO');
@@ -49,7 +49,7 @@ const abs = p => path.join(root, p);
   assert.deepStrictEqual(order, ['High#1:a', 'High#2:b', 'High#3:d', 'Low#1:c']);
 
   // broken file -> empty board instead of a crash
-  fs.writeFileSync(path.join(root, '.linecounter', 'pinboard.json'), '{ broken');
+  fs.writeFileSync(path.join(root, '.locomotive', 'pinboard.json'), '{ broken');
   assert.strictEqual(pinboard.load(root).cards.length, 0);
   fs.rmSync(root, { recursive: true, force: true });
   console.log('pinboard.test OK');

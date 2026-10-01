@@ -1,9 +1,9 @@
-## Was Line Counter kann
+## Was LOComotive kann
 
 **Sidebar & Filter**
 - Dateibaum des Workspaces mit Live-Suche (Wildcards, Pfade), Ausschluss per Klick
 - Vordefinierte Filter (node_modules, venvs, Build-Output, Lock-Files, Binärdateien, `.gitignore` …) und eigene Filter wie `*/data`
-- Dateitypen als Chips ein-/ausblenden, Presets und Einstellungen in `.linecounter/` (teilbar im Team)
+- Dateitypen als Chips ein-/ausblenden, Presets und Einstellungen in `.locomotive/` (teilbar im Team)
 - Beliebigen Ordner als Projekt-Root wählen
 
 **Statistik-Seite (Vollbild)**
@@ -17,7 +17,7 @@
 - Risiko-Hotspots (Git-Churn × Komplexität), möglicherweise ungenutzte Funktionen
 - Duplikate und Secrets im Code
 - TODO-Tracker mit Autor und Alter aus `git blame`
-- Pinboard: TODOs per Drag & Drop nach Priorität ordnen, mit Sprung zur Code-Zeile, gespeichert in `.linecounter/pinboard.json`
+- Pinboard: TODOs per Drag & Drop nach Priorität ordnen, mit Sprung zur Code-Zeile, gespeichert in `.locomotive/pinboard.json`
 - Code Ownership: Owner, Bus-Factor pro Ordner, verwaiste Dateien
 
 **Dependencies**
@@ -35,6 +35,6 @@
 - „Dependency Express“: 3D-Zug fährt durch das Projekt
 
 **Automatisierung**
-- Quality Gate für CI: `node bin/linecounter.js gate` (Exit-Code 1 bei Verstößen)
+- Quality Gate für CI: `node bin/locomotive.js gate` (Exit-Code 1 bei Verstößen)
 - MCP-Server mit 22 Tools für LLM-Agenten (Impact einer Änderung, Risiko, Schwachstellen, Lizenzen …)
 - PDF-Exporte (Statistik, Code Health, Lizenzen, Schwachstellen)

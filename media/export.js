@@ -133,7 +133,7 @@
         pdf.setFont('helvetica', 'normal');
         pdf.setFontSize(10);
         pdf.setTextColor(...muted);
-        pdf.text(`Generated ${dateStr} with Line Counter`, M + 10, 168);
+        pdf.text(`Generated ${dateStr} with LOComotive`, M + 10, 168);
         const kpis = [
           ['Total lines', t.lines], ['Code lines', t.code], ['Comment lines', t.comment], ['Blank lines', t.blank],
           ['Files', t.files], ['Languages', D.languages.filter(l => l.key !== 'Binary').length],
@@ -410,7 +410,7 @@
     const gradeColor = H.score >= 80 ? [90, 90, 90] : H.score >= 65 ? [200, 130, 40] : H.score >= 50 ? [224, 98, 27] : [200, 40, 40];
     ctx.kpis([['Grade', `${H.grade} (${H.score})`, gradeColor], ['Functions', H.functions], ['Too complex', H.overComplex, H.overComplex ? [224, 98, 27] : null],
       ['Too long', H.overLong], ['Duplicated', H.duplicates ? H.duplicates.percent.toFixed(1) + '%' : 'off'], ['Secrets', H.secrets ? H.secrets.total : 'off', H.secrets && H.secrets.total ? [200, 40, 40] : null]]);
-    ctx.para(`Thresholds: complexity > ${H.thresholds.maxComplexity}, function length > ${H.thresholds.maxFunctionLines} lines, duplicates of ${H.thresholds.duplicateMinLines}+ lines (linecounter.health.*). Average complexity ${H.avgComplexity.toFixed(1)}, maximum ${H.maxComplexity}.`);
+    ctx.para(`Thresholds: complexity > ${H.thresholds.maxComplexity}, function length > ${H.thresholds.maxFunctionLines} lines, duplicates of ${H.thresholds.duplicateMinLines}+ lines (locomotive.health.*). Average complexity ${H.avgComplexity.toFixed(1)}, maximum ${H.maxComplexity}.`);
     ctx.heading('Complexity distribution');
     drawTable(pdf, ctx, [
       { label: 'Cyclomatic complexity', w: 0.5, get: r => r.label },
@@ -478,9 +478,9 @@
   function secretsPdf(D) {
     const S = D.health && D.health.secrets;
     const { pdf, ctx } = reportDoc('Secrets report', `${D.workspace || ''} · ${new Date(D.generated).toLocaleString()}`);
-    if (!S) { ctx.para('Secret scanning is disabled (linecounter.secrets.enabled).'); return pdf.output('datauristring').split(',')[1]; }
+    if (!S) { ctx.para('Secret scanning is disabled (locomotive.secrets.enabled).'); return pdf.output('datauristring').split(',')[1]; }
     ctx.kpis([['Findings', S.total, S.total ? [200, 40, 40] : null], ['Critical', S.bySeverity.critical, [200, 40, 40]], ['High', S.bySeverity.high, [224, 98, 27]], ['Medium', S.bySeverity.medium, [200, 130, 40]]]);
-    ctx.para('Values are masked. Every real credential that was committed must be rotated (revoked and replaced) – removing it from the file does not remove it from the git history. Move secrets to environment variables or a secret manager, and ignore test fixtures via linecounter.secrets.ignore.');
+    ctx.para('Values are masked. Every real credential that was committed must be rotated (revoked and replaced) – removing it from the file does not remove it from the git history. Move secrets to environment variables or a secret manager, and ignore test fixtures via locomotive.secrets.ignore.');
     if (!S.items.length) { ctx.para('No hard-coded secrets were found.'); return pdf.output('datauristring').split(',')[1]; }
     ctx.heading('By type');
     drawTable(pdf, ctx, [{ label: 'Type', w: 0.7, get: r => r.label }, { label: 'Findings', w: 0.3, get: r => r.count }], S.byRule);

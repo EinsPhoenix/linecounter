@@ -1,4 +1,4 @@
-# Code Statistics (Line Counter) – Funktionen im Detail
+# LOComotive – Funktionen im Detail
 
 Diese Seite beschreibt, **was jede Funktion macht, was du erwarten kannst und wo die Grenzen liegen**. Eine Kurzfassung steht in der [README](../README.md).
 
@@ -56,9 +56,9 @@ Die tieferen Analysen unterscheiden sich je nach Sprache:
 - **Eigene Filter.**
   - Unter *Predefined filters → My filters* legst du eigene Filter an: ein Muster (oder mehrere, durch Komma getrennt) und ein optionaler Name, z. B. `*/data`, `*.generated.ts` oder `docs/`.
   - `*/data` bzw. `**/data` trifft jeden Ordner namens `data` in jeder Tiefe.
-  - Jeder Filter ist eine eigene Checkbox, wird in Presets mitgespeichert und landet in `.linecounter/filters.json`, sodass das Team ihn teilen kann.
+  - Jeder Filter ist eine eigene Checkbox, wird in Presets mitgespeichert und landet in `.locomotive/filters.json`, sodass das Team ihn teilen kann.
   - Aus einer Suche in der Sidebar machst du mit *Save as filter* direkt einen Filter.
-  - Filter aus der Einstellung `linecounter.customFilters` (`[{ "label": "…", "patterns": ["…"] }]`) erscheinen ebenfalls.
+  - Filter aus der Einstellung `locomotive.customFilters` (`[{ "label": "…", "patterns": ["…"] }]`) erscheinen ebenfalls.
 - **Projekt-Root.** Liegen die eigentlichen Projekte tiefer als der in VS Code geöffnete Ordner (z. B. `Graphoenix` ist geöffnet, die Projekte liegen in `Graphoenix/facgraph/…`), klickst du auf einem Ordner auf das Ziel-Symbol. Dann gilt:
   - Der Baum zeigt nur noch diesen Ordner.
   - Die Statistik zählt nur seine Dateien.
@@ -66,7 +66,7 @@ Die tieferen Analysen unterscheiden sich je nach Sprache:
   - Die Leiste *Project root* zeigt den Pfad; ↑ geht eine Ebene höher, ✕ analysiert wieder den ganzen Workspace.
   - Der Root wird im Workspace und in Presets gespeichert.
   - Git-Repos werden weiterhin erkannt, auch wenn sie höher liegen.
-- **Presets.** Ausgeschlossene Dateien, Filter und Endungen speicherst du als benanntes Preset in `.linecounter/presets.json`. Die Datei kann ins Repo, damit das ganze Team dieselben Einstellungen nutzt.
+- **Presets.** Ausgeschlossene Dateien, Filter und Endungen speicherst du als benanntes Preset in `.locomotive/presets.json`. Die Datei kann ins Repo, damit das ganze Team dieselben Einstellungen nutzt.
 - **Bibliotheken als Graph-Knoten.** Externe Pakete erscheinen dann im Graphen und im 3D-Zug. In Statistiken zählen sie nicht.
 
 ---
@@ -98,7 +98,7 @@ Die Seite öffnet sich maximiert oder im Vollbild. Jedes Diagramm hat einen eige
 | Ranking | sortierbare Tabelle aller Dateien; ein Klick öffnet die Datei |
 | Structure | Ordner und Dateien als Graph, Ordner klappen auf und zu |
 
-Alle Grenzwerte (z. B. ab wie vielen Zeilen eine Datei „zu lang“ ist) stehen in den Einstellungen bzw. in `.linecounter/settings.json`.
+Alle Grenzwerte (z. B. ab wie vielen Zeilen eine Datei „zu lang“ ist) stehen in den Einstellungen bzw. in `.locomotive/settings.json`.
 
 ---
 
@@ -108,13 +108,13 @@ Alle Grenzwerte (z. B. ab wie vielen Zeilen eine Datei „zu lang“ ist) stehen
 - **„Since the last run“.** Zeigt die Änderungen seit dem letzten Lauf. Grün heißt besser, rot heißt schlechter.
 - **Kurven.** Für jede Kennzahl, die sich verändert hat, gibt es eine Verlaufskurve.
 - **Zusammenfassen.** Läufe innerhalb von 10 Minuten werden zusammengefasst.
-- **Speicherort.** Gespeichert wird lokal im Workspace-State (`linecounter.history.enabled`). Mit `linecounter.history.saveToFile` landet die Historie zusätzlich in `.linecounter/history.json` und kann mit dem Team geteilt werden. *Clear history* setzt sie zurück.
+- **Speicherort.** Gespeichert wird lokal im Workspace-State (`locomotive.history.enabled`). Mit `locomotive.history.saveToFile` landet die Historie zusätzlich in `.locomotive/history.json` und kann mit dem Team geteilt werden. *Clear history* setzt sie zurück.
 
 ## Architecture
 
 ![Architekturregeln](images/architecture.png)
 
-- **Regeln** in `.linecounter/settings.json` oder den VS-Code-Einstellungen:
+- **Regeln** in `.locomotive/settings.json` oder den VS-Code-Einstellungen:
   ```jsonc
   "architecture.rules": [
     { "name": "UI never talks to the database", "from": "src/ui/**", "disallow": ["src/db/**"], "allow": ["src/db/types.ts"] },
@@ -134,7 +134,7 @@ Alle Grenzwerte (z. B. ab wie vielen Zeilen eine Datei „zu lang“ ist) stehen
 
 ## Branch comparison
 
-- **Automatisch.** Bist du nicht auf dem Basis-Branch, vergleicht die Statistikseite den aktuellen Stand (HEAD plus uncommittete Änderungen) mit dem Merge-Base des Basis-Branches. Die Basis wird automatisch bestimmt (`origin/HEAD`, `main`, `master` oder `develop`) oder fest über `linecounter.compare.baseBranch` gesetzt.
+- **Automatisch.** Bist du nicht auf dem Basis-Branch, vergleicht die Statistikseite den aktuellen Stand (HEAD plus uncommittete Änderungen) mit dem Merge-Base des Basis-Branches. Die Basis wird automatisch bestimmt (`origin/HEAD`, `main`, `master` oder `develop`) oder fest über `locomotive.compare.baseBranch` gesetzt.
 - **Manuell.** Jeder andere Branch lässt sich in der Auswahl wählen, dann *Compare*.
 - **Was du siehst.**
   - Commits ahead und behind, geänderte Dateien mit ± Zeilen sowie Komplexität vorher und nachher pro Datei.
@@ -142,7 +142,7 @@ Alle Grenzwerte (z. B. ab wie vielen Zeilen eine Datei „zu lang“ ist) stehen
   - Neue TODOs und **neue Secrets** in den hinzugefügten Zeilen.
   - Geänderte Abhängigkeiten aus `package.json`, `requirements`, `pyproject.toml`, `Cargo.toml` und `go.mod`.
   - Die Commits des Branches mit Autoren.
-- **Abschalten:** `linecounter.compare.enabled`.
+- **Abschalten:** `locomotive.compare.enabled`.
 
 ## TODO tracker
 
@@ -152,7 +152,7 @@ Alle Grenzwerte (z. B. ab wie vielen Zeilen eine Datei „zu lang“ ist) stehen
   - Kennzahlen: Anzahl, ältester TODO, Durchschnittsalter.
   - Diagramme: Alter, Tag, Autor.
   - Tabelle: älteste zuerst, filterbar nach Tag und Text; ein Klick springt zur Zeile.
-- **Abschalten:** `linecounter.todos.enabled`.
+- **Abschalten:** `locomotive.todos.enabled`.
 
 ### Pinboard – TODOs nach Priorität
 
@@ -164,7 +164,7 @@ Oben im TODO-Bereich der Statistik-Seite liegt ein Pinboard mit den Spalten **Hi
 - **Reihenfolge ändern.** Karten per Drag & Drop verschieben oder über die Pfeile: ▲ ▼ ändert die Reihenfolge, ◀ ▶ die Spalte. ✕ nimmt ein TODO vom Board (zurück zu „Unsorted“) oder löscht eine Notiz.
 - **Sprung in den Code.** Jede Code-Karte zeigt `datei:zeile`; ein Klick öffnet die Datei an genau dieser Zeile.
 - **Notizen.** Über „+ Note“ legst du Aufgaben an, die nicht im Code stehen.
-- **Gespeichert in `.linecounter/pinboard.json`** im Workspace, direkt nach jeder Änderung. Die Datei kann ins Repo, dann teilt das Team dieselbe Reihenfolge.
+- **Gespeichert in `.locomotive/pinboard.json`** im Workspace, direkt nach jeder Änderung. Die Datei kann ins Repo, dann teilt das Team dieselbe Reihenfolge.
 - **Robust gegen Code-Änderungen.** Karten werden über Datei, Tag und Text wiedererkannt, nicht über die Zeilennummer. Wandert ein TODO nach unten, zeigt die Karte die neue Zeile. Ist der Kommentar verschwunden, wird die Karte durchgestrichen („Not in the code anymore – done?“) und kann entfernt werden.
 - **Für LLM-Agenten.** Das MCP-Tool `todo_pinboard` liefert die Prioritäten, damit ein Agent weiß, woran als Nächstes gearbeitet werden soll.
 
@@ -196,7 +196,7 @@ Die Spalten lassen sich in der Datei umbenennen oder ergänzen (z. B. „Next sp
 
 - **Who owns the code.** Pro Datei zählt als Hauptautor, wer die meisten Commits auf ihr hat. Gleiche Namen in anderer Schreibweise werden zusammengefasst, Bots (dependabot, renovate …) ignoriert. Daraus entsteht pro Person die Summe der Zeilen.
 - **Ownership pro Ordner.** Ein farbiger Balken zeigt die Anteile der Autoren, dazu den Bus-Factor (wie viele Personen die Hälfte geschrieben haben). Ordner mit Bus-Factor 1 sind rot.
-- **Stale files.** Dateien ohne Commit seit `linecounter.ownership.staleDays` Tagen (Standard 365). Werden sie noch gebraucht?
+- **Stale files.** Dateien ohne Commit seit `locomotive.ownership.staleDays` Tagen (Standard 365). Werden sie noch gebraucht?
 - **Knowledge at risk.** Dateien, die zu mindestens 60 % von jemandem stammen, der seit mehr als 6 Monaten nicht mehr committet.
 - **Alter der letzten Änderung** pro Datei als Diagramm, dazu Rants.
 
@@ -212,9 +212,9 @@ Die Spalten lassen sich in der Datei umbenennen oder ergänzen (z. B. „Next sp
 - **Zyklomatische Komplexität pro Funktion.**
   - Gezählt werden 1 + Verzweigungen (`if`, `for`, `while`, `case`, `catch`, `&&`, `||`, `?:`, `??`).
   - Verschachtelte Funktionen werden separat gemessen und zählen nicht doppelt.
-  - Der Grenzwert ist einstellbar: `linecounter.health.maxComplexity`, Standard 15.
+  - Der Grenzwert ist einstellbar: `locomotive.health.maxComplexity`, Standard 15.
 - **Lange Funktionen.**
-  - Grenzwert: `linecounter.health.maxFunctionLines`, Standard 80.
+  - Grenzwert: `locomotive.health.maxFunctionLines`, Standard 80.
   - Funktionen mit 6 oder mehr Parametern werden ebenfalls gelistet.
 - **Hotspots.** Dateien mit der höchsten Gesamtkomplexität. Ein Klick öffnet die Datei, ein Klick auf eine Funktion springt direkt zur Zeile.
 - **Risiko-Hotspots (Churn × Komplexität).**
@@ -233,7 +233,7 @@ Die Spalten lassen sich in der Datei umbenennen oder ergänzen (z. B. „Next sp
   - Erkannt werden AWS-, GitHub-, GitLab-, Slack-, Stripe-, Google-, OpenAI-, Anthropic-, npm-, SendGrid- und Twilio-Keys, Private Keys, JWTs, Connection-Strings mit Passwort und hart codierte Passwörter.
   - Bei Passwörtern prüft der Scanner die Entropie, damit Platzhalter wie `changeme` nicht auffallen.
   - Werte werden **immer maskiert**.
-  - Test- und Beispieldateien sind über `linecounter.secrets.ignore` ausgenommen.
+  - Test- und Beispieldateien sind über `locomotive.secrets.ignore` ausgenommen.
 - **PDFs:** Code-Health-Report und Secrets-Report.
 
 ---
@@ -250,13 +250,13 @@ Die Spalten lassen sich in der Datei umbenennen oder ergänzen (z. B. „Next sp
   4. deps.dev (Open Source Insights von Google)
   5. Die GitHub-Lizenz des Repositorys
 - **Wann ein Paket „Unknown“ bleibt:** Nur wenn keine Quelle etwas liefert, z. B. bei privaten Paketen oder einem Tippfehler im Namen (Registry meldet 404). „Custom“ heißt: Es gibt einen Lizenztext, aber keine Standardlizenz. Beide brauchen eine manuelle Prüfung.
-- **Lizenz-Policy.** Was als problematisch gilt bzw. ein Review braucht, stellst du in `linecounter.licenses.problematic`, `.review` und `.allowed` ein (Globs wie `GPL*`). Bei `MIT OR GPL` zählt die beste Option, bei `AND` die schlechteste.
+- **Lizenz-Policy.** Was als problematisch gilt bzw. ein Review braucht, stellst du in `locomotive.licenses.problematic`, `.review` und `.allowed` ein (Globs wie `GPL*`). Bei `MIT OR GPL` zählt die beste Option, bei `AND` die schlechteste.
 - **Schwachstellen.** Abgefragt über OSV.dev für alle vier Ökosysteme, mit CVSS-Score, Advisory-Link und der Version, die den Fehler behebt.
 - **Dependency hygiene.**
   - Deklarierte, aber nie importierte Pakete: Ein Klick springt zur Zeile im Manifest.
   - Importierte, aber nicht deklarierte Pakete: mit Liste der Dateien, die sie verwenden.
   - CLI-Tools (pytest, ruff, …) und Plugins in Configs werden berücksichtigt.
-- **Netzwerk.** Die Online-Abfragen lassen sich abschalten (`linecounter.licenses.fetchFromRegistry`, `linecounter.vulnerabilities.enabled`). Dann bleiben nur lokale Informationen.
+- **Netzwerk.** Die Online-Abfragen lassen sich abschalten (`locomotive.licenses.fetchFromRegistry`, `locomotive.vulnerabilities.enabled`). Dann bleiben nur lokale Informationen.
 
 ---
 
@@ -282,14 +282,14 @@ Die Spalten lassen sich in der Datei umbenennen oder ergänzen (z. B. „Next sp
   - Doppelklick auf eine freie Fläche zoomt hinein, Shift + Doppelklick heraus.
   - Der Zoombereich reicht von 2 % bis 4000 %.
 - **Große Graphen.**
-  - Die Limits sind einstellbar: `linecounter.graphs.maxNodes` (Standard **20.000**) und `linecounter.graphs.maxLinks` (Standard **40.000**). Zyklen werden immer gezeigt.
+  - Die Limits sind einstellbar: `locomotive.graphs.maxNodes` (Standard **20.000**) und `locomotive.graphs.maxLinks` (Standard **40.000**). Zyklen werden immer gezeigt.
   - Ab etwa 2.500 Knoten wird nur noch der sichtbare Ausschnitt gezeichnet, Beschriftungen erscheinen beim Hineinzoomen, und ab 4.000 Knoten wird das Layout einmal berechnet statt animiert. Ein Test mit 20.000 Knoten und 40.000 Relationen lief flüssig.
   - Der 3D-Zug hat eigene Limits, weil das 3D-Layout quadratisch wächst und jede Schiene GPU-Speicher kostet:
-    - `linecounter.train.maxNodes`: Planeten, Standard **800**. Behalten werden die am stärksten vernetzten Dateien.
-    - `linecounter.train.maxLinks`: Relationen als Schienen, Standard **2.400**. Vorrang haben Zyklen, Abhängigkeitsketten und Relationen zu verwundbaren Bibliotheken, danach die am stärksten vernetzten.
-    - `linecounter.train.detail`: `auto` (Standard; ab 300 Planeten oder 900 Relationen gröbere Schienen, Planeten und Drehscheiben), `high` (immer volle Details) oder `low` (immer reduziert, für schwache GPUs).
+    - `locomotive.train.maxNodes`: Planeten, Standard **800**. Behalten werden die am stärksten vernetzten Dateien.
+    - `locomotive.train.maxLinks`: Relationen als Schienen, Standard **2.400**. Vorrang haben Zyklen, Abhängigkeitsketten und Relationen zu verwundbaren Bibliotheken, danach die am stärksten vernetzten.
+    - `locomotive.train.detail`: `auto` (Standard; ab 300 Planeten oder 900 Relationen gröbere Schienen, Planeten und Drehscheiben), `high` (immer volle Details) oder `low` (immer reduziert, für schwache GPUs).
   - Bleibt die 3D-Ansicht grau oder langsam, senke `train.maxLinks` / `train.maxNodes` oder stelle `train.detail` auf `low`.
-- **Bewegung.** *Wiggle*, *Calm* oder *Still*, einstellbar über `linecounter.graphs.motion`.
+- **Bewegung.** *Wiggle*, *Calm* oder *Still*, einstellbar über `locomotive.graphs.motion`.
 
 ---
 
@@ -322,18 +322,18 @@ Ein Zug fährt durch dein Projekt als Universum.
   - **Chase:** folgt dem Zug von hinten.
   - **Cab:** Führerstand; die Kamera dreht sich mit dem Zug.
   - **Free cam:** frei im Raum.
-- **Tasten** lassen sich über `linecounter.train.keys` ändern.
+- **Tasten** lassen sich über `locomotive.train.keys` ändern.
 
-**Leistung:** Bei sehr großen Projekten (mehrere Hundert Knoten mit Funktionen) braucht der Aufbau ein bis zwei Sekunden. Mit `linecounter.graphs.maxFunctions` begrenzt du die Zahl der Funktionen.
+**Leistung:** Bei sehr großen Projekten (mehrere Hundert Knoten mit Funktionen) braucht der Aufbau ein bis zwei Sekunden. Mit `locomotive.graphs.maxFunctions` begrenzt du die Zahl der Funktionen.
 
 ---
 
 ## Quality Gate (CI)
 
-- **Checks:** kritische Schwachstellen, Secrets, problematische (optional auch unbekannte) Lizenzen und Architektur-Verstöße. Optional dazu maximale Komplexität, minimaler Health-Score, Duplikat-Anteil und zirkuläre Imports. Was zählt, stellst du in `linecounter.gate` ein.
+- **Checks:** kritische Schwachstellen, Secrets, problematische (optional auch unbekannte) Lizenzen und Architektur-Verstöße. Optional dazu maximale Komplexität, minimaler Health-Score, Duplikat-Anteil und zirkuläre Imports. Was zählt, stellst du in `locomotive.gate` ein.
 - **Statistikseite:** zeigt das Ergebnis ganz oben.
-- **In VS Code:** *Line Counter: Run Quality Gate* meldet das Ergebnis.
-- **Im CI:** `node bin/linecounter.js gate .` scheitert mit Exit-Code 1. Details und ein GitHub-Actions-Beispiel stehen in [CI.md](CI.md).
+- **In VS Code:** *LOComotive: Run Quality Gate* meldet das Ergebnis.
+- **Im CI:** `node bin/locomotive.js gate .` scheitert mit Exit-Code 1. Details und ein GitHub-Actions-Beispiel stehen in [CI.md](CI.md).
 
 ## MCP-Server für LLM-Agenten
 
@@ -343,7 +343,7 @@ Ein Zug fährt durch dein Projekt als Universum.
   - Schwachstellen, Lizenzen, ungenutzte Pakete
   - Zyklen, Funktionen und ihre Aufrufer, Ownership, TODOs, Architektur-Verstöße, Quality Gate und Branch-Vergleich
 - **In VS Code** (ab Version 1.101) wird der Server automatisch registriert.
-- **Für andere Clients** kopiert *Line Counter: Copy MCP Server Configuration* die Konfiguration.
+- **Für andere Clients** kopiert *LOComotive: Copy MCP Server Configuration* die Konfiguration.
 - **Details** und die Tool-Liste stehen in [MCP.md](MCP.md).
 
 ## Exporte und PDFs

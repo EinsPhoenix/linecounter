@@ -1,21 +1,21 @@
 # MCP server for LLM agents
 
-Line Counter ships a [Model Context Protocol](https://modelcontextprotocol.io) server (stdio, no extra dependencies).
+LOComotive ships a [Model Context Protocol](https://modelcontextprotocol.io) server (stdio, no extra dependencies).
 LLM agents get the same analysis as the statistics page as **tools**, to understand a code base before changing it.
 
 ## Setup
 
-- **VS Code** (1.101+, Copilot agent mode or other MCP clients in VS Code): the server is registered automatically, one per workspace folder ("Line Counter (folder)").
-- **Claude Code:** run *Line Counter: Copy MCP Server Configuration* in VS Code, or
+- **VS Code** (1.101+, Copilot agent mode or other MCP clients in VS Code): the server is registered automatically, one per workspace folder ("LOComotive (folder)").
+- **Claude Code:** run *LOComotive: Copy MCP Server Configuration* in VS Code, or
   ```bash
-  claude mcp add linecounter -- node /path/to/linecounter/bin/linecounter-mcp.js --root /path/to/project
+  claude mcp add locomotive -- node /path/to/locomotive/bin/locomotive-mcp.js --root /path/to/project
   ```
 - **Claude Desktop / Cursor / other clients:**
   ```json
-  { "mcpServers": { "linecounter": { "command": "node", "args": ["/path/to/linecounter/bin/linecounter-mcp.js", "--root", "/path/to/project"] } } }
+  { "mcpServers": { "locomotive": { "command": "node", "args": ["/path/to/locomotive/bin/locomotive-mcp.js", "--root", "/path/to/project"] } } }
   ```
 
-Options: `--root FOLDER` (default: current directory), `--offline` (no OSV.dev / registry requests), `--preset NAME` (filter preset from `.linecounter/presets.json`, default: the active one). The server reads `.linecounter/settings.json` like the CLI.
+Options: `--root FOLDER` (default: current directory), `--offline` (no OSV.dev / registry requests), `--preset NAME` (filter preset from `.locomotive/presets.json`, default: the active one). The server reads `.locomotive/settings.json` like the CLI.
 
 The analysis starts when the server starts and is cached. `refresh_analysis` runs it again.
 
@@ -38,7 +38,7 @@ The analysis starts when the server starts and is cached. `refresh_analysis` run
 | `secrets` | hard-coded secrets (masked) |
 | `code_owners` | main authors, bus factor, stale files, knowledge at risk |
 | `todos` | TODO / FIXME / HACK with author and age |
-| `todo_pinboard` | the team's TODO priorities from `.linecounter/pinboard.json` (column + rank, current file and line) |
+| `todo_pinboard` | the team's TODO priorities from `.locomotive/pinboard.json` (column + rank, current file and line) |
 | `architecture_violations` | imports that break `architecture.rules` / `architecture.layers` |
 | `unused_functions` | dead code candidates |
 | `duplicate_code` | duplicated blocks with both locations |

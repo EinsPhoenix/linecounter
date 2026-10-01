@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 /**
- * TODO pinboard: TODOs ordered by priority, stored in `.linecounter/pinboard.json` so the team shares the order.
+ * TODO pinboard: TODOs ordered by priority, stored in `.locomotive/pinboard.json` so the team shares the order.
  *
  *   {
  *     "columns": [{ "id": "high", "title": "High" }, …],          // priority columns, top to bottom = most important first
@@ -17,7 +17,7 @@ const path = require('path');
  * Code cards are matched to the TODO comments by file + tag + text (line numbers move when code changes; the stored
  * line is only a hint to tell identical comments apart). A card whose comment is gone is reported as `gone` (done?).
  */
-const DIR = '.linecounter';
+const { configDir, configDirName } = require('./configDir');
 const FILE = 'pinboard.json';
 const DEFAULT_COLUMNS = [
   { id: 'high', title: 'High' },
@@ -29,7 +29,7 @@ const norm = p => String(p || '').replace(/\\/g, '/').replace(/^\.\//, '');
 const normText = s => String(s || '').replace(/\s+/g, ' ').trim().toLowerCase();
 const keyOf = (p, tag, text) => `${norm(p)}|${String(tag || '').toUpperCase()}|${normText(text)}`;
 
-function filePath(root) { return root ? path.join(root, DIR, FILE) : null; }
+function filePath(root) { return root ? path.join(configDir(root), FILE) : null; }
 
 /** normalized board (never throws; a missing or broken file gives an empty board) */
 function load(root) {
@@ -64,7 +64,7 @@ function sanitize(raw) {
 
 async function save(root, board) {
   const p = filePath(root);
-  if (!p) throw new Error('Open a folder first – the pinboard is stored in .linecounter/pinboard.json');
+  if (!p) throw new Error('Open a folder first – the pinboard is stored in .locomotive/pinboard.json');
   const clean = sanitize(board);
   await fs.promises.mkdir(path.dirname(p), { recursive: true });
   await fs.promises.writeFile(p, JSON.stringify(clean, null, 2) + '\n', 'utf8');
@@ -73,7 +73,7 @@ async function save(root, board) {
 
 /**
  * Board + current TODO comments → cards with their current location.
- * todos: items of the TODO tracker ({ tag, text, path, abs, line, … }); root: folder that holds .linecounter.
+ * todos: items of the TODO tracker ({ tag, text, path, abs, line, … }); root: folder that holds .locomotive.
  * Every TODO item gets `pin` (its path relative to root) so the page can pin it.
  */
 function resolve(board, todos, root) {
@@ -99,7 +99,7 @@ function resolve(board, todos, root) {
     t.pinnedBy = c.id;
     return { ...c, state: 'open', line: t.line, abs: t.abs, author: t.author, ageDays: t.ageDays, assignee: t.assignee };
   });
-  return { file: root ? `${DIR}/${FILE}` : null, columns: board.columns, cards, pinnedCount: used.size };
+  return { file: root ? `${configDirName(root)}/${FILE}` : null, columns: board.columns, cards, pinnedCount: used.size };
 }
 
 /** ordered list for agents / reports: column by column, top to bottom */

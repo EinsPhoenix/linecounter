@@ -186,11 +186,11 @@
       <span>${esc(p.label)}</span></label>`).join('');
     const userFilters = presets.filter(p => p.user);
     const userHtml = `<div class="ufilters">
-        <div class="ufilters-title">My filters <span class="muted">(.linecounter/filters.json)</span></div>
+        <div class="ufilters-title">My filters <span class="muted">(.locomotive/filters.json)</span></div>
         ${userFilters.map(p => `<div class="ufilter">
           <label class="check"><input type="checkbox" data-preset="${esc(p.id)}" ${enabledPresets.has(p.id) ? 'checked' : ''}>
             <span>${esc(p.label)}${p.label !== (p.patterns || []).join(', ') ? ` <span class="muted">${esc((p.patterns || []).join(', '))}</span>` : ''}</span></label>
-          ${p.source === 'settings' ? '<span class="muted" title="Defined in linecounter.customFilters">settings</span>' : `<button class="icon-btn2 ufilter-del" data-filter-del="${esc(p.id)}" data-label="${esc(p.label)}" title="Delete this filter">${SVG.trash}</button>`}
+          ${p.source === 'settings' ? '<span class="muted" title="Defined in locomotive.customFilters">settings</span>' : `<button class="icon-btn2 ufilter-del" data-filter-del="${esc(p.id)}" data-label="${esc(p.label)}" title="Delete this filter">${SVG.trash}</button>`}
         </div>`).join('') || '<div class="muted ufilter-empty">No own filters yet.</div>'}
         <form class="ufilter-add" id="filterAdd">
           <input id="filterPat" type="text" placeholder="Pattern, e.g. */data, *.generated.ts, docs/" spellcheck="false" title="Glob patterns, comma separated. */data = every folder named data below another folder, **/x = anywhere, x/ = folder">
@@ -236,7 +236,7 @@
           <button class="link" id="saveFilter" title="Save this search as a reusable filter">Save as filter</button>
         </div>` : ''}
       </div>
-      <div class="presetbar" title="Filter presets are stored in .linecounter/presets.json">
+      <div class="presetbar" title="Filter presets are stored in .locomotive/presets.json">
         <span class="presetbar-label">Preset</span>
         <select id="presetSel" ${hasWorkspace ? '' : 'disabled'}>
           <option value="">${userPresets.length ? '— none —' : '— no presets yet —'}</option>
@@ -244,7 +244,7 @@
         </select>
         <button class="icon-btn2" id="presetSave" title="Save current filters as preset" ${hasWorkspace ? '' : 'disabled'}>${SVG.save}</button>
         <button class="icon-btn2" id="presetDelete" title="Delete selected preset" ${activePreset ? '' : 'disabled'}>${SVG.trash}</button>
-        <button class="icon-btn2" id="openConfig" title="Open .linecounter/settings.json">${SVG.gear}</button>
+        <button class="icon-btn2" id="openConfig" title="Open .locomotive/settings.json">${SVG.gear}</button>
       </div>
       ${baseNode() ? `<div class="basebar" title="Only this folder is analyzed. Paths, folder colors and clusters are relative to it.">
         <span class="basebar-label">Project root</span>
@@ -275,7 +275,7 @@
         <button class="link" id="collapseAll" title="Collapse all">Collapse</button>
         <button class="link" id="resetEx" title="Remove all manual exclusions">Reset</button>
       </div>
-      ${roots.some(r => r.truncated) ? '<div class="warn">Scan limit reached – some entries are not shown. Increase "linecounter.maxEntries" or exclude large folders.</div>' : ''}
+      ${roots.some(r => r.truncated) ? '<div class="warn">Scan limit reached – some entries are not shown. Increase "locomotive.maxEntries" or exclude large folders.</div>' : ''}
       ${busyText ? `<div class="busy">${esc(busyText)}</div>` : ''}
       <div id="tree" class="tree">${rowHtml}
         ${total > MAX_ROWS ? `<div class="more muted">…and ${(total - MAX_ROWS).toLocaleString()} more – refine your search</div>` : ''}

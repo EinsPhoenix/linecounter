@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "title": "Line Counter workspace settings (.linecounter/settings.json)",
-  "description": "Overrides the linecounter.* VS Code settings for this workspace. Keys may be written with or without the 'linecounter.' prefix.",
+  "title": "LOComotive workspace settings (.locomotive/settings.json)",
+  "description": "Overrides the locomotive.* VS Code settings for this workspace. Keys may be written with or without the 'locomotive.' prefix.",
   "type": "object",
   "properties": {
     "statisticsLayout": {
@@ -19,7 +19,7 @@
       "default": "maximized",
       "description": "How the statistics page is opened."
     },
-    "linecounter.statisticsLayout": {
+    "locomotive.statisticsLayout": {
       "type": "string",
       "enum": [
         "maximized",
@@ -39,7 +39,7 @@
       "default": 2048,
       "description": "Files larger than this (in KB) are counted by size only; their lines are not analyzed."
     },
-    "linecounter.maxFileSizeKB": {
+    "locomotive.maxFileSizeKB": {
       "type": "number",
       "default": 2048,
       "description": "Files larger than this (in KB) are counted by size only; their lines are not analyzed."
@@ -49,7 +49,7 @@
       "default": 200000,
       "description": "Maximum number of files and folders scanned for the tree."
     },
-    "linecounter.maxEntries": {
+    "locomotive.maxEntries": {
       "type": "number",
       "default": 200000,
       "description": "Maximum number of files and folders scanned for the tree."
@@ -59,7 +59,7 @@
       "default": 20000,
       "description": "Maximum number of commits read per git repository."
     },
-    "linecounter.maxCommits": {
+    "locomotive.maxCommits": {
       "type": "number",
       "default": 20000,
       "description": "Maximum number of commits read per git repository."
@@ -69,7 +69,7 @@
       "default": true,
       "description": "Show the \"Code Rant\" section that complains about files that are too long or contain too many blank lines."
     },
-    "linecounter.rant.enabled": {
+    "locomotive.rant.enabled": {
       "type": "boolean",
       "default": true,
       "description": "Show the \"Code Rant\" section that complains about files that are too long or contain too many blank lines."
@@ -80,7 +80,7 @@
       "minimum": 1,
       "description": "Rant about files longer than this many lines."
     },
-    "linecounter.rant.maxFileLines": {
+    "locomotive.rant.maxFileLines": {
       "type": "number",
       "default": 500,
       "minimum": 1,
@@ -93,7 +93,7 @@
       "maximum": 100,
       "description": "Rant about files (with at least 10 lines) and the whole project when more than this percentage of lines is blank."
     },
-    "linecounter.rant.maxBlankPercent": {
+    "locomotive.rant.maxBlankPercent": {
       "type": "number",
       "default": 10,
       "minimum": 0,
@@ -106,7 +106,7 @@
       "minimum": 0,
       "description": "Rant about commit messages (subject line) shorter than this many characters."
     },
-    "linecounter.rant.commitMinLength": {
+    "locomotive.rant.commitMinLength": {
       "type": "number",
       "default": 10,
       "minimum": 0,
@@ -118,7 +118,7 @@
       "minimum": 1,
       "description": "Rant about commit messages (subject line) longer than this many characters."
     },
-    "linecounter.rant.commitMaxLength": {
+    "locomotive.rant.commitMaxLength": {
       "type": "number",
       "default": 72,
       "minimum": 1,
@@ -132,7 +132,7 @@
       "default": [],
       "description": "Words or phrases in commit messages to rant about. Leave empty for the built-in list (`wip`, `asdf`, `tmp`, `stuff`, `misc`, `oops`, `typo`, `final`, `please`, `hack`, `whatever`, `idk`, `wtf`, `lol`, `yolo`, `again`, `why`, `test`, `changes`, `update`, `minor`, …)."
     },
-    "linecounter.rant.commitWords": {
+    "locomotive.rant.commitWords": {
       "type": "array",
       "items": {
         "type": "string"
@@ -148,7 +148,7 @@
       "default": [],
       "description": "Additional glob patterns to exclude, like `.gitignore` (e.g. `*.generated.ts`, `docs/`, `/build`, `src/**/*.spec.ts`). Shown as the predefined filter *Custom patterns*."
     },
-    "linecounter.excludePatterns": {
+    "locomotive.excludePatterns": {
       "type": "array",
       "items": {
         "type": "string"
@@ -187,9 +187,9 @@
         "gitignore",
         "custom"
       ],
-      "description": "Predefined filters that are enabled in a new workspace (unless a preset from .linecounter/presets.json is active)."
+      "description": "Predefined filters that are enabled in a new workspace (unless a preset from .locomotive/presets.json is active)."
     },
-    "linecounter.defaultFilters": {
+    "locomotive.defaultFilters": {
       "type": "array",
       "items": {
         "type": "string",
@@ -220,7 +220,7 @@
         "gitignore",
         "custom"
       ],
-      "description": "Predefined filters that are enabled in a new workspace (unless a preset from .linecounter/presets.json is active)."
+      "description": "Predefined filters that are enabled in a new workspace (unless a preset from .locomotive/presets.json is active)."
     },
     "graphs.motion": {
       "type": "string",
@@ -239,7 +239,7 @@
       "default": "auto",
       "description": "How much the graphs move."
     },
-    "linecounter.graphs.motion": {
+    "locomotive.graphs.motion": {
       "type": "string",
       "enum": [
         "auto",
@@ -261,7 +261,7 @@
       "default": true,
       "description": "Scan package.json / requirements.txt / pyproject.toml / Pipfile / setup.py for the dependency, license and vulnerability report."
     },
-    "linecounter.dependencies.enabled": {
+    "locomotive.dependencies.enabled": {
       "type": "boolean",
       "default": true,
       "description": "Scan package.json / requirements.txt / pyproject.toml / Pipfile / setup.py for the dependency, license and vulnerability report."
@@ -281,7 +281,7 @@
       ],
       "description": "Licenses that are flagged as **problematic** (SPDX ids, `*` wildcards). Example: `GPL*` matches GPL-2.0 and GPL-3.0, but not LGPL."
     },
-    "linecounter.licenses.problematic": {
+    "locomotive.licenses.problematic": {
       "type": "array",
       "items": {
         "type": "string"
@@ -313,7 +313,7 @@
       ],
       "description": "Licenses that **need a review** (weak copyleft, unknown or custom licenses)."
     },
-    "linecounter.licenses.review": {
+    "locomotive.licenses.review": {
       "type": "array",
       "items": {
         "type": "string"
@@ -338,7 +338,7 @@
       "default": [],
       "description": "Optional allowlist. If set, every license that does not match is flagged as problematic (e.g. `[\"MIT\", \"BSD*\", \"Apache-2.0\", \"ISC\"]`)."
     },
-    "linecounter.licenses.allowed": {
+    "locomotive.licenses.allowed": {
       "type": "array",
       "items": {
         "type": "string"
@@ -354,7 +354,7 @@
       "default": [],
       "description": "Packages that are accepted exceptions: they stay in the report but are not flagged or checked for vulnerabilities."
     },
-    "linecounter.licenses.ignorePackages": {
+    "locomotive.licenses.ignorePackages": {
       "type": "array",
       "items": {
         "type": "string"
@@ -367,7 +367,7 @@
       "default": true,
       "description": "Include installed transitive packages (from package-lock.json / node_modules / the virtual environment) in the license report."
     },
-    "linecounter.licenses.includeTransitive": {
+    "locomotive.licenses.includeTransitive": {
       "type": "boolean",
       "default": true,
       "description": "Include installed transitive packages (from package-lock.json / node_modules / the virtual environment) in the license report."
@@ -377,7 +377,7 @@
       "default": true,
       "description": "Check npm and PyPI packages for known vulnerabilities via [OSV.dev](https://osv.dev). Only package names and versions are sent."
     },
-    "linecounter.vulnerabilities.enabled": {
+    "locomotive.vulnerabilities.enabled": {
       "type": "boolean",
       "default": true,
       "description": "Check npm and PyPI packages for known vulnerabilities via [OSV.dev](https://osv.dev). Only package names and versions are sent."
@@ -387,7 +387,7 @@
       "default": true,
       "description": "Also check transitive (installed but not declared) packages for vulnerabilities."
     },
-    "linecounter.vulnerabilities.includeTransitive": {
+    "locomotive.vulnerabilities.includeTransitive": {
       "type": "boolean",
       "default": true,
       "description": "Also check transitive (installed but not declared) packages for vulnerabilities."
@@ -398,7 +398,7 @@
       "minimum": 3,
       "description": "Timeout for requests to OSV.dev."
     },
-    "linecounter.vulnerabilities.timeoutSeconds": {
+    "locomotive.vulnerabilities.timeoutSeconds": {
       "type": "number",
       "default": 20,
       "minimum": 3,
@@ -409,7 +409,7 @@
       "default": true,
       "description": "Look up the license of packages that are declared but not installed in the public registries (registry.npmjs.org, pypi.org). Only package names are sent."
     },
-    "linecounter.licenses.fetchFromRegistry": {
+    "locomotive.licenses.fetchFromRegistry": {
       "type": "boolean",
       "default": true,
       "description": "Look up the license of packages that are declared but not installed in the public registries (registry.npmjs.org, pypi.org). Only package names are sent."
@@ -459,7 +459,7 @@
       "additionalProperties": false,
       "description": "Key bindings of the 3D train: forward (drive / thrust), back (turn around / brake), left/right (choose relation / steer), up/down (climb / dive when flying), snap (snap back onto the nearest relation), fly (leave the rails), camera."
     },
-    "linecounter.train.keys": {
+    "locomotive.train.keys": {
       "type": "object",
       "default": {
         "forward": "w",
@@ -510,7 +510,7 @@
       "minimum": 0,
       "description": "Maximum number of functions shown when functions are switched on in the import graph and the 3D train."
     },
-    "linecounter.graphs.maxFunctions": {
+    "locomotive.graphs.maxFunctions": {
       "type": "number",
       "default": 600,
       "minimum": 0,
@@ -521,7 +521,7 @@
       "default": true,
       "description": "Code health scan: complexity per function, long functions, duplicate code."
     },
-    "linecounter.health.enabled": {
+    "locomotive.health.enabled": {
       "type": "boolean",
       "default": true,
       "description": "Code health scan: complexity per function, long functions, duplicate code."
@@ -532,7 +532,7 @@
       "minimum": 2,
       "description": "Functions with a higher cyclomatic complexity are flagged (and roasted)."
     },
-    "linecounter.health.maxComplexity": {
+    "locomotive.health.maxComplexity": {
       "type": "number",
       "default": 15,
       "minimum": 2,
@@ -544,7 +544,7 @@
       "minimum": 5,
       "description": "Functions longer than this are flagged."
     },
-    "linecounter.health.maxFunctionLines": {
+    "locomotive.health.maxFunctionLines": {
       "type": "number",
       "default": 80,
       "minimum": 5,
@@ -556,7 +556,7 @@
       "minimum": 3,
       "description": "Minimum number of identical (normalized) lines that count as duplicated code."
     },
-    "linecounter.health.duplicateMinLines": {
+    "locomotive.health.duplicateMinLines": {
       "type": "number",
       "default": 6,
       "minimum": 3,
@@ -567,7 +567,7 @@
       "default": true,
       "description": "Scan for hard-coded secrets (API keys, tokens, private keys, passwords). Values are masked in the report."
     },
-    "linecounter.secrets.enabled": {
+    "locomotive.secrets.enabled": {
       "type": "boolean",
       "default": true,
       "description": "Scan for hard-coded secrets (API keys, tokens, private keys, passwords). Values are masked in the report."
@@ -586,7 +586,7 @@
       ],
       "description": "Glob patterns of files that are not scanned for secrets."
     },
-    "linecounter.secrets.ignore": {
+    "locomotive.secrets.ignore": {
       "type": "array",
       "items": {
         "type": "string"
@@ -605,7 +605,7 @@
       "default": true,
       "description": "Remember the key numbers of every run (per workspace) and show trends on the statistics page."
     },
-    "linecounter.history.enabled": {
+    "locomotive.history.enabled": {
       "type": "boolean",
       "default": true,
       "description": "Remember the key numbers of every run (per workspace) and show trends on the statistics page."
@@ -613,12 +613,12 @@
     "history.saveToFile": {
       "type": "boolean",
       "default": false,
-      "description": "Also store the history in .linecounter/history.json so that it can be committed and shared with the team."
+      "description": "Also store the history in .locomotive/history.json so that it can be committed and shared with the team."
     },
-    "linecounter.history.saveToFile": {
+    "locomotive.history.saveToFile": {
       "type": "boolean",
       "default": false,
-      "description": "Also store the history in .linecounter/history.json so that it can be committed and shared with the team."
+      "description": "Also store the history in .locomotive/history.json so that it can be committed and shared with the team."
     },
     "graphs.maxNodes": {
       "type": "number",
@@ -626,7 +626,7 @@
       "minimum": 10,
       "description": "Maximum number of nodes in the 2D graphs (import graph, structure graph). The most connected files are kept, cycles and chains always."
     },
-    "linecounter.graphs.maxNodes": {
+    "locomotive.graphs.maxNodes": {
       "type": "number",
       "default": 20000,
       "minimum": 10,
@@ -638,7 +638,7 @@
       "minimum": 10,
       "description": "Maximum number of relations (edges) drawn in the import graph. Circular imports are always kept."
     },
-    "linecounter.graphs.maxLinks": {
+    "locomotive.graphs.maxLinks": {
       "type": "number",
       "default": 40000,
       "minimum": 10,
@@ -650,7 +650,7 @@
       "minimum": 20,
       "description": "Maximum number of planets in the 3D train view (the 3D layout gets slow with thousands of nodes). The most connected files are kept."
     },
-    "linecounter.train.maxNodes": {
+    "locomotive.train.maxNodes": {
       "type": "number",
       "default": 800,
       "minimum": 20,
@@ -662,7 +662,7 @@
       "minimum": 50,
       "description": "Maximum number of relations drawn as rails in the 3D train view. Circular imports, dependency chains and relations to vulnerable libraries are kept first, then the most connected ones. Every rail costs GPU memory – lower it if the 3D view stays grey or slow."
     },
-    "linecounter.train.maxLinks": {
+    "locomotive.train.maxLinks": {
       "type": "number",
       "default": 2400,
       "minimum": 50,
@@ -683,7 +683,7 @@
       "default": "auto",
       "description": "Level of detail of the 3D train view."
     },
-    "linecounter.train.detail": {
+    "locomotive.train.detail": {
       "type": "string",
       "enum": [
         "auto",
@@ -718,9 +718,9 @@
           "patterns"
         ]
       },
-      "description": "Own filters shown as checkboxes in the sidebar (in addition to .linecounter/filters.json), e.g. [{\"label\": \"Data folders\", \"patterns\": [\"*/data\"]}]."
+      "description": "Own filters shown as checkboxes in the sidebar (in addition to .locomotive/filters.json), e.g. [{\"label\": \"Data folders\", \"patterns\": [\"*/data\"]}]."
     },
-    "linecounter.customFilters": {
+    "locomotive.customFilters": {
       "type": "array",
       "default": [],
       "items": {
@@ -740,7 +740,7 @@
           "patterns"
         ]
       },
-      "description": "Own filters shown as checkboxes in the sidebar (in addition to .linecounter/filters.json), e.g. [{\"label\": \"Data folders\", \"patterns\": [\"*/data\"]}]."
+      "description": "Own filters shown as checkboxes in the sidebar (in addition to .locomotive/filters.json), e.g. [{\"label\": \"Data folders\", \"patterns\": [\"*/data\"]}]."
     },
     "architecture.rules": {
       "type": "array",
@@ -784,7 +784,7 @@
       },
       "description": "Architecture rules: files matching \"from\" must not import files matching \"disallow\" (globs, relative to the project root), e.g. [{\"from\": \"src/ui/**\", \"disallow\": [\"src/db/**\"]}]."
     },
-    "linecounter.architecture.rules": {
+    "locomotive.architecture.rules": {
       "type": "array",
       "default": [],
       "items": {
@@ -845,7 +845,7 @@
       },
       "description": "Ordered layers from top to bottom; a layer may import lower layers but never higher ones, e.g. [{\"name\":\"ui\",\"pattern\":\"src/ui/**\"},{\"name\":\"services\",\"pattern\":\"src/services/**\"},{\"name\":\"db\",\"pattern\":\"src/db/**\"}]."
     },
-    "linecounter.architecture.layers": {
+    "locomotive.architecture.layers": {
       "type": "array",
       "default": [],
       "items": {
@@ -933,9 +933,9 @@
           "type": "boolean"
         }
       },
-      "description": "Quality gate (command \"Line Counter: Run Quality Gate\" and CLI \"node bin/linecounter.js gate\"): which findings make it fail."
+      "description": "Quality gate (command \"LOComotive: Run Quality Gate\" and CLI \"node bin/locomotive.js gate\"): which findings make it fail."
     },
-    "linecounter.gate": {
+    "locomotive.gate": {
       "type": "object",
       "default": {
         "vulnerabilities": "critical",
@@ -1004,7 +1004,7 @@
           "type": "boolean"
         }
       },
-      "description": "Quality gate (command \"Line Counter: Run Quality Gate\" and CLI \"node bin/linecounter.js gate\"): which findings make it fail."
+      "description": "Quality gate (command \"LOComotive: Run Quality Gate\" and CLI \"node bin/locomotive.js gate\"): which findings make it fail."
     },
     "ownership.staleDays": {
       "type": "number",
@@ -1012,7 +1012,7 @@
       "minimum": 30,
       "description": "Files without a commit for this many days count as stale (Ownership section)."
     },
-    "linecounter.ownership.staleDays": {
+    "locomotive.ownership.staleDays": {
       "type": "number",
       "default": 365,
       "minimum": 30,
@@ -1023,7 +1023,7 @@
       "default": true,
       "description": "TODO tracker: list every TODO / FIXME / HACK / XXX / BUG comment with author and age (git blame)."
     },
-    "linecounter.todos.enabled": {
+    "locomotive.todos.enabled": {
       "type": "boolean",
       "default": true,
       "description": "TODO tracker: list every TODO / FIXME / HACK / XXX / BUG comment with author and age (git blame)."
@@ -1033,7 +1033,7 @@
       "default": true,
       "description": "Branch comparison: compare the current branch with its base (when you are not on the base branch)."
     },
-    "linecounter.compare.enabled": {
+    "locomotive.compare.enabled": {
       "type": "boolean",
       "default": true,
       "description": "Branch comparison: compare the current branch with its base (when you are not on the base branch)."
@@ -1043,7 +1043,7 @@
       "default": "",
       "description": "Base branch for the comparison (empty = origin/HEAD, main, master or develop)."
     },
-    "linecounter.compare.baseBranch": {
+    "locomotive.compare.baseBranch": {
       "type": "string",
       "default": "",
       "description": "Base branch for the comparison (empty = origin/HEAD, main, master or develop)."
