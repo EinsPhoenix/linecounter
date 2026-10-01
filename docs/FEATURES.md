@@ -44,6 +44,12 @@ Die tieferen Analysen unterscheiden sich je nach Sprache:
 - **Vordefinierte Filter.** Schließen typische Ordner aus, etwa `node_modules`, `venv`, `.git`, Build-Ordner und Caches.
 - **`.gitignore`** wird optional beachtet.
 - **Dateiendungen.** Alle erkannten Endungen lassen sich einzeln ein- und ausblenden.
+- **Eigene Filter.**
+  - Unter *Predefined filters → My filters* legst du eigene Filter an: ein Muster (oder mehrere, durch Komma getrennt) und ein optionaler Name, z. B. `*/data`, `*.generated.ts` oder `docs/`.
+  - `*/data` bzw. `**/data` trifft jeden Ordner namens `data` in jeder Tiefe.
+  - Jeder Filter ist eine eigene Checkbox, wird in Presets mitgespeichert und landet in `.linecounter/filters.json`, sodass das Team ihn teilen kann.
+  - Aus einer Suche in der Sidebar machst du mit *Save as filter* direkt einen Filter.
+  - Filter aus der Einstellung `linecounter.customFilters` (`[{ "label": "…", "patterns": ["…"] }]`) erscheinen ebenfalls.
 - **Projekt-Root.** Liegen die eigentlichen Projekte tiefer als der in VS Code geöffnete Ordner (z. B. `Graphoenix` ist geöffnet, die Projekte liegen in `Graphoenix/facgraph/…`), klickst du auf einem Ordner auf das Ziel-Symbol. Dann gilt:
   - Der Baum zeigt nur noch diesen Ordner.
   - Die Statistik zählt nur seine Dateien.

@@ -16,6 +16,7 @@ const path = require('path');
 const DIR = '.linecounter';
 const SETTINGS_FILE = 'settings.json';
 const PRESETS_FILE = 'presets.json';
+const FILTERS_FILE = 'filters.json';
 
 class LineCounterConfig {
   constructor() {
@@ -35,11 +36,44 @@ class LineCounterConfig {
   get dir() { return this.root ? path.join(this.root, DIR) : null; }
   get settingsPath() { return this.dir ? path.join(this.dir, SETTINGS_FILE) : null; }
   get presetsPath() { return this.dir ? path.join(this.dir, PRESETS_FILE) : null; }
+  get filtersPath() { return this.dir ? path.join(this.dir, FILTERS_FILE) : null; }
 
   reload() {
     this.fileSettings = readJson(this.settingsPath) || {};
     const store = readJson(this.presetsPath);
     this.presetStore = store && typeof store === 'object' && store.presets ? store : { presets: {} };
+    const filters = readJson(this.filtersPath);
+    this.filterStore = filters && Array.isArray(filters.filters) ? filters : { filters: [] };
+  }
+
+  // ---------- custom filters (.linecounter/filters.json + linecounter.customFilters) ----------
+  /** [{ id, label, patterns, source }] – every filter becomes its own checkbox in the sidebar */
+  listCustomFilters() {
+    const out = [];
+    const add = (f, source) => {
+      if (!f || !Array.isArray(f.patterns) || !f.patterns.length) return;
+      const label = String(f.label || f.patterns.join(', ')).trim();
+      const id = 'cf:' + label.toLowerCase().replace(/[^\w*./-]+/g, '-');
+      if (!out.some(x => x.id === id)) out.push({ id, label, patterns: f.patterns.map(String).filter(Boolean), source });
+    };
+    for (const f of this.filterStore.filters || []) add(f, DIR + '/' + FILTERS_FILE);
+    for (const f of this.get('customFilters', []) || []) add(f, 'settings');
+    return out;
+  }
+
+  async addCustomFilter(label, patterns) {
+    if (!this.dir) throw new Error('Open a folder first – filters are stored in .linecounter/filters.json');
+    const list = (this.filterStore.filters || []).filter(f => String(f.label).trim() !== label);
+    list.push({ label, patterns });
+    this.filterStore = { filters: list };
+    await fs.promises.mkdir(this.dir, { recursive: true });
+    await fs.promises.writeFile(this.filtersPath, JSON.stringify(this.filterStore, null, 2) + '\n', 'utf8');
+  }
+
+  async removeCustomFilter(id) {
+    const list = (this.filterStore.filters || []).filter(f => 'cf:' + String(f.label || f.patterns.join(', ')).trim().toLowerCase().replace(/[^\w*./-]+/g, '-') !== id);
+    this.filterStore = { filters: list };
+    if (this.dir) await fs.promises.writeFile(this.filtersPath, JSON.stringify(this.filterStore, null, 2) + '\n', 'utf8');
   }
 
   /** Effective value: .linecounter/settings.json > VS Code settings > default. */
