@@ -274,6 +274,10 @@ Since version 2.0.0 the extension is called **LOComotive** (ID `einsphoenix.loco
 
 ## ☕ Support
 
-If LOComotive is helpful to you, I'd appreciate a small donation:
+If LOComotive is helpful to you, I'd love to hear about it! Here's how you can help:
+
+- ⭐ **Star this repo** — it helps others discover the project
+- 💬 **Open an issue** with feedback, ideas or bug reports on [GitHub Issues](https://github.com/EinsPhoenix/linecounter/issues)
+- ☕ **Donate** if you'd like to support development:
 
 [![PayPal](https://img.shields.io/badge/PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white)](https://www.paypal.com/donate/?hosted_button_id=JFUZJFFH5X97N)
