@@ -83,7 +83,12 @@ function aggregate(files, meta) {
   const fileEdges = [];
   const importGraph = buildImportGraph(text, { libraries: !!meta.includeLibraries, deps: meta.dependencies, edgesOut: fileEdges });
   const graphFiles = new Set(importGraph.nodes.filter(n => !n.library).map(n => n.abs));
-  const hopts = meta.health || {};
+  const churn = new Map();
+  for (const r of meta.repos || []) {
+    for (const [abs, c] of r.churnAll || []) churn.set(abs, (churn.get(abs) || 0) + c);
+    delete r.churnAll; // large – not needed on the page
+  }
+  const hopts = { ...(meta.health || {}), churn };
   return {
     generated: now, ...meta, multiRoot,
     totals, languages, extensions, folders, histogram, identifiers, ages, table,

@@ -599,6 +599,26 @@
         "**/*.sample"
       ],
       "description": "Glob patterns of files that are not scanned for secrets."
+    },
+    "history.enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Remember the key numbers of every run (per workspace) and show trends on the statistics page."
+    },
+    "linecounter.history.enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "Remember the key numbers of every run (per workspace) and show trends on the statistics page."
+    },
+    "history.saveToFile": {
+      "type": "boolean",
+      "default": false,
+      "description": "Also store the history in .linecounter/history.json so that it can be committed and shared with the team."
+    },
+    "linecounter.history.saveToFile": {
+      "type": "boolean",
+      "default": false,
+      "description": "Also store the history in .linecounter/history.json so that it can be committed and shared with the team."
     }
   }
 }

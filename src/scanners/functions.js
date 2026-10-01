@@ -107,8 +107,9 @@ function extractFunctions(text, langName, max = 400) {
   for (let i = 0; i < lines.length && out.length < max; i++) {
     const l = lines[i];
     if (l.length > 400) continue;
-    let name = null, indent = 0;
+    let name = null, indent = 0, pi = -1;
     for (const re of patterns) {
+      pi++;
       const m = re.exec(l);
       if (!m) continue;
       if (kind === 'py') { indent = m[1].replace(/\t/g, '    ').length; name = m[2]; } else name = m[1];
@@ -162,7 +163,15 @@ function extractFunctions(text, langName, max = 400) {
     const sig = raw[i] || '';
     const paramsMatch = sig.match(/\(([^)]*)\)/);
     const params = paramsMatch && paramsMatch[1].trim() ? paramsMatch[1].split(',').filter(p => p.trim() && !/^\s*(self|cls|this)\s*$/.test(p)).length : 0;
-    out.push({ name, line: i + 1, end: end + 1, lines: end - i + 1, complexity: 1, params });
+    // decorators / annotations (framework handlers, @Override …) and exports mark functions that are used from outside
+    let prev = i - 1;
+    while (prev >= 0 && !raw[prev].trim()) prev--;
+    const decorated = prev >= 0 && /^\s*(@|#\[)/.test(raw[prev]);
+    const exported = /^\s*(export\b|pub\b|public\b|module\.exports|exports\.)/.test(raw[i] || '') || (kind === 'go' && /^[A-Z]/.test(name));
+    // members (methods, object properties, receivers) are often called dynamically by frameworks
+    const lead = (raw[i] || '').match(/^\s*/)[0].length;
+    const member = kind === 'cish' || (kind === 'js' && pi >= 3) || ((kind === 'py' || kind === 'rust' || kind === 'ruby' || kind === 'php' || kind === 'kotlin' || kind === 'swift') && lead > 0) || (kind === 'go' && /^\s*func\s*\(/.test(raw[i] || ''));
+    out.push({ name, line: i + 1, end: end + 1, lines: end - i + 1, complexity: 1, params, decorated, exported, member });
   }
   // complexity counts only the function's own lines – nested functions are measured on their own
   const perLine = lines.map((_, k) => complexityOf(lines, k, k, kind) - 1);

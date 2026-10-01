@@ -84,6 +84,45 @@
       <p class="muted hl-note">Values are masked. Rotate every real key that was ever committed – deleting the line does not delete git history.</p>`;
   }
 
+  /** churn (git changes) × complexity scatter – the top right corner is where refactoring pays off most */
+  function riskHtml(ui, H) {
+    const { esc, fmt, tipAttr } = ui;
+    const R = H.risk;
+    if (!R || !R.files.length) return '<p class="muted">Needs a git repository with history: files that change often and are complex appear here.</p>';
+    const W = 560, Hh = 300, P = 36;
+    const lx = v => Math.log10(1 + v), mx = lx(R.maxChurn), my = lx(R.maxComplexity);
+    const x = v => P + (lx(v) / mx) * (W - P - 12), y = v => Hh - P - (lx(v) / my) * (Hh - P - 12);
+    const maxLines = Math.max(1, ...R.files.map(f => f.lines || 1));
+    const dots = R.files.slice().reverse().map(f => {
+      const r = 3 + Math.sqrt((f.lines || 1) / maxLines) * 12;
+      const c = f.risk >= 60 ? '#ff4d4f' : f.risk >= 35 ? '#e0621b' : f.risk >= 15 ? '#f7ae62' : '#8a8a8a';
+      return `<circle cx="${x(f.churn).toFixed(1)}" cy="${y(f.complexity).toFixed(1)}" r="${r.toFixed(1)}" style="fill:${c}" class="hl-risk-dot clickable" data-abs="${esc(f.abs)}" ${tipAttr(`<b>${esc(f.path)}</b><br>changed in ${fmt(f.churn)} commits · total complexity ${fmt(f.complexity)}<br>worst function ${fmt(f.maxComplexity)} · ${fmt(f.lines)} lines<br>risk ${f.risk}/100 · click to open`)}/>`;
+    }).join('');
+    const top = R.files.slice(0, 8);
+    return `<div class="hl-risk">
+      <svg viewBox="0 0 ${W} ${Hh}" class="hl-risk-svg">
+        <rect x="${(P + (W - P - 12) / 2).toFixed(0)}" y="12" width="${((W - P - 12) / 2).toFixed(0)}" height="${((Hh - P - 12) / 2).toFixed(0)}" class="hl-risk-zone"/>
+        <text x="${W - 16}" y="28" text-anchor="end" class="hl-risk-zone-label">refactor first</text>
+        <line x1="${P}" y1="${Hh - P}" x2="${W - 8}" y2="${Hh - P}" class="hl-axis"/><line x1="${P}" y1="8" x2="${P}" y2="${Hh - P}" class="hl-axis"/>
+        <text x="${(W + P) / 2}" y="${Hh - 8}" text-anchor="middle" class="hl-axis-label">changes (git commits, log scale) →</text>
+        <text x="12" y="${(Hh - P) / 2}" text-anchor="middle" class="hl-axis-label" transform="rotate(-90 12 ${(Hh - P) / 2})">complexity (log) →</text>
+        ${dots}
+      </svg>
+      <ol class="hl-risk-list">${top.map(f => `<li class="clickable" data-abs="${esc(f.abs)}"><span class="hl-risk-score" style="background:${f.risk >= 60 ? '#ff4d4f' : f.risk >= 35 ? '#e0621b' : '#6b6b6b'}">${f.risk}</span><span class="hl-path">${esc(f.path)}</span><span class="muted">${fmt(f.churn)}× · cx ${fmt(f.complexity)}</span></li>`).join('')}</ol>
+    </div>`;
+  }
+
+  function deadHtml(ui, H) {
+    const { esc, fmt } = ui;
+    const d = H.deadCode;
+    if (!d) return '';
+    if (!d.items.length) return '<p class="dep-okmsg">Every function is referenced somewhere. No dead weight found.</p>';
+    return `<p class="muted hl-note">Functions whose name appears nowhere else in the analyzed files. Methods, decorated handlers, tests and entry points are skipped. <b>exported</b> ones may still be public API of a library.</p>
+      <div class="table-scroll small"><table class="grid"><thead><tr><th>Function</th><th>File</th><th class="num">Lines</th><th></th></tr></thead><tbody>
+      ${d.items.map(f => `<tr class="clickable" data-abs="${esc(f.abs)}" data-line="${f.line}"><td><b class="hl-fn">${esc(f.name)}</b><span class="muted">()</span></td><td class="hl-path">${esc(f.path)}<span class="muted">:${f.line}</span></td><td class="num">${fmt(f.lines)}</td><td>${f.exported ? '<span class="dep-tag">exported</span>' : '<span class="dep-tag prod">internal</span>'}</td></tr>`).join('')}
+      </tbody></table></div>`;
+  }
+
   function render(ui, D) {
     const H = D.health;
     if (!H) return '';
@@ -115,6 +154,10 @@
           <input id="hlQ" type="search" placeholder="Filter functions / files…" value="${esc(state.q)}">
         </div><div id="hl-fns">${fnTable(ui, H)}</div>`, { sub: 'click a row to jump to the function', tools: `<button class="btn" data-hl-pdf="health">${icon('pages')} Code health PDF</button>` })}
       <div class="grid-2 hl-bottom">
+        ${card('Risk hotspots – churn × complexity', riskHtml(ui, H), { sub: 'often changed and complex = most likely to break' })}
+        ${card(`Possibly unused functions <span class="dep-chip ${H.deadCode && H.deadCode.internal ? 'warn' : ''}">${fmt(H.deadCode ? H.deadCode.total : 0)}</span>`, deadHtml(ui, H), { sub: H.deadCode && H.deadCode.total ? `${fmt(H.deadCode.lines)} lines` : '' })}
+      </div>
+      <div class="grid-2 hl-bottom">
         ${card(`Duplicated code`, `<div id="hl-dups">${dupsHtml(ui, H)}</div>`, { sub: H.duplicates ? `blocks of ${H.thresholds.duplicateMinLines}+ identical lines` : '' })}
         ${card(`${icon('alert')} Hard-coded secrets`, `<div id="hl-secrets">${secretsHtml(ui, H)}</div>`, { sub: S && S.total ? secretSub : '', tools: S ? `<button class="btn" data-hl-pdf="secrets">${icon('pages')} Secrets PDF</button>` : '' })}
       </div>`;
@@ -139,6 +182,8 @@
     const S = H.secrets;
     if (S && S.bySeverity.critical) out.push(['🔑', `${fmt(S.bySeverity.critical)} critical secret${S.bySeverity.critical === 1 ? '' : 's'} in the code (${esc(S.items[0].name)} in ${esc(S.items[0].path.split('/').pop())}). Hackers say thanks for the free keys.`]);
     else if (S && S.total) out.push(['🙈', `${fmt(S.total)} possible hard-coded secret${S.total === 1 ? '' : 's'}. “It's just for local testing” – famous last words.`]);
+    if (H.deadCode && H.deadCode.internal >= 5) out.push(['🪦', `${fmt(H.deadCode.internal)} functions nobody calls (${fmt(H.deadCode.lines)} lines). A graveyard with syntax highlighting.`]);
+    if (H.risk && H.risk.files[0] && H.risk.files[0].risk >= 60) out.push(['💣', `${esc(H.risk.files[0].path.split('/').pop())} changed in ${fmt(H.risk.files[0].churn)} commits and has a total complexity of ${fmt(H.risk.files[0].complexity)}. That's where the next bug is born.`]);
     if (H.grade === 'A' && H.functions > 30) out.push(['🏅', `Code health grade A with ${fmt(H.functions)} functions. Either you're very good or the scanner is very tired.`]);
     return out;
   }
