@@ -2,6 +2,15 @@
 
 VS-Code-Extension, die alle Dateien und Ordner des Workspaces rekursiv als Baum in der Sidebar anzeigt. Dort filterst du die Auswahl und erzeugst mit einem Klick eine Statistik-Seite im Vollbild.
 
+**Ausführliche Beschreibung aller Funktionen, was du erwarten kannst und wo die Grenzen liegen: [`docs/FEATURES.md`](docs/FEATURES.md)**
+
+## Sprachunterstützung (Kurzfassung)
+
+- **Zeilen zählen:** 74 Sprachen und Dateitypen
+- **Importgraph:** JS/TS (inkl. `tsconfig`-Pfade und `@/`-Aliase), Python, Rust, Go, C/C++, CSS/SCSS/Less, HTML
+- **Funktionen & Komplexität:** JS/TS, Python, Rust, Go, Java, Kotlin, Scala, C#, C/C++, Swift, PHP, Ruby, Lua, Dart
+- **Pakete, Lizenzen, Schwachstellen:** npm, PyPI, crates.io (Rust), Go-Module
+
 ## Installation
 
 Die fertig gepackte Extension liegt im Repo: **`linecounter.vsix`**
@@ -41,8 +50,9 @@ Die Seite nutzt ein festes Farbschema aus dunklem Orange und Grau mit SVG-Icons.
   - **Treemap-Kachel:** Ein **Linksklick kopiert den Pfad** in die Zwischenablage, ein Doppelklick öffnet die Datei.
   - **Rechtsklick** (auch in Rangliste, Balken und Rant-Listen): Datei öffnen, Pfad bzw. relativen Pfad kopieren, im Dateimanager anzeigen oder **Datei löschen**. Beim Löschen kommt eine Sicherheitsabfrage, danach landet die Datei im Papierkorb oder wird endgültig gelöscht.
 - **Hall of Fame**: 18 Kategorien mit Podest (🥇🥈🥉), darunter längste und schwerste Datei, längste Zeile (öffnet direkt an der Stelle), kleinste Datei, tiefste Verschachtelung, längster Name, TODO-Sammler, am besten dokumentiert, „Silent treatment“ (viel Code, kein Kommentar), Function Factory, Debug-Print-Champion, luftigste und dichteste Datei, breitester Code, Whitespace-Hoarder, Emoji-Artist, neueste Datei und Fossil. Die Hero-Karte 🏆 zeigt die meistdekorierte Datei.
-- **Dependencies, licenses & vulnerabilities** (npm und Python)
-  - **Manifeste:** `package.json`, `requirements*.txt`, `pyproject.toml` (PEP 621 und Poetry), `Pipfile`, `setup.py`, `setup.cfg`
+- **Dependencies, licenses & vulnerabilities** (npm, Python, Rust, Go)
+  - **Manifeste:** `package.json`, `requirements*.txt`, `pyproject.toml` (PEP 621, Poetry, uv, PDM), `Pipfile`, `setup.py`, `setup.cfg`, `Cargo.toml` (+ `Cargo.lock`), `go.mod` (+ `go.sum`)
+  - **Lizenzen aller Pakete:** Ist eine Lizenz lokal unbekannt, wird nacheinander die Registry, das **Paket-Archiv** (LICENSE-Dateien darin), deps.dev und das GitHub-Repository geprüft. Was geprüft wurde, zeigt die Karte *Unknown & custom licenses* und das Lizenz-PDF.
   - **Installierte Pakete:** npm aus `package-lock.json` oder `node_modules`, Python aus der virtuellen Umgebung (`.venv`, `venv` oder jeder Ordner mit `pyvenv.cfg`) über `METADATA`, Classifier und Lizenzdateien. Ohne venv kommen die Versionen aus `Pipfile.lock`, `poetry.lock` oder `uv.lock`.
   - **Lizenz-Report:** jedes Paket (direkt und transitiv) mit normalisierter SPDX-Lizenz, Kategorie (permissive, weak/strong/network copyleft, restricted, unknown) und Status *problematic*, *review* oder *ok*. Filter und Export als CSV sind dabei. Welche Lizenzen problematisch sind, legst du in den Einstellungen fest.
   - **Vulnerability-Report** über [OSV.dev](https://osv.dev): Schweregrad (auch aus CVSS v3 berechnet), Advisory-Link, CVE, Zusammenfassung und korrigierte Version. Gesendet werden nur Paketname und Version, abschaltbar über `linecounter.vulnerabilities.enabled`.
@@ -71,8 +81,10 @@ Die Seite nutzt ein festes Farbschema aus dunklem Orange und Grau mit SVG-Icons.
     - **Bibliotheken als Knoten:** In der Sidebar gibt es unter den Filtern den Schalter *Show libraries as graph nodes*. Externe npm- und Python-Pakete werden dann zu Knoten im Graphen: Quadrate, und Pakete mit bekannten Schwachstellen als rote Totenköpfe. Tooltip mit Version, Lizenz und Schwachstellen. Sie zählen in keiner Statistik.
     - **3D Train (Dependency Express):**
       - **Welt:** Dateien sind Planeten (Größe nach Importen, roter Schein bei Zyklen), Bibliotheken sind Metallwürfel, verwundbare Pakete sind Totenköpfe, und Dateien, die verwundbare Pakete importieren, bekommen einen Totenkopf-Mond. Die Planeten stehen mit großem Abstand und überlappen nicht.
-      - **Gleise:** Jede Beziehung ist ein durchgehendes Gleis (Bézier-Kurve). Es läuft **über** die Planeten: Jede Beziehung verlässt den Planeten auf der oberen Hälfte in Richtung Ziel, und oben am Pol treffen sich alle Gleise auf einer **Drehscheibe**. Dort kreuzen sie sich, und dort wechselt der Zug die Beziehung. Zyklen haben rote Schienen, Funktionsaufrufe bernsteinfarbene.
-      - **Zug:** eine Magnetschwebebahn mit Cockpit-Kuppel, Leuchtstreifen, Schwebe-Pads, Triebwerksglühen und Ionenspur. Auf den Planeten richtet sich der Zug zur Oberfläche aus.
+      - **Farben:** Planeten desselben Ordners haben dieselbe Farbe (Legende unten links), Funktionen die Farbe ihrer Datei.
+      - **Gleise:** Jede Beziehung ist eine glänzende Magnetschwebe-Führungsschiene (Bézier-Kurve) mit Neon-Kanten, in denen Licht fließt. Sie läuft **über** die Planeten: Jede Beziehung verlässt den Planeten auf der oberen Hälfte in Richtung Ziel, und oben am Pol treffen sich alle Gleise auf einer **Drehscheibe**. Dort kreuzen sie sich, und dort wechselt der Zug die Beziehung. Zyklen haben rote Schienen, Funktionsaufrufe bernsteinfarbene.
+      - **Zug:** eine Stromlinien-Magnetschwebebahn in Chrom und Klarlack mit Cockpit-Kuppel, Leuchtlinien, Finne, Winglets, Doppel-Triebwerk und Passagier-Pods mit Fensterbändern. Auf den Planeten richtet sich der Zug zur Oberfläche aus.
+      - **Gefahrene Strecke:** Bereits gefahrene Beziehungen werden grün markiert. Je öfter du sie fährst, desto dicker wird die Linie. *Trail* in der Top-Bar zeigt die Anzahl und löscht die Spur.
       - **Funktionen (ƒ Functions):** Schaltest du im Graphen oder in der Zug-Top-Bar die Funktionen ein, werden Funktionen zu kristallförmigen Monden mit eigenen Gleisen (Datei → Funktion, Aufrufer → aufgerufene Funktion). So fährst du Dateien und Funktionen entlang. Im Chain-Modus gibt es zusätzlich die Route *Longest call chain*.
       - **Beschriftungen** erscheinen nur für Objekte in der Nähe, für das, was die Kamera anschaut, und für die Stationen der Strecke.
       - **Chain:** Der Zug fährt eine Kette oder eine Ringlinie (zirkulärer Import) mit Stationen ab. Das Fahrziel ist wählbar.
@@ -85,7 +97,10 @@ Die Seite nutzt ein festes Farbschema aus dunklem Orange und Grau mit SVG-Icons.
       - **Kameras:** Chase, Cab (Führerstand, dreht sich mit dem Zug statt mit der Welt) und Free cam. **C** wechselt, Ziehen mit der Maus schaut umher, das Mausrad zoomt, ↑/↓ ändert die Geschwindigkeit, Leertaste pausiert, **Esc** beendet.
     - **Motion:** *Wiggle*, *Calm* (kommt zur Ruhe) oder *Still* (statisch, ohne Animation). Gezogene Knoten bleiben in Calm und Still dort liegen, wo man sie ablegt. Gegenseitige Imports werden als Bögen gezeichnet.
   - Alle Graphen lassen sich zoomen, verschieben und per Drag bewegen. Hover hebt die Nachbarn hervor. Die Buttons oben rechts pausieren die Animation, schalten das Wackeln ein und aus, schütteln den Graphen durch und setzen den Zoom zurück. Die Einblend-Animation startet, sobald ein Graph ins Bild scrollt.
-    - **ƒ Functions:** Funktionen als Rauten im Graphen, verbunden mit ihrer Datei und mit den Funktionen, die sie aufrufen (nur entlang echter Imports). Doppelklick öffnet die Funktion an ihrer Zeile.
+    - **ƒ Functions:** Funktionen als Rauten im Graphen, verbunden mit ihrer Datei und mit den Funktionen, die sie aufrufen (nur entlang echter Imports, inklusive JSX-Komponenten). Doppelklick öffnet die Funktion an ihrer Zeile.
+    - **Farbe:** *Folder* (Dateien desselben Ordners gleich, Funktionen nach Datei) oder *Language*.
+    - **Cluster folders:** Dateien gruppieren sich pro Ordner in beschriftete Blasen ohne Überlappung. Ein Doppelklick in eine Blase zoomt hinein.
+    - **Suche:** Beim Tippen werden alle Treffer markiert, die Ansicht zoomt hin, und Enter wählt aus. Word Web und Structure haben ebenfalls ein Suchfeld; die Structure-Suche klappt passende Ordner auf.
 - **Code health**
   - Note (A–F) und Score als Tacho, dazu Funktionen, zu komplexe und zu lange Funktionen, Anteil duplizierten Codes und gefundene Secrets
   - **Komplexität pro Funktion** (zyklomatisch, verschachtelte Funktionen zählen separat) für JS/TS, Python, Go, Rust, Java, C#, C/C++, Kotlin, Swift, PHP, Ruby und Lua. Diagramme zur Verteilung, zur Funktionslänge und zu Hotspot-Dateien.

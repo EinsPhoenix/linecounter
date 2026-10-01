@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.11.1
+- Rust: functions named like keywords of other languages (e.g. `new`) are recognised again
+- docs/FEATURES.md: every feature explained – what it does, what to expect, limits and the language support matrix
+
 ## 1.11.0
 - Licenses of all packages: thorough lookup (registry, LICENSE files inside the package archive, deps.dev, GitHub) with a trail of what was checked; new "Unknown & custom licenses" card and PDF section
 - Rust (Cargo.toml / Cargo.lock) and Go (go.mod / go.sum): dependencies, licenses, vulnerabilities, unused crates / modules, import graph (mod, crate::, super::, Go packages)
