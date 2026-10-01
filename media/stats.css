@@ -646,3 +646,15 @@ body.print-light .dep-catseg { color: #111; }
 .cmp-add { color: #3ddc84; font-weight: 700; } .cmp-del { color: #ff6b6b; font-weight: 700; }
 .cmp-alert { background: rgba(255, 77, 79, .12); border: 1px solid rgba(255, 77, 79, .5); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; font-size: 13px; }
 .cmp-commits { margin: 0; padding-left: 18px; font-size: 12.5px; display: flex; flex-direction: column; gap: 3px; }
+/* ---------- many repositories ---------- */
+.repo-table tr.sel td { background: rgba(224, 98, 27, .12); }
+.repo-table tr.stale td { opacity: .55; }
+.repo-remote { font-size: 11px; }
+.repo-spark { width: 120px; height: 24px; display: block; fill: currentColor; }
+.repo-stack { display: flex; align-items: flex-end; gap: 6px; height: 180px; padding-top: 6px; }
+.repo-stack-col { flex: 1; display: flex; flex-direction: column; height: 100%; }
+.repo-stack-bar { flex: 1; display: flex; flex-direction: column-reverse; gap: 1px; border-radius: 4px 4px 0 0; overflow: hidden; }
+.repo-stack-bar span { display: block; width: 100%; }
+.repo-switch { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; position: sticky; top: 0; z-index: 3; background: var(--bg, var(--vscode-editor-background)); padding: 6px 0; }
+.repo-switch .sw, .repo-table .sw { margin-right: 6px; }
+.repo-tag { display: inline-block; font-size: 10.5px; padding: 0 6px; margin-right: 6px; border-radius: 8px; background: var(--card-2); border: 1px solid var(--border); color: var(--muted); }
