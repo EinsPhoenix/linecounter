@@ -1,8 +1,10 @@
 <p align="center"><img src="media/icon.png" width="96" alt="Line Counter"></p>
 
-# Line Counter & Code Statistics
+# Code Statistics – Lines of Code, Complexity & Git Insights
 
-[![Release](https://img.shields.io/badge/release-v1.15.1-e0621b)](https://github.com/EinsPhoenix/linecounter/releases/latest)
+*(Line Counter für VS Code)*
+
+[![Release](https://img.shields.io/badge/release-v1.15.2-e0621b)](https://github.com/EinsPhoenix/linecounter/releases/latest)
 [![Download vsix](https://img.shields.io/badge/download-linecounter.vsix-2ea44f?logo=visualstudiocode&logoColor=white)](https://github.com/EinsPhoenix/linecounter/releases/latest/download/linecounter.vsix)
 [![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)](https://github.com/EinsPhoenix/linecounter/actions/workflows/ci.yml)
 [![Changelog](https://img.shields.io/badge/changelog-CHANGELOG.md-555)](CHANGELOG.md)

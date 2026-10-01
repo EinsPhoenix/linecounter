@@ -61,10 +61,10 @@ for (const v of versions) {
   const stableDir = fs.mkdtempSync(path.join(os.tmpdir(), `lc-${v}-`));
   const stable = path.join(stableDir, 'linecounter.vsix');
   fs.copyFileSync(asset, stable);
-  const args = ['release', 'create', tag, asset, stable, '--title', `Line Counter ${v}`, '--notes-file', notesFile,
+  const args = ['release', 'create', tag, asset, stable, '--title', `Code Statistics ${v}`, '--notes-file', notesFile,
     '--target', process.env.GITHUB_SHA || 'main', `--latest=${v === latest}`];
   if (have.has(tag)) {
-    const edit = ['release', 'edit', tag, '--title', `Line Counter ${v}`, '--notes-file', notesFile, `--latest=${v === latest}`];
+    const edit = ['release', 'edit', tag, '--title', `Code Statistics ${v}`, '--notes-file', notesFile, `--latest=${v === latest}`];
     console.log(`${dryRun ? '[dry-run] ' : ''}gh ${edit.join(' ')}`);
     if (!dryRun) execFileSync('gh', edit, { cwd: root, stdio: 'inherit' });
     continue;

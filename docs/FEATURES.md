@@ -1,4 +1,4 @@
-# Line Counter – Funktionen im Detail
+# Code Statistics (Line Counter) – Funktionen im Detail
 
 Diese Seite beschreibt, **was jede Funktion macht, was du erwarten kannst und wo die Grenzen liegen**. Eine Kurzfassung steht in der [README](../README.md).
 
