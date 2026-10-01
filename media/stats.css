@@ -578,3 +578,10 @@ body.print-light .dep-catseg { color: #111; }
 .dep-trail b { color: var(--accent); font-weight: 700; margin-right: 3px; }
 .dep-trail.fail { opacity: .6; }
 .dep-unknown-links { white-space: nowrap; }
+.gsearch { width: 150px; height: 26px; font: inherit; font-size: 12px; padding: 0 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--card-2); color: var(--fg); }
+.gsearch:focus { outline: none; border-color: var(--accent); }
+.gsearch.nohit { border-color: #ff4d4f; }
+.seg-btn.solo { border: 1px solid var(--border); border-radius: 6px; }
+#train3d .t3-legend { position: absolute; left: 12px; bottom: 56px; font-size: 11px; color: #cfcfcf; background: rgba(20,20,22,.72); border: 1px solid #333; border-radius: 8px; padding: 8px 10px; max-width: 260px; pointer-events: none; }
+#train3d .t3-legend-title { font-weight: 700; color: #f7ae62; margin-bottom: 4px; text-transform: uppercase; letter-spacing: .05em; font-size: 10px; }
+#train3d .t3-legend-row { display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

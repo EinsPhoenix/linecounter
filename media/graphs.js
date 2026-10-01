@@ -251,6 +251,80 @@
     let colorCache = new Map();
     const col = c => { if (!colorCache.has(c)) colorCache.set(c, resolveColor(c)); return colorCache.get(c); };
     const nodeR = n => (opts.radius ? opts.radius(n) : 4);
+    // ---- clusters: nodes of one group (e.g. folder) gather around their own anchor inside a soft bubble ----
+    let clusters = !!opts.clusters;
+    let groups = new Map(); // key -> { key, n, x, y, r, color, label, hull }
+    const groupOf = n => (opts.group ? opts.group(n) : null);
+    function computeGroups() {
+      groups = new Map();
+      if (!opts.group) return;
+      for (const n of nodes) {
+        const g = groupOf(n);
+        if (g == null) continue;
+        let e = groups.get(g);
+        if (!e) groups.set(g, (e = { key: g, n: 0, area: 0 }));
+        e.n++;
+        e.area += Math.pow(nodeR(n) + 9, 2) * Math.PI;
+      }
+      // anchors: circles packed without overlap, sized by the space the members need
+      const list = [...groups.values()].sort((a, b) => b.n - a.n);
+      for (const e of list) { e.r = Math.sqrt(e.area / Math.PI) * 1.5 + 26; e.color = opts.groupColor ? opts.groupColor(e.key) : '#888'; e.label = opts.groupLabel ? opts.groupLabel(e.key, e.n) : String(e.key); }
+      const packed = list.map(e => ({ r: e.r + 22, e }));
+      d3.packSiblings(packed);
+      for (const p of packed) { p.e.x = p.x; p.e.y = p.y; }
+    }
+    function applyClusters() {
+      computeGroups();
+      if (clusters && groups.size > 1) {
+        const anchor = n => groups.get(groupOf(n));
+        sim.force('x', d3.forceX(n => (anchor(n) ? anchor(n).x : 0)).strength(n => (anchor(n) ? 0.16 : 0.02)));
+        sim.force('y', d3.forceY(n => (anchor(n) ? anchor(n).y : 0)).strength(n => (anchor(n) ? 0.16 : 0.02)));
+        sim.force('link').strength(l => (groupOf(l.source) === groupOf(l.target) ? 0.35 : 0.012));
+        sim.force('charge').distanceMax(160);
+        sim.force('collide').radius(n => nodeR(n) + 4);
+      } else {
+        sim.force('charge').distanceMax(400);
+        sim.force('collide').radius(n => nodeR(n) + (opts.collidePad ?? 2));
+        applyLayout();
+      }
+    }
+    function drawHulls(k) {
+      if (!clusters || groups.size < 2) return;
+      const pts = new Map();
+      for (const n of nodes) {
+        const g = groupOf(n);
+        if (g == null || !groups.has(g)) continue;
+        if (!pts.has(g)) pts.set(g, []);
+        const r = nodeR(n) + 12;
+        for (let a = 0; a < 8; a++) pts.get(g).push([n.x + Math.cos(a * Math.PI / 4) * r, n.y + Math.sin(a * Math.PI / 4) * r]);
+      }
+      ctx.save();
+      ctx.lineJoin = 'round';
+      for (const [g, list] of pts) {
+        const e = groups.get(g);
+        const hull = d3.polygonHull(list);
+        if (!hull) continue;
+        e.hull = hull;
+        const c = col(e.color);
+        ctx.beginPath();
+        hull.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+        ctx.closePath();
+        ctx.globalAlpha = highlight ? 0.04 : 0.09;
+        ctx.fillStyle = c; ctx.fill();
+        ctx.globalAlpha = highlight ? 0.15 : 0.45;
+        ctx.strokeStyle = c; ctx.lineWidth = 1.4 / k; ctx.stroke();
+        // label above the bubble
+        let top = hull[0];
+        for (const p of hull) if (p[1] < top[1]) top = p;
+        const cx = hull.reduce((s, p) => s + p[0], 0) / hull.length;
+        ctx.globalAlpha = highlight ? 0.35 : 0.9;
+        ctx.font = `600 ${Math.max(10, 12 / Math.sqrt(k))}px var(--vscode-font-family, system-ui)`;
+        ctx.fillStyle = c;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+        ctx.fillText(e.label, cx, top[1] - 4 / k);
+      }
+      ctx.restore();
+    }
 
     const sim = d3.forceSimulation()
       .force('link', d3.forceLink().distance(l => (opts.distance ? opts.distance(l) : 40)).strength(l => (opts.linkStrength ? opts.linkStrength(l) : 0.4)))
@@ -334,6 +408,7 @@
       sim.nodes(nodes);
       sim.force('link').links(links);
       applyLayout();
+      applyClusters();
       applyMotion();
       sim.alpha(keepPositions ? 0.5 : 1);
       if (!keepPositions) fitted = false;
@@ -420,6 +495,7 @@
         ctx.stroke();
         if (opts.arrows) { ctx.fillStyle = color; drawArrow(p, l.target, (hl && hl.links.has(l) ? 8 : 5) / Math.sqrt(k)); }
       };
+      drawHulls(k);
       // links – normal ones first, highlighted ones on top
       for (const l of links) {
         if (hl && hl.links.has(l)) continue;
@@ -541,9 +617,19 @@
     canvas.addEventListener('click', ev => {
       if (!findNode(ev) && opts.onBackground) opts.onBackground(ev);
     });
+    const groupAt = ev => {
+      if (!clusters) return null;
+      const r = canvas.getBoundingClientRect();
+      const { w, h } = cv.state;
+      const x = (ev.clientX - r.left - w / 2 - transform.x) / transform.k, y = (ev.clientY - r.top - h / 2 - transform.y) / transform.k;
+      for (const e of groups.values()) if (e.hull && d3.polygonContains(e.hull, [x, y])) return e;
+      return null;
+    };
     canvas.addEventListener('dblclick', ev => {
       const n = findNode(ev);
-      if (n && opts.onDblClick) opts.onDblClick(n, ev);
+      if (n && opts.onDblClick) { opts.onDblClick(n, ev); return; }
+      const g = !n && groupAt(ev);
+      if (g) fitView(500, nodes.filter(x => groupOf(x) === g.key)); // zoom into a cluster
     });
     canvas.addEventListener('mouseleave', ev => { hovered = null; draw(); if (opts.onHover) opts.onHover(null, ev); });
     canvas.addEventListener('contextmenu', ev => {
@@ -621,6 +707,29 @@
       positions() { return nodes.map(n => [n.id, { x: n.x, y: n.y }]); },
       get running() { return running; },
       destroy() { sim.stop(); io.disconnect(); ro.disconnect(); },
+      /** group nodes into bubbles (e.g. by folder) */
+      setClusters(on) {
+        clusters = !!on;
+        for (const n of nodes) { n.fx = null; n.fy = null; }
+        applyClusters();
+        fitted = false;
+        if (motion === 'still') settleNow(); else { sim.alpha(0.9); keepAlive(); }
+        return clusters;
+      },
+      get clusters() { return clusters; },
+      /** highlights all nodes whose label / search text contains q and zooms to them; returns the matches */
+      search(q) {
+        q = String(q || '').trim().toLowerCase();
+        if (!q) { highlight = null; draw(); return []; }
+        const text = n => ((opts.searchText ? opts.searchText(n) : '') + ' ' + (opts.label ? opts.label(n) : '') + ' ' + n.id).toLowerCase();
+        const hits = nodes.filter(n => text(n).includes(q));
+        highlight = hits.length ? { nodes: new Map(hits.map(n => [n.index, opts.searchColor || '#ffb46b'])), links: new Map(), labels: new Set(hits.map(n => n.index)) } : null;
+        draw();
+        if (hits.length) fitView(500, hits.length > 60 ? null : hits);
+        return hits;
+      },
+      /** group key -> color (after clustering) */
+      get groups() { return groups; },
     };
   }
 
@@ -655,5 +764,28 @@
     return { ...G, nodes, links, functions: nodes.length - base };
   }
 
-  window.LCGraphs = { Treemap, ForceGraph, resolveColor, drawSkull, withFunctions };
+  // distinct, muted colors for folders / files (orange and gray first, then cooler tones)
+  const PALETTE = ['#e0621b', '#6c8ebf', '#7fa37a', '#b39ddb', '#f2c14e', '#5fb3b3', '#d9738c', '#a8a8a8', '#b8480f', '#8fb8e8', '#c9a26b', '#9a7fb8',
+    '#e6a57e', '#6f9f6f', '#d4b44a', '#7a8aa0', '#ff9a57', '#a0c4a8', '#c47a5a', '#5f7fbf'];
+  /** stable key -> color map; the most frequent keys get the first (most distinct) colors */
+  function palette(keys) {
+    const count = new Map();
+    for (const k of keys) count.set(k, (count.get(k) || 0) + 1);
+    const out = new Map();
+    [...count.keys()].sort((a, b) => count.get(b) - count.get(a) || String(a).localeCompare(String(b))).forEach((k, i) => out.set(k, PALETTE[i % PALETTE.length]));
+    return out;
+  }
+  /** folder of a graph node: files by their directory, functions by their file, libraries by ecosystem */
+  const folderOf = n => (n.fn ? n.filePath.split('/').slice(0, -1).join('/') || '(root)' : n.library ? 'lib:' + n.ecosystem : n.path.split('/').slice(0, -1).join('/') || '(root)');
+  /** colors for a graph: files by folder, functions by file (so functions of different files differ) */
+  function nodeColors(nodes) {
+    const folders = palette(nodes.filter(n => !n.library && !n.fn).map(folderOf));
+    const filesWithFns = palette(nodes.filter(n => n.fn).map(n => n.file));
+    return {
+      folders,
+      of: n => (n.library ? null : n.fn ? filesWithFns.get(n.file) : folders.get(folderOf(n))),
+    };
+  }
+
+  window.LCGraphs = { Treemap, ForceGraph, resolveColor, drawSkull, withFunctions, palette, folderOf, nodeColors, PALETTE };
 })();

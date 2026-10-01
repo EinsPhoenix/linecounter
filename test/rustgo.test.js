@@ -49,6 +49,24 @@ write('go/internal/db/db.go', 'package db\n\nimport "strings"\n\nfunc Open() str
   assert.deepStrictEqual(rs.unused.map(u => u.name).sort(), ['pretty_assertions', 'unused-crate']);
   const go = usage.find(u => u.ecosystem === 'Go');
   assert.deepStrictEqual(go.unused.map(u => u.name), ['github.com/stretchr/testify']);
+  // TypeScript: tsconfig path aliases, React components, JSX calls
+  write('web/tsconfig.json', '{\n  // comment\n  "compilerOptions": { "baseUrl": ".", "paths": { "@/*": ["./src/*"] } },\n}\n');
+  write('web/package.json', '{ "name": "web" }');
+  write('web/src/App.tsx', "import { api } from '@/lib/api';\nimport Toolbar from '@/components/Toolbar';\nexport const App = ({ id }: { id: string }) => {\n  const run = useCallback(async (x: string) => {\n    if (x) await api(x);\n  }, []);\n  return <Toolbar title={id} />;\n};\nexport function useThing<T>(\n  a: T,\n): T {\n  return a;\n}\n");
+  write('web/src/lib/api.ts', 'export async function api(x: string) { return x; }\n');
+  write('web/src/components/Toolbar.tsx', 'export default function Toolbar({ title }: { title: string }) { return <h1>{title}</h1>; }\n');
+  const tsRels = ['web/tsconfig.json', 'web/package.json', 'web/src/App.tsx', 'web/src/lib/api.ts', 'web/src/components/Toolbar.tsx'];
+  const ts = await analyzeFiles(tsRels.map(r => ({ abs: path.join(root, r), rel: r, root })), 1e6, null, null, { functions: true });
+  const tg = buildImportGraph(ts, {});
+  const tedge = (a, b) => tg.links.some(l => tg.nodes[l.s].path === a && tg.nodes[l.t].path === b);
+  assert.ok(tedge('web/src/App.tsx', 'web/src/lib/api.ts'), '@/lib/api via tsconfig paths');
+  assert.ok(tedge('web/src/App.tsx', 'web/src/components/Toolbar.tsx'), '@/components/Toolbar');
+  const app = ts.find(f => f.path === 'web/src/App.tsx');
+  const fnNames = app.functions.map(x => x.name);
+  for (const n of ['App', 'run', 'useThing']) assert.ok(fnNames.includes(n), 'function ' + n);
+  assert.strictEqual(app.functions.find(x => x.name === 'App').end, 8, 'App body ends at line 8');
+  assert.ok(app.calls.Toolbar && app.calls.api, 'JSX and function calls');
+
   fs.rmSync(root, { recursive: true, force: true });
   console.log('rustgo.test OK');
 })().catch(e => { console.error(e); process.exit(1); });

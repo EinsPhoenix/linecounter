@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.11.0
+- Licenses of all packages: thorough lookup (registry, LICENSE files inside the package archive, deps.dev, GitHub) with a trail of what was checked; new "Unknown & custom licenses" card and PDF section
+- Rust (Cargo.toml / Cargo.lock) and Go (go.mod / go.sum): dependencies, licenses, vulnerabilities, unused crates / modules, import graph (mod, crate::, super::, Go packages)
+- TypeScript / JavaScript: tsconfig / jsconfig paths, vite / webpack aliases and "@/" imports are resolved; functions with generics, multi-line parameters, useCallback / memo wrappers and JSX component calls are recognised
+- Planets and graph nodes colored by folder (functions by file), folder legend in 3D
+- 2D import graph: cluster folders into bubbles (double-click to zoom in), color by folder or language, live search; search fields for all graphs
+- 3D: glossy maglev guideways with flowing neon edges, streamlined chrome train with canopy, fins and twin thrusters, reflections
+- Driven trail: relations you already drove are marked in green, thicker the more often you drove them
+
 ## 1.10.0
 - Code health section: cyclomatic complexity per function, long functions, too many parameters, hotspot files, duplicated code, grade A–F with rants
 - Secrets scanner (cloud / VCS / payment / AI API keys, private keys, JWTs, connection strings, hard-coded passwords) with masked output

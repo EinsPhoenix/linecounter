@@ -16,10 +16,16 @@ const NOT_A_NAME = new Set(['if', 'for', 'while', 'switch', 'catch', 'return', '
 
 const DEF_PATTERNS = {
   js: [
-    /^\s*(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s*\*?\s*([A-Za-z_$][\w$]*)\s*\(/,
-    /^\s*(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=]+)?=\s*(?:async\s+)?(?:function\b|\([^)]*\)\s*(?::[^=]+)?=>|[A-Za-z_$][\w$]*\s*=>)/,
-    /^\s*(?:(?:public|private|protected|static|async|override|readonly|get|set|abstract)\s+)*([A-Za-z_$][\w$]*)\s*(?:<[^>]*>)?\s*\([^)]*\)\s*(?::\s*[^{=;]+)?\{\s*$/,
-    /^\s*([A-Za-z_$][\w$]*)\s*[:=]\s*(?:async\s+)?(?:function\b|\([^)]*\)\s*=>)/,
+    // function foo(…) / function foo<T>(…) / export default async function* foo(
+    /^\s*(?:export\s+)?(?:default\s+)?(?:declare\s+)?(?:async\s+)?function\s*\*?\s*([A-Za-z_$][\w$]*)\s*(?:<[^()]*>)?\s*\(/,
+    // const foo = (…) => / async <T,>(…) => / function / x => / multi-line parameters "(" at the end of the line
+    /^\s*(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=]+)?=\s*(?:async\s+)?(?:function\b|(?:<[^()]*>\s*)?\((?:[^)]*\)\s*(?::[^=]+)?=>|[^)]*$)|[A-Za-z_$][\w$]*\s*=>)/,
+    // const Foo = React.memo(…) / forwardRef / useCallback / useMemo / observer wrapping a function
+    /^\s*(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=]+)?=\s*(?:[\w$]+\.)?(?:memo|forwardRef|useCallback|observer|defineComponent|debounce|throttle)\s*(?:<[^()]*>)?\(\s*(?:async\s+)?(?:function\b|\(|[A-Za-z_$][\w$]*\s*=>)/,
+    // class methods: async load(…): Promise<T> {  /  get name() {  /  static create<T>(
+    /^\s*(?:(?:public|private|protected|static|async|override|readonly|get|set|abstract)\s+)*([A-Za-z_$][\w$]*)\s*(?:<[^()]*>)?\s*\([^)]*\)\s*(?::\s*[^{=;]+)?\{\s*(?:\}\s*)?$/,
+    // class fields / object properties: handle = async (…) => / handle: function (
+    /^\s*(?:(?:public|private|protected|static|readonly)\s+)*([A-Za-z_$][\w$]*)\s*[:=]\s*(?:async\s+)?(?:function\b|(?:<[^()]*>\s*)?\([^)]*\)\s*(?::[^=]+)?=>|[A-Za-z_$][\w$]*\s*=>)/,
   ],
   py: [/^(\s*)(?:async\s+)?def\s+([A-Za-z_]\w*)\s*\(/],
   go: [/^\s*func\s+(?:\([^)]*\)\s*)?([A-Za-z_]\w*)\s*[(<[]/],
@@ -66,6 +72,9 @@ function blankStringsAndComments(text, kind) {
   }
   return out;
 }
+
+// text right before a "{" that opens a function body (arrow, parameter list, return type, throws clause)
+const BODY_START = /(=>|\)|->\s*[^{]*|\)\s*:\s*[^{]*|throws\s+[\w., ]+)\s*$/;
 
 const DECISION = {
   default: /\b(?:if|for|foreach|while|case|catch|when)\b|&&|\|\||\?\?|\s\?\s/g,
@@ -127,16 +136,24 @@ function extractFunctions(text, langName, max = 400) {
       }
     } else {
       // brace matching from the first "{" (on this line or the next few); arrow functions without braces end on their line
-      let depth = 0, started = false;
+      let depth = 0, started = false, paren = 0;
       for (let k = i; k < lines.length && k < i + 5000; k++) {
         const t = lines[k];
         for (let c = 0; c < t.length; c++) {
-          if (t[c] === '{') { depth++; started = true; } else if (t[c] === '}') depth--;
-          if (started && depth === 0) { end = k; break; }
+          const ch = t[c];
+          if (!started) {
+            // before the body: skip braces of destructured parameters / inline types
+            if (ch === '(') paren++;
+            else if (ch === ')') paren = Math.max(0, paren - 1);
+            else if (ch === '{' && (paren === 0 || BODY_START.test(t.slice(0, c)))) { depth = 1; started = true; }
+            continue;
+          }
+          if (ch === '{') depth++; else if (ch === '}') depth--;
+          if (depth === 0) { end = k; break; }
         }
         if (started && depth === 0) break;
-        if (!started && k > i + 3) break;
-        if (!started && k === i && /=>\s*[^{\s]/.test(t)) break;
+        if (!started && k > i + 12) break;
+        if (!started && paren === 0 && /=>\s*[^{\s(]/.test(t)) break; // expression-bodied arrow function
         if (!started && /;\s*$/.test(t)) break; // declaration only (C prototypes, abstract methods)
       }
       if (!started && kind === 'cish') continue;
@@ -171,7 +188,7 @@ function callSites(text, langName, max = 4000) {
   const re = /(?:^|[^\w$])([A-Za-z_$][\w$]*)\s*\(/g;
   for (let i = 0; i < lines.length && count < max; i++) {
     const l = lines[i];
-    if (/^\s*(?:(?:export|async|public|private|static)\s+)*(?:def|function|func|fn|fun)\b/.test(l)) continue;
+    if (/^\s*(?:(?:export|default|async|public|private|static|pub)\s+)*(?:def|function|func|fn|fun)\b/.test(l)) continue;
     re.lastIndex = 0;
     let m;
     while ((m = re.exec(l))) {
@@ -179,6 +196,13 @@ function callSites(text, langName, max = 4000) {
       if (NOT_A_NAME.has(name) || name.length < 3) continue;
       (calls[name] || (calls[name] = [])).push(i + 1);
       if (++count >= max) break;
+    }
+    // JSX: <Component … /> counts as a call of the component
+    if (kind === 'js') {
+      for (const m of l.matchAll(/<([A-Z][\w$]*)(?=[\s/>.])/g)) {
+        (calls[m[1]] || (calls[m[1]] = [])).push(i + 1);
+        if (++count >= max) break;
+      }
     }
   }
   return calls;

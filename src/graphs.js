@@ -56,6 +56,43 @@ function buildImportGraph(files, opts = {}) {
   const goMods = files.filter(f => f.goModule).map(f => ({ root: f.root, dir: dirOf(f.path), module: f.goModule })).sort((a, b) => b.module.length - a.module.length);
   const goPkgs = new Map();
   for (const f of files) if (f.lang === 'Go' && !/_test\.go$/.test(f.path)) { const k = f.root + '|' + dirOf(f.path); if (!goPkgs.has(k)) goPkgs.set(k, []); goPkgs.get(k).push(f); }
+  // JS/TS path aliases: tsconfig / jsconfig "paths" + "baseUrl", vite / webpack aliases, and the common "@/" -> src/ convention
+  const aliasConfigs = [];
+  for (const f of files) {
+    const dir = dirOf(f.path);
+    if (f.tsPaths) {
+      const base = path.normalize([dir, f.tsPaths.baseUrl].filter(Boolean).join('/')).replace(/^\.$/, '');
+      for (const [pat, targets] of Object.entries(f.tsPaths.paths)) aliasConfigs.push({ root: f.root, dir, pat, targets: (targets || []).map(t => path.normalize([base, t].filter(Boolean).join('/')).replace(/^\.\/?/, '')) });
+      if (f.tsPaths.baseUrl) aliasConfigs.push({ root: f.root, dir, pat: '*', targets: [base ? base + '/*' : '*'], baseUrl: true });
+    }
+    if (f.aliases) for (const [a, t] of Object.entries(f.aliases)) aliasConfigs.push({ root: f.root, dir, pat: a + '/*', targets: [path.normalize([dir, t].filter(Boolean).join('/')).replace(/^\/+/, '') + '/*'] }, { root: f.root, dir, pat: a, targets: [path.normalize([dir, t].filter(Boolean).join('/')).replace(/^\/+/, '')] });
+  }
+  aliasConfigs.sort((a, b) => b.dir.length - a.dir.length || b.pat.length - a.pat.length);
+  const projectDirs = [...new Set(files.filter(f => /^(package\.json|tsconfig\.json|jsconfig\.json)$/.test(f.name)).map(f => f.root + '|' + dirOf(f.path)))];
+  const resolveAlias = (f, spec) => {
+    const inside = c => c.root === f.root && (!c.dir || f.path.startsWith(c.dir + '/'));
+    for (const c of aliasConfigs) {
+      if (!inside(c)) continue;
+      let rest = null;
+      if (c.pat.endsWith('*')) { const pre = c.pat.slice(0, -1); if (spec.startsWith(pre)) rest = spec.slice(pre.length); } else if (spec === c.pat) rest = '';
+      if (rest == null) continue;
+      for (const t of c.targets) {
+        const hit = tryList2(f, t.endsWith('*') ? t.slice(0, -1) + rest : t);
+        if (hit) return hit;
+      }
+    }
+    // convention: "@/x", "~/x", "#/x" -> <project>/src/x
+    const m = /^[@~#]\/(.+)$/.exec(spec);
+    if (m) {
+      const dirs = projectDirs.filter(k => k.startsWith(f.root + '|')).map(k => k.slice(f.root.length + 1)).filter(d => !d || f.path.startsWith(d + '/')).sort((a, b) => b.length - a.length);
+      for (const d of dirs) {
+        const hit = tryList2(f, [d, 'src', m[1]].filter(Boolean).join('/')) || tryList2(f, [d, m[1]].filter(Boolean).join('/'));
+        if (hit) return hit;
+      }
+    }
+    return null;
+  };
+  let tryList2 = () => null;
   const localCrates = new Set(files.filter(f => f.crateName).map(f => f.crateName.replace(/-/g, '_')));
   const rustFile = (root, base) => has(root, base + '.rs') || has(root, base + '/mod.rs');
   /** module folder of a Rust file: foo.rs -> foo/, mod.rs / lib.rs / main.rs -> their folder */
@@ -127,6 +164,11 @@ function buildImportGraph(files, opts = {}) {
       return null;
     }
     if (/^[a-z]+:/i.test(spec)) return null; // urls, node: builtins
+    if (!spec.startsWith('.') && !spec.startsWith('/') && JS_LANGS.has(f.lang)) {
+      tryList2 = (_f, base) => tryList(base, JS_EXT);
+      const hit = resolveAlias(f, spec);
+      if (hit) return hit;
+    }
     const isCss = ['CSS', 'SCSS', 'Less'].includes(f.lang);
     const isC = ['C', 'C++', 'Objective-C'].includes(f.lang);
     if (spec.startsWith('/')) return tryList(spec.slice(1), isCss ? CSS_EXT : JS_EXT);

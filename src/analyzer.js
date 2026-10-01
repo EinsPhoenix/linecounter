@@ -144,6 +144,8 @@ async function analyzeFile(absPath, relPath, root, maxBytes, scan = {}) {
   result.imports = countMatches(text, /^\s*(import|from\s+\S+\s+import|#include|using\s+[\w.]+;|require\(|use\s+[\w:]+)/gm);
 
   result.deps = extractDeps(text, lang.name);
+  if (/^(tsconfig|jsconfig)([.\w-]*)?\.json$/i.test(name)) result.tsPaths = readTsPaths(text);
+  if (/^vite\.config\.[cm]?[jt]s$|^webpack\.config\.[cm]?[jt]s$|^vitest\.config\.[cm]?[jt]s$/i.test(name)) result.aliases = readBundlerAliases(text);
   if (name === 'go.mod') { const m = /^\s*module\s+(\S+)/m.exec(text); if (m) result.goModule = m[1]; }
   if (name === 'Cargo.toml') { const m = /^\s*\[package\][^[]*?^\s*name\s*=\s*"([^"]+)"/ms.exec(text); if (m) result.crateName = m[1]; }
 
@@ -233,6 +235,23 @@ function extractDeps(text, langName) {
     }
   }
   return out.size ? [...out] : null;
+}
+
+/** compilerOptions.baseUrl / paths of a tsconfig.json or jsconfig.json (comments and trailing commas allowed) */
+function readTsPaths(text) {
+  try {
+    const json = JSON.parse(text.replace(/("(?:\\.|[^"\\])*")|\/\/[^\n]*|\/\*[\s\S]*?\*\//g, (m, str) => str || '').replace(/,(\s*[}\]])/g, '$1'));
+    const co = json.compilerOptions || {};
+    if (!co.paths && !co.baseUrl) return null;
+    return { baseUrl: co.baseUrl || '.', paths: co.paths || {} };
+  } catch { return null; }
+}
+/** aliases like  '@': path.resolve(__dirname, './src')  or  { find: '@', replacement: '/src' }  in vite / webpack configs */
+function readBundlerAliases(text) {
+  const out = {};
+  for (const m of text.matchAll(/['"]?([@~#$][\w/-]*)['"]?\s*:\s*(?:path\.(?:resolve|join)\([^'"]*|fileURLToPath\(new URL\()?\s*['"]([./\w-]+)['"]/g)) out[m[1]] = m[2].replace(/^\.\//, '');
+  for (const m of text.matchAll(/find:\s*['"]([^'"]+)['"]\s*,\s*replacement:\s*(?:path\.(?:resolve|join)\([^'"]*|fileURLToPath\(new URL\()?\s*['"]([./\w-]+)['"]/g)) out[m[1]] = m[2].replace(/^\.\//, '');
+  return Object.keys(out).length ? out : null;
 }
 
 /** Runs analyzeFile over many files with bounded concurrency. */
