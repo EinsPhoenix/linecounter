@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.12.0
+- Project root: pick any folder in the sidebar (target icon) as the root of the analysis – paths, folder charts, colors, clusters and planets are relative to it; stored per workspace and in presets
+- 3D train: the streamlined body was mounted backwards – the nose now points forward and the headlights, nose ring and lamp sit on the hull instead of floating in front of it
+
 ## 1.11.1
 - Rust: functions named like keywords of other languages (e.g. `new`) are recognised again
 - docs/FEATURES.md: every feature explained – what it does, what to expect, limits and the language support matrix

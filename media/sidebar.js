@@ -11,6 +11,8 @@
   let included = new Set();
   let hiddenExt = new Set();
   let libraries = false;
+  /** project root: key of a folder ("<workspace>/<rel>") whose subtree is analyzed instead of the whole workspace */
+  let base = null;
   let expanded = new Set();
   let query = '';
   let pendingStats = false;
@@ -62,7 +64,13 @@
       walk(root, null);
     });
     if (!expanded.size) roots.forEach(r => expanded.add(r.key));
+    if (base && !baseNode()) base = null; // folder no longer exists
+    if (base) expanded.add(base);
   }
+  const baseNode = () => (base ? allNodes.find(n => n.d && n.key === base) || null : null);
+  /** top-level rows of the tree: the project root folder, or the workspace roots */
+  const treeRoots = () => { const b = baseNode(); return b ? [b] : roots; };
+  const depthOf = n => n.depth - (baseNode() ? baseNode().depth : 0);
 
   const selfExcluded = n => !n.isRoot && (excluded.has(n.key) || (!!n.p && !included.has(n.key)));
   function isExcluded(n) {
@@ -109,7 +117,7 @@
           if (c.d && (!c._match || expanded.has(c.key))) walk(c);
         }
       };
-      for (const r of roots) { rows.push(r); walk(r); }
+      for (const r of treeRoots()) { rows.push(r); walk(r); }
       return { total, matches: allNodes.filter(n => n._match).length };
     }
     const walk = node => {
@@ -121,7 +129,7 @@
         if (c.d) walk(c);
       }
     };
-    for (const r of roots) { rows.push(r); walk(r); }
+    for (const r of treeRoots()) { rows.push(r); walk(r); }
     return { total, matches: 0 };
   }
 
@@ -134,12 +142,12 @@
         else if (!hiddenExt.has(c.ext)) out.push(c);
       }
     };
-    roots.forEach(walk);
+    treeRoots().forEach(walk);
     return out;
   }
 
   function save(rescan) {
-    vscode.postMessage({ type: 'saveState', excluded: [...excluded], included: [...included], hiddenExt: [...hiddenExt], libraries, rescan: !!rescan });
+    vscode.postMessage({ type: 'saveState', excluded: [...excluded], included: [...included], hiddenExt: [...hiddenExt], libraries, base, rescan: !!rescan });
   }
 
   function toggle(n) {
@@ -167,7 +175,8 @@
     const scrollTop = (document.getElementById('tree') || {}).scrollTop || 0;
     const { total, matches } = computeRows();
     const incFiles = includedFiles();
-    const totalFiles = allNodes.filter(n => !n.d).length;
+    const bn = baseNode();
+    const totalFiles = allNodes.filter(n => !n.d && (!bn || n.key.startsWith(bn.key + '/'))).length;
     const exts = [...extCounts.entries()].sort((a, b) => b[1] - a[1]);
     const incByExt = new Map();
     for (const f of incFiles) incByExt.set(f.ext, (incByExt.get(f.ext) || 0) + 1);
@@ -188,13 +197,14 @@
       const reason = self ? excludeReason(n) : '';
       const isOpen = n.d && (expanded.has(n.key) || (query && !n._match && !n.isRoot));
       const twisty = n.d ? `<span class="twisty ${isOpen ? 'open' : ''}" data-twisty="${i}" title="Expand / collapse"></span>` : '<span class="twisty none"></span>';
-      const icon = n.isRoot ? 'root' : n.d ? (isOpen ? 'folder open' : 'folder') : 'file';
+      const icon = n.isRoot || n.key === base ? 'root' : n.d ? (isOpen ? 'folder open' : 'folder') : 'file';
       const title = n.isRoot ? n.n : `${n.rel}\n${ex ? 'Excluded – click to include' : 'Included – click to exclude'}`;
       return `<div class="row ${ex ? 'excluded' : ''} ${self ? 'self' : ''} ${n._match ? 'match' : ''} ${n.isRoot ? 'rootrow' : ''}"
-        style="padding-left:${n.depth * 12 + 4}px" data-row="${i}" title="${esc(title)}">
+        style="padding-left:${depthOf(n) * 12 + 4}px" data-row="${i}" title="${esc(title)}">
         ${twisty}<span class="icon ${icon}"></span><span class="name">${n._match ? highlight(n.n) : esc(n.n)}</span>
         ${n.u && !ex ? '<span class="badge">not scanned</span>' : ''}
         ${reason ? `<span class="badge">${esc(reason)}</span>` : ''}
+        ${n.d && n.key !== base ? `<span class="eye" data-base="${i}" title="Use this folder as project root – statistics, folders and paths are relative to it"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="pointer-events:none"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></span>` : ''}
         ${n.isRoot || n.d ? '' : `<span class="eye" data-open="${i}" title="Open file"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true" style="pointer-events:none"><path d="M14 4h6v6M20 4l-9 9M18 14v6H4V6h6"/></svg></span>`}
       </div>`;
     }).join('');
@@ -221,6 +231,12 @@
         <button class="icon-btn2" id="presetDelete" title="Delete selected preset" ${activePreset ? '' : 'disabled'}>${SVG.trash}</button>
         <button class="icon-btn2" id="openConfig" title="Open .linecounter/settings.json">${SVG.gear}</button>
       </div>
+      ${baseNode() ? `<div class="basebar" title="Only this folder is analyzed. Paths, folder colors and clusters are relative to it.">
+        <span class="basebar-label">Project root</span>
+        <span class="basebar-path"><span>${esc(base)}</span></span>
+        <button class="icon-btn2" id="baseUp" title="Go one folder up"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button>
+        <button class="icon-btn2" id="baseClear" title="Analyze the whole workspace again"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>` : `<div class="basehint muted">Tip: the <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5"/></svg> button on a folder makes it the project root.</div>`}
       <details id="filters" ${ui.filtersOpen ? 'open' : ''}>
         <summary>Predefined filters</summary>
         <div class="presets">${presetHtml}</div>
@@ -305,6 +321,8 @@
     on('collapseAll', () => { expanded = new Set(roots.map(r => r.key)); render(); });
     on('resetEx', () => { excluded.clear(); included.clear(); hiddenExt.clear(); save(true); render(); });
     on('stats', createStats);
+    on('baseClear', () => setBase(null));
+    on('baseUp', () => { const b = baseNode(); setBase(b && b.parent && !b.parent.isRoot ? b.parent.key : null); });
     const lt = /** @type {HTMLInputElement} */ (document.getElementById('libToggle'));
     if (lt) lt.addEventListener('change', () => { libraries = lt.checked; save(); });
     on('presetSave', () => vscode.postMessage({ type: 'presetSave' }));
@@ -342,6 +360,11 @@
         render();
         return;
       }
+      if (t.dataset.base !== undefined) {
+        const n = rows[Number(t.dataset.base)];
+        setBase(n.isRoot ? null : n.key);
+        return;
+      }
       if (t.dataset.open !== undefined) {
         const n = rows[Number(t.dataset.open)];
         if (!n.d) vscode.postMessage({ type: 'open', r: n.r, p: n.rel });
@@ -370,9 +393,17 @@
     if (el) el.addEventListener('click', fn);
   }
 
+  function setBase(key) {
+    base = key;
+    if (base) expanded.add(base);
+    save();
+    render();
+  }
+
   function createStats() {
     const files = includedFiles().map(f => ({ r: f.r, p: f.rel }));
-    vscode.postMessage({ type: 'createStats', files });
+    const b = baseNode();
+    vscode.postMessage({ type: 'createStats', files, base: b ? { r: b.r, p: b.rel } : null });
   }
 
   window.addEventListener('message', ev => {
@@ -385,6 +416,7 @@
       included = new Set(msg.state.included);
       hiddenExt = new Set(msg.state.hiddenExt);
       libraries = !!msg.state.libraries;
+      base = msg.state.base || null;
       userPresets = msg.userPresets || [];
       activePreset = msg.activePreset || null;
       hasWorkspace = msg.hasWorkspace !== false;

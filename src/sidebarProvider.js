@@ -67,11 +67,11 @@ class SidebarProvider {
         await this.scan();
         break;
       case 'saveState':
-        await this.setState({ excluded: msg.excluded, included: msg.included, hiddenExt: msg.hiddenExt, ...(msg.libraries !== undefined ? { libraries: !!msg.libraries } : {}) });
+        await this.setState({ excluded: msg.excluded, included: msg.included, hiddenExt: msg.hiddenExt, ...(msg.libraries !== undefined ? { libraries: !!msg.libraries } : {}), ...(msg.base !== undefined ? { base: msg.base || null } : {}) });
         if (msg.rescan) await this.scan();
         break;
       case 'createStats':
-        await this.onCreateStats(this.roots, msg.files, { libraries: !!this.state.libraries });
+        await this.onCreateStats(this.roots, msg.files, { libraries: !!this.state.libraries, base: msg.base || null });
         break;
       case 'open':
         if (this.roots[msg.r]) await openFile(path.join(this.roots[msg.r].path, ...msg.p.split('/')));
@@ -185,6 +185,7 @@ function normalizeState(s) {
     included: Array.isArray(s.included) ? s.included : [],
     hiddenExt: Array.isArray(s.hiddenExt) ? s.hiddenExt : [],
     libraries: !!s.libraries,
+    base: typeof s.base === 'string' && s.base ? s.base : null, // project root folder (tree key "<root>/<rel>")
   };
 }
 
