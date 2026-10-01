@@ -93,6 +93,26 @@ Alle Grenzwerte (z. B. ab wie vielen Zeilen eine Datei „zu lang“ ist) stehen
 - **Zusammenfassen.** Läufe innerhalb von 10 Minuten werden zusammengefasst.
 - **Speicherort.** Gespeichert wird lokal im Workspace-State (`linecounter.history.enabled`). Mit `linecounter.history.saveToFile` landet die Historie zusätzlich in `.linecounter/history.json` und kann mit dem Team geteilt werden. *Clear history* setzt sie zurück.
 
+## Architecture
+
+- **Regeln** in `.linecounter/settings.json` oder den VS-Code-Einstellungen:
+  ```jsonc
+  "architecture.rules": [
+    { "name": "UI never talks to the database", "from": "src/ui/**", "disallow": ["src/db/**"], "allow": ["src/db/types.ts"] },
+    { "from": "src/core/**", "disallow": ["src/plugins/**"], "severity": "warning" }
+  ],
+  "architecture.layers": [
+    { "name": "ui", "pattern": "src/ui/**" }, { "name": "services", "pattern": "src/services/**" }, { "name": "db", "pattern": "src/db/**" }
+  ]
+  ```
+- **`rules`:** Dateien, die zu `from` passen, dürfen nichts importieren, was zu `disallow` passt. Ausnahmen trägst du in `allow` ein.
+- **`layers`:** Die Schichten sind von oben nach unten sortiert. Eine Schicht darf nur Schichten darunter importieren.
+- **Geprüft** wird jeder echte Import (JS/TS mit Aliasen, Python, Rust, Go, C/C++, CSS). Die Pfade sind relativ zum Projekt-Root.
+- **Anzeige.**
+  - Die Sektion *Architecture* zeigt Verstöße pro Regel; ein Klick auf eine Regel filtert die Liste.
+  - *Show in import graph* markiert die verletzenden Kanten pink-rot im Graphen.
+  - Verstöße erzeugen einen Rant und können das Quality Gate scheitern lassen.
+
 ## Code health
 
 - **Note A–F und Score 0–100.**

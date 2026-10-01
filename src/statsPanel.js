@@ -66,6 +66,7 @@ class StatsPanel {
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'deps.js'))}"></script>
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'health.js'))}"></script>
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'trends.js'))}"></script>
+<script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'architecture.js'))}"></script>
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'vendor', 'jspdf.umd.min.js'))}"></script>
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'vendor', 'html2canvas.min.js'))}"></script>
 <script nonce="${n}" src="${w.asWebviewUri(vscode.Uri.joinPath(media, 'export.js'))}"></script>
@@ -118,7 +119,7 @@ window.acquireVsCodeApi = () => ({
   },
   getState() { return null; }, setState() {},
 });</script>
-${['vendor/d3.min.js', 'graphs.js', 'deps.js', 'health.js', 'trends.js', 'vendor/jspdf.umd.min.js', 'vendor/html2canvas.min.js', 'export.js', 'vendor/three.min.js', 'train3d.js', 'stats.js'].map(f => `<script>${safe(read(f))}</script>`).join('\n')}
+${['vendor/d3.min.js', 'graphs.js', 'deps.js', 'health.js', 'trends.js', 'architecture.js', 'vendor/jspdf.umd.min.js', 'vendor/html2canvas.min.js', 'export.js', 'vendor/three.min.js', 'train3d.js', 'stats.js'].map(f => `<script>${safe(read(f))}</script>`).join('\n')}
 </body></html>`;
     await fs.promises.writeFile(uri.fsPath, html, 'utf8');
     const open = await vscode.window.showInformationMessage(`HTML report saved to ${uri.fsPath}`, 'Open in browser');
@@ -134,6 +135,9 @@ ${['vendor/d3.min.js', 'graphs.js', 'deps.js', 'health.js', 'trends.js', 'vendor
     switch (msg.type) {
       case 'ready':
         this.update(this.data);
+        break;
+      case 'openSettings':
+        await vscode.commands.executeCommand('linecounter.openWorkspaceSettings');
         break;
       case 'clearHistory':
         if (this.handlers.clearHistory) await this.handlers.clearHistory(msg.projectRoot || '');

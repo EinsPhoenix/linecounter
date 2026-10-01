@@ -699,6 +699,128 @@
         ]
       },
       "description": "Own filters shown as checkboxes in the sidebar (in addition to .linecounter/filters.json), e.g. [{\"label\": \"Data folders\", \"patterns\": [\"*/data\"]}]."
+    },
+    "architecture.rules": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "from": {
+            "type": [
+              "string",
+              "array"
+            ]
+          },
+          "disallow": {
+            "type": [
+              "string",
+              "array"
+            ]
+          },
+          "allow": {
+            "type": [
+              "string",
+              "array"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "error",
+              "warning"
+            ]
+          }
+        },
+        "required": [
+          "from",
+          "disallow"
+        ]
+      },
+      "description": "Architecture rules: files matching \"from\" must not import files matching \"disallow\" (globs, relative to the project root), e.g. [{\"from\": \"src/ui/**\", \"disallow\": [\"src/db/**\"]}]."
+    },
+    "linecounter.architecture.rules": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "from": {
+            "type": [
+              "string",
+              "array"
+            ]
+          },
+          "disallow": {
+            "type": [
+              "string",
+              "array"
+            ]
+          },
+          "allow": {
+            "type": [
+              "string",
+              "array"
+            ]
+          },
+          "severity": {
+            "type": "string",
+            "enum": [
+              "error",
+              "warning"
+            ]
+          }
+        },
+        "required": [
+          "from",
+          "disallow"
+        ]
+      },
+      "description": "Architecture rules: files matching \"from\" must not import files matching \"disallow\" (globs, relative to the project root), e.g. [{\"from\": \"src/ui/**\", \"disallow\": [\"src/db/**\"]}]."
+    },
+    "architecture.layers": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "pattern": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "pattern"
+        ]
+      },
+      "description": "Ordered layers from top to bottom; a layer may import lower layers but never higher ones, e.g. [{\"name\":\"ui\",\"pattern\":\"src/ui/**\"},{\"name\":\"services\",\"pattern\":\"src/services/**\"},{\"name\":\"db\",\"pattern\":\"src/db/**\"}]."
+    },
+    "linecounter.architecture.layers": {
+      "type": "array",
+      "default": [],
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "pattern": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "pattern"
+        ]
+      },
+      "description": "Ordered layers from top to bottom; a layer may import lower layers but never higher ones, e.g. [{\"name\":\"ui\",\"pattern\":\"src/ui/**\"},{\"name\":\"services\",\"pattern\":\"src/services/**\"},{\"name\":\"db\",\"pattern\":\"src/db/**\"}]."
     }
   }
 }

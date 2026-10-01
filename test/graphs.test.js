@@ -26,4 +26,12 @@ assert.strictEqual(node('e.js').dependents, 6, 'everything depends on e');
 assert.strictEqual(node('x.js').dependencies, 6);
 assert.ok(node('e.js').layer > node('d.js').layer && node('d.js').layer > node('a.js').layer, 'layers follow the imports');
 assert.ok(g.links.filter(l => l.cyc).length === 5, 'cycle edges are flagged');
+// architecture rules
+{
+  const { checkArchitecture } = require('../src/scanners/architecture');
+  const e = [['/r/src/ui/a.ts', '/r/src/db/repo.ts'], ['/r/src/ui/a.ts', '/r/src/db/types.ts'], ['/r/src/db/repo.ts', '/r/src/ui/x.ts']];
+  const res = checkArchitecture(e, a => a.replace('/r/', ''), { rules: [{ from: 'src/ui/**', disallow: ['src/db/**'], allow: ['src/db/types.ts'] }], layers: [{ name: 'ui', pattern: 'src/ui/**' }, { name: 'db', pattern: 'src/db/**' }] });
+  assert.strictEqual(res.total, 2, 'one rule violation + one layer violation');
+  assert.deepStrictEqual(res.violations.map(v => v.to.path), ['src/db/repo.ts', 'src/ui/x.ts']);
+}
 console.log('graphs.test OK');
