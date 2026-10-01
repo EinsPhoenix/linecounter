@@ -617,6 +617,16 @@
           "type": "boolean",
           "default": true,
           "description": "TODO tracker: list every TODO / FIXME / HACK / XXX / BUG comment with author and age (git blame)."
+        },
+        "linecounter.compare.enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Branch comparison: compare the current branch with its base (when you are not on the base branch)."
+        },
+        "linecounter.compare.baseBranch": {
+          "type": "string",
+          "default": "",
+          "description": "Base branch for the comparison (empty = origin/HEAD, main, master or develop)."
         }
       }
     },

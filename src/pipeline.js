@@ -8,6 +8,7 @@ const { scanDependencies } = require('./deps');
 const { globToRegExp } = require('./glob');
 const { evaluateGate } = require('./gate');
 const { buildTodos } = require('./scanners/todos');
+const { compareBranches, defaultBase, listBranches } = require('./compare');
 
 /**
  * The whole analysis without any VS Code dependency (used by the extension and by the CLI).
@@ -82,6 +83,17 @@ async function runPipeline(config, roots, selection, options = {}, progress = { 
   if (config.get('todos.enabled', true)) {
     progress.report({ message: 'Dating TODOs with git blame…' });
     try { data.todos = await buildTodos(results.filter(f => !f.binary && !f.skipped), repos); } catch { data.todos = null; }
+  }
+  // branch comparison: automatically when the (first) repository is on a different branch than its base
+  if (repos.length && config.get('compare.enabled', true)) {
+    const repo = repos[0];
+    try {
+      const wanted = config.get('compare.baseBranch', '') || await defaultBase(repo.root, repo.branch);
+      if (wanted && repo.branch && repo.branch !== wanted && !wanted.endsWith('/' + repo.branch)) {
+        progress.report({ message: `Comparing ${repo.branch} with ${wanted}…` });
+        data.compare = await compareBranches(repo.root, wanted);
+      } else data.compare = { idle: true, root: repo.root, head: repo.branch, base: wanted, branches: await listBranches(repo.root) };
+    } catch (e) { data.compare = { error: e.message, root: repo.root }; }
   }
   data.gate = evaluateGate(data, config.get('gate', {}));
   return data;

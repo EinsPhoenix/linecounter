@@ -113,6 +113,18 @@ Alle Grenzwerte (z. B. ab wie vielen Zeilen eine Datei „zu lang“ ist) stehen
   - *Show in import graph* markiert die verletzenden Kanten pink-rot im Graphen.
   - Verstöße erzeugen einen Rant und können das Quality Gate scheitern lassen.
 
+## Branch comparison
+
+- **Automatisch.** Bist du nicht auf dem Basis-Branch, vergleicht die Statistikseite den aktuellen Stand (HEAD plus uncommittete Änderungen) mit dem Merge-Base des Basis-Branches. Die Basis wird automatisch bestimmt (`origin/HEAD`, `main`, `master` oder `develop`) oder fest über `linecounter.compare.baseBranch` gesetzt.
+- **Manuell.** Jeder andere Branch lässt sich in der Auswahl wählen, dann *Compare*.
+- **Was du siehst.**
+  - Commits ahead und behind, geänderte Dateien mit ± Zeilen sowie Komplexität vorher und nachher pro Datei.
+  - Neue und komplexer gewordene Funktionen.
+  - Neue TODOs und **neue Secrets** in den hinzugefügten Zeilen.
+  - Geänderte Abhängigkeiten aus `package.json`, `requirements`, `pyproject.toml`, `Cargo.toml` und `go.mod`.
+  - Die Commits des Branches mit Autoren.
+- **Abschalten:** `linecounter.compare.enabled`.
+
 ## TODO tracker
 
 - **Was gefunden wird.** Jeder Kommentar mit `TODO`, `FIXME`, `HACK`, `XXX` oder `BUG`. Eine Zuweisung wie `TODO(alice):` wird als `@alice` angezeigt.
