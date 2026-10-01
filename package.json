@@ -2,7 +2,7 @@
   "name": "linecounter",
   "displayName": "Line Counter & Code Statistics",
   "description": "Browse your workspace as a filterable tree, exclude files and folders with a click and generate full-screen code statistics with charts, git insights, fun facts and a file ranking.",
-  "version": "1.14.3",
+  "version": "1.14.4",
   "license": "MIT",
   "publisher": "einsphoenix",
   "icon": "media/icon.png",

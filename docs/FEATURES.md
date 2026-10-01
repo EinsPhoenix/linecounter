@@ -9,12 +9,19 @@ Diese Seite beschreibt, **was jede Funktion macht, was du erwarten kannst und wo
 1. [Sprachunterstützung](#sprachunterstützung)
 2. [Sidebar, Filter und Presets](#sidebar-filter-und-presets)
 3. [Statistik-Seite](#statistik-seite)
-4. [Code health](#code-health)
-5. [Dependencies, Lizenzen und Schwachstellen](#dependencies-lizenzen-und-schwachstellen)
-6. [Graphen (2D)](#graphen-2d)
-7. [Dependency Express (3D-Zug)](#dependency-express-3d-zug)
-8. [Exporte und PDFs](#exporte-und-pdfs)
-9. [Was die Extension nicht macht](#was-die-extension-nicht-macht)
+4. [Trends](#trends)
+5. [Architecture](#architecture)
+6. [Branch comparison](#branch-comparison)
+7. [TODO tracker](#todo-tracker)
+8. [Ownership (Git)](#ownership-git)
+9. [Code health](#code-health)
+10. [Dependencies, Lizenzen und Schwachstellen](#dependencies-lizenzen-und-schwachstellen)
+11. [Graphen (2D)](#graphen-2d)
+12. [Dependency Express (3D-Zug)](#dependency-express-3d-zug)
+13. [Quality Gate (CI)](#quality-gate-ci)
+14. [MCP-Server für LLM-Agenten](#mcp-server-für-llm-agenten)
+15. [Exporte und PDFs](#exporte-und-pdfs)
+16. [Was die Extension nicht macht](#was-die-extension-nicht-macht)
 
 ---
 
@@ -38,6 +45,8 @@ Die tieferen Analysen unterscheiden sich je nach Sprache:
 ---
 
 ## Sidebar, Filter und Presets
+
+<img src="images/sidebar.png" alt="Sidebar" width="340">
 
 - **Baum aller Dateien und Ordner.** Ein Klick schließt eine Datei oder einen Ordner aus oder nimmt sie wieder auf.
 - **Suche.** Filtert den Baum live.
@@ -63,6 +72,14 @@ Die tieferen Analysen unterscheiden sich je nach Sprache:
 ---
 
 ## Statistik-Seite
+
+![Statistik-Seite](images/overview.png)
+
+![Sprachen](images/languages.png)
+
+![Treemap](images/treemap.png)
+
+![Project roast](images/roast.png)
 
 Die Seite öffnet sich maximiert oder im Vollbild. Jedes Diagramm hat einen eigenen Vollbild-Knopf.
 
@@ -94,6 +111,8 @@ Alle Grenzwerte (z. B. ab wie vielen Zeilen eine Datei „zu lang“ ist) stehen
 - **Speicherort.** Gespeichert wird lokal im Workspace-State (`linecounter.history.enabled`). Mit `linecounter.history.saveToFile` landet die Historie zusätzlich in `.linecounter/history.json` und kann mit dem Team geteilt werden. *Clear history* setzt sie zurück.
 
 ## Architecture
+
+![Architekturregeln](images/architecture.png)
 
 - **Regeln** in `.linecounter/settings.json` oder den VS-Code-Einstellungen:
   ```jsonc
@@ -137,6 +156,16 @@ Alle Grenzwerte (z. B. ab wie vielen Zeilen eine Datei „zu lang“ ist) stehen
 
 ## Ownership (Git)
 
+![Wem gehört der Code](images/ownership.png)
+
+![Knowledge at risk](images/knowledge-at-risk.png)
+
+![Wann wird Code geschrieben](images/commit-heatmap.png)
+
+![Commits pro Monat](images/commits-per-month.png)
+
+![Git Fun Facts](images/git-fun-facts.png)
+
 - **Who owns the code.** Pro Datei zählt als Hauptautor, wer die meisten Commits auf ihr hat. Gleiche Namen in anderer Schreibweise werden zusammengefasst, Bots (dependabot, renovate …) ignoriert. Daraus entsteht pro Person die Summe der Zeilen.
 - **Ownership pro Ordner.** Ein farbiger Balken zeigt die Anteile der Autoren, dazu den Bus-Factor (wie viele Personen die Hälfte geschrieben haben). Ordner mit Bus-Factor 1 sind rot.
 - **Stale files.** Dateien ohne Commit seit `linecounter.ownership.staleDays` Tagen (Standard 365). Werden sie noch gebraucht?
@@ -144,6 +173,10 @@ Alle Grenzwerte (z. B. ab wie vielen Zeilen eine Datei „zu lang“ ist) stehen
 - **Alter der letzten Änderung** pro Datei als Diagramm, dazu Rants.
 
 ## Code health
+
+![Komplexität pro Funktion](images/complexity.png)
+
+![Risiko-Hotspots](images/risk-hotspots.png)
 
 - **Note A–F und Score 0–100.**
   - Abzüge gibt es für zu komplexe Funktionen, zu lange Funktionen, duplizierten Code und Secrets.
@@ -179,6 +212,8 @@ Alle Grenzwerte (z. B. ab wie vielen Zeilen eine Datei „zu lang“ ist) stehen
 
 ## Dependencies, Lizenzen und Schwachstellen
 
+![Lizenzübersicht](images/licenses.png)
+
 - **Ökosysteme:** npm, PyPI, crates.io (Rust), Go-Module. Direkte und transitive Pakete werden erfasst; Versionen kommen aus Lockfiles bzw. installierten Paketen.
 - **Lizenzen aller Pakete.** Für jedes Paket mit unbekannter oder nicht standardmäßiger Lizenz läuft eine Kette von Quellen. Jeder Versuch wird protokolliert und in der Karte *Unknown & custom licenses* angezeigt.
   1. Lokale Metadaten: `node_modules`, `site-packages` (METADATA, Classifiers, License-Expression), Cargo-Cache, Go-Modul-Cache, LICENSE-Dateien
@@ -198,6 +233,10 @@ Alle Grenzwerte (z. B. ab wie vielen Zeilen eine Datei „zu lang“ ist) stehen
 ---
 
 ## Graphen (2D)
+
+![Import-Graph](images/import-graph.png)
+
+![Ordner und Dateien als Graph](images/structure-graph.png)
 
 - **Word Web.** Die häufigsten Bezeichner und die Dateien, die sie verwenden.
 - **Importgraph.** Wer importiert wen.
@@ -223,6 +262,8 @@ Alle Grenzwerte (z. B. ab wie vielen Zeilen eine Datei „zu lang“ ist) stehen
 ---
 
 ## Dependency Express (3D-Zug)
+
+![Dependency Express](images/train-3d.png)
 
 Ein Zug fährt durch dein Projekt als Universum.
 

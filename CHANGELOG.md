@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.14.4
+- Documentation with screenshots: README quick start and gallery, images in every FEATURES section, complete table of contents
+- README badges work for the private repository and link to release, download, CI, changelog and license
+- 3D train: the Exit button no longer overlaps the stops list
+
 ## 1.14.3
 - Downloads as GitHub Releases (one per version with the `.vsix`, notes from this changelog), CI workflow (tests + packaging), README badges and download section, MIT license
 - CI docs download the vsix from the latest release
