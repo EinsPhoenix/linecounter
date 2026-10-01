@@ -2,7 +2,7 @@
 
 # Line Counter & Code Statistics
 
-[![Release](https://img.shields.io/badge/release-v1.14.4-e0621b)](https://github.com/EinsPhoenix/linecounter/releases/latest)
+[![Release](https://img.shields.io/badge/release-v1.14.5-e0621b)](https://github.com/EinsPhoenix/linecounter/releases/latest)
 [![Download vsix](https://img.shields.io/badge/download-linecounter.vsix-2ea44f?logo=visualstudiocode&logoColor=white)](https://github.com/EinsPhoenix/linecounter/releases/latest/download/linecounter.vsix)
 [![CI](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)](https://github.com/EinsPhoenix/linecounter/actions/workflows/ci.yml)
 [![Changelog](https://img.shields.io/badge/changelog-CHANGELOG.md-555)](CHANGELOG.md)

@@ -659,3 +659,6 @@ body.print-light .dep-catseg { color: #111; }
 .repo-switch { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 12px; position: sticky; top: 0; z-index: 3; background: var(--bg, var(--vscode-editor-background)); padding: 6px 0; }
 .repo-switch .sw, .repo-table .sw { margin-right: 6px; }
 .repo-tag { display: inline-block; font-size: 10.5px; padding: 0 6px; margin-right: 6px; border-radius: 8px; background: var(--card-2); border: 1px solid var(--border); color: var(--muted); }
+
+.t3-notice { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 700; max-width: 640px; background: #3a1d12; color: #ffd7c2; border: 1px solid #e0621b; border-radius: 8px; padding: 10px 14px; font-size: 12px; box-shadow: 0 6px 24px rgba(0,0,0,.4); }
+#train3d .t3-lost { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: 460px; text-align: center; background: rgba(20,20,22,.9); border: 1px solid #e0621b; border-radius: 10px; padding: 16px 20px; font-size: 13px; line-height: 1.5; }

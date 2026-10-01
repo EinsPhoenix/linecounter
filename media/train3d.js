@@ -24,6 +24,13 @@
       x: (Math.random() - 0.5) * spread, y: layered ? -(nd.layer || 0) * 70 : (Math.random() - 0.5) * spread, z: (Math.random() - 0.5) * spread, vx: 0, vy: 0, vz: 0, i,
     }));
     const L = links.map(l => [l.s, l.t]);
+    // spring strength per link like d3: hubs (a library imported by hundreds of files) would otherwise get hundreds of full
+    // spring pulls per step, overshoot and blow the layout up to infinity
+    const deg = new Array(n).fill(0);
+    for (const [s, t] of L) { deg[s]++; deg[t]++; }
+    const strength = L.map(([s, t]) => 0.02 * Math.min(1, 3 / Math.min(deg[s], deg[t])));
+    const bias = L.map(([s, t]) => deg[s] / (deg[s] + deg[t]));
+    const MAXV = 40;
     for (let it = 0; it < 260; it++) {
       const alpha = 1 - it / 260;
       for (let a = 0; a < n; a++) {
@@ -40,17 +47,20 @@
           pb.vx -= dx * f; pb.vy -= dy * f; pb.vz -= dz * f;
         }
       }
-      for (const [s, t] of L) {
+      L.forEach(([s, t], k) => {
         const a = P[s], b = P[t];
         const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
         const d = Math.sqrt(dx * dx + dy * dy + dz * dz) || 1;
-        const f = (d - (85 + R[s] + R[t])) * 0.02 * alpha;
-        a.vx += dx / d * f; a.vy += dy / d * f; a.vz += dz / d * f;
-        b.vx -= dx / d * f; b.vy -= dy / d * f; b.vz -= dz / d * f;
-      }
+        const f = (d - (85 + R[s] + R[t])) * strength[k] * alpha * 2;
+        const fa = f * (1 - bias[k]), fb = f * bias[k];
+        a.vx += dx / d * fa; a.vy += dy / d * fa; a.vz += dz / d * fa;
+        b.vx -= dx / d * fb; b.vy -= dy / d * fb; b.vz -= dz / d * fb;
+      });
       for (const p of P) {
         p.vx -= p.x * 0.003 * alpha; p.vz -= p.z * 0.003 * alpha;
         if (layered) p.vy += (-(nodes[p.i].layer || 0) * 70 - p.y) * 0.08; else p.vy -= p.y * 0.003 * alpha;
+        const v = Math.hypot(p.vx, p.vy, p.vz);
+        if (!(v <= MAXV)) { const k = v > 0 && isFinite(v) ? MAXV / v : 0; p.vx *= k; p.vy *= k; p.vz *= k; }
         p.x += p.vx; p.y += p.vy; p.z += p.vz;
         p.vx *= 0.6; p.vy *= 0.6; p.vz *= 0.6;
       }
@@ -318,6 +328,26 @@
 
   /** keeps the 3D universe fast: at most `cap` nodes – cycles, chains, the selected file and the most connected ones */
   function capGraph(G, cap, selectedAbs) {
+    return capLinks(capNodes(G, cap, selectedAbs), Math.max(600, cap * 3));
+  }
+
+  /** every relation becomes a 3D guideway – too many of them exhaust the GPU memory of the webview, so keep the important ones */
+  function capLinks(G, max) {
+    if (G.links.length <= max) return G;
+    const deg = G.nodes.map(() => 0);
+    for (const l of G.links) { deg[l.s]++; deg[l.t]++; }
+    const onChain = new Set();
+    const byAbs = new Map(G.nodes.map((n, i) => [n.abs, i]));
+    for (const c of G.chains || []) {
+      const idx = c.files.map(f => byAbs.get(f.abs));
+      for (let k = 1; k < idx.length; k++) if (idx[k - 1] != null && idx[k] != null) onChain.add(idx[k - 1] + '>' + idx[k]);
+    }
+    const score = l => (l.cyc ? 1e9 : 0) + (onChain.has(l.s + '>' + l.t) ? 1e8 : 0) + (G.nodes[l.t].library && G.nodes[l.t].vulns ? 1e7 : 0) + deg[l.s] + deg[l.t];
+    const links = G.links.map(l => ({ l, v: score(l) })).sort((a, b) => b.v - a.v).slice(0, max).map(x => x.l);
+    return { ...G, links, cappedLinks: G.links.length };
+  }
+
+  function capNodes(G, cap, selectedAbs) {
     if (G.nodes.length <= cap) return G;
     const deg = G.nodes.map(() => 0);
     for (const l of G.links) { deg[l.s]++; deg[l.t]++; }
@@ -339,8 +369,29 @@
   function storeGet(k) { try { return window.localStorage.getItem(k); } catch { return null; } }
   function storeSet(k, v) { try { window.localStorage.setItem(k, v); } catch { /* storage unavailable */ } }
 
+  /** VS Code webviews block alert(), so problems are shown as a small banner */
+  function notice(text) {
+    const el = document.createElement('div');
+    el.className = 't3-notice';
+    el.textContent = text;
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 9000);
+  }
+
   function open(ui, D, opts = {}) {
-    if (!window.THREE) { alert('3D view not available (three.js failed to load).'); return; }
+    try {
+      openTrain(ui, D, opts);
+    } catch (e) {
+      console.error('Dependency Express failed', e);
+      if (session) close();
+      document.querySelectorAll('#train3d').forEach(el => el.remove());
+      document.body.classList.remove('has-train');
+      notice(`3D view could not be built: ${e && e.message ? e.message : e}. Try fewer nodes (linecounter.train.maxNodes) or hide libraries / functions.`);
+    }
+  }
+
+  function openTrain(ui, D, opts) {
+    if (!window.THREE) { notice('3D view not available (three.js failed to load).'); return; }
     const G0 = D.importGraph;
     if (!G0 || !G0.nodes.length) return;
     const G = capGraph(opts.functions && window.LCGraphs && D.functionGraph ? LCGraphs.withFunctions(G0, D.functionGraph) : G0, (D.graphLimits && D.graphLimits.train3d) || 800, opts.selectedAbs);
@@ -384,6 +435,14 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     root.prepend(renderer.domElement);
+    // the GPU can drop the context (driver reset, out of memory) – say so instead of leaving a dead canvas
+    renderer.domElement.addEventListener('webglcontextlost', ev => {
+      ev.preventDefault();
+      const msg = document.createElement('div');
+      msg.className = 't3-lost';
+      msg.innerHTML = '<b>The 3D view lost its graphics context</b><br>The graph is probably too big for the GPU. Press Esc and lower <code>linecounter.train.maxNodes</code> or hide libraries / functions.';
+      root.appendChild(msg);
+    });
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x07070a);
@@ -426,8 +485,12 @@
     const pos = layout3d(G.nodes, G.links, false, G.nodes.map(radiusOf));
     const vulnerableFiles = new Set();
     for (const l of G.links) if (G.nodes[l.t].library && G.nodes[l.t].vulns) vulnerableFiles.add(l.s);
-    const skullTex = skullTexture();
-    const planetGeo = new THREE.SphereGeometry(1, 32, 20);
+    let skullTexCache = null;
+    const skullTex = () => skullTexCache || (skullTexCache = skullTexture());
+    // level of detail for big universes: fewer polygons per planet, ring and rail (the GPU of a webview is limited)
+    const big = G.nodes.length > 300 || G.links.length > 900;
+    let skullLights = 0;
+    const planetGeo = big ? new THREE.SphereGeometry(1, 20, 12) : new THREE.SphereGeometry(1, 32, 20);
     // colors: files of the same folder share a planet color, functions are colored by their file
     const colors = window.LCGraphs ? LCGraphs.nodeColors(G.nodes) : { of: () => null, folders: new Map() };
     const colorFor = n => ui.resolveColor(colors.of(n) || ui.colorOf(n.lang));
@@ -441,10 +504,11 @@
       let r;
       if (n.library && n.vulns) {
         r = radiusOf(n);
-        const sk = new THREE.Sprite(new THREE.SpriteMaterial({ map: skullTex, transparent: true, depthWrite: false }));
+        const sk = new THREE.Sprite(new THREE.SpriteMaterial({ map: skullTex(), transparent: true, depthWrite: false }));
         sk.scale.setScalar(r * 3.2);
         group.add(sk);
-        group.add(new THREE.PointLight(0xff3030, 60, 60, 1.5));
+        // every point light makes all shaders heavier – only the first few skulls glow for real
+        if (skullLights++ < 6) group.add(new THREE.PointLight(0xff3030, 60, 60, 1.5));
         const hit = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 8), new THREE.MeshBasicMaterial({ visible: false }));
         hit.userData.i = i; group.add(hit); pickables.push(hit);
       } else if (n.fn) {
@@ -474,7 +538,7 @@
         atmo.userData.atmo = atmo.material.opacity;
         group.add(atmo);
         if (vulnerableFiles.has(i)) {
-          const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: skullTex, transparent: true, depthWrite: false }));
+          const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: skullTex(), transparent: true, depthWrite: false }));
           moon.scale.setScalar(4.5);
           moon.userData.orbit = { r: r + 4, speed: 0.8 + Math.random() };
           group.add(moon);
@@ -609,7 +673,7 @@
      */
     function guideway(curve, hub, out) {
       const len = curve.getLength();
-      const segs = Math.max(6, Math.round(len / 1.6));
+      const segs = Math.min(400, Math.max(detail > 1 ? 3 : 6, Math.round(len / (1.6 * detail))));
       // beam cross-section (local: x = side, y = up), slightly tapered at the bottom
       const prof = [[-0.95, -0.04], [-1.02, -0.14], [-0.7, -0.42], [0.7, -0.42], [1.02, -0.14], [0.95, -0.04]];
       const P = [], N = [], I = [];
@@ -643,20 +707,20 @@
       // neon edges (tube uv.x runs along the length -> scaled so that the light pattern has a constant size)
       for (const s of [-1, 1]) {
         const pts = frames.map(({ p, f }) => p.clone().add(f.side.clone().multiplyScalar(s * 0.92)).add(f.down.clone().multiplyScalar(1.22)));
-        const tube = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), segs, 0.07, 5, false);
+        const tube = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), segs, 0.07, big ? 3 : 5, false);
         const uv = tube.attributes.uv;
         for (let i = 0; i < uv.count; i++) uv.setX(i, uv.getX(i) * len / 7);
         out.edges.push(tube);
       }
       // glowing cross bars every 5 units, pylons below the beam every 22 units (only out in space)
       const basis = new THREE.Matrix4();
-      for (let d = 2.5; d < len; d += 5) {
+      for (let d = 2.5 * detail; d < len; d += 5 * detail) {
         const u = d / len, p = curve.getPointAt(u), t = curve.getTangentAt(u), f = railFrame(p, t, hub);
         basis.makeBasis(f.side, f.down.clone().multiplyScalar(-1), t);
         out.bars.push(basis.clone().setPosition(p.clone().add(f.down.clone().multiplyScalar(1.19))));
       }
       if (hub == null) {
-        for (let d = 11; d < len - 11; d += 22) {
+        for (let d = 11 * detail; d < len - 11; d += 22 * detail) {
           const u = d / len, p = curve.getPointAt(u), t = curve.getTangentAt(u), f = railFrame(p, t, null);
           basis.makeBasis(f.side, f.down.clone().multiplyScalar(-1), t);
           out.pylons.push(basis.clone().setPosition(p.clone().add(f.down.clone().multiplyScalar(2.3))));
@@ -687,6 +751,10 @@
       route: new THREE.MeshBasicMaterial({ color: 0xffa24d, transparent: true, opacity: 0.9 }),
       routeRed: new THREE.MeshBasicMaterial({ color: 0xff4d4f, transparent: true, opacity: 0.9 }),
     };
+    // level of detail: the rails of huge graphs get coarser instead of eating all GPU memory (~60k length units at full detail)
+    let railLen = 0;
+    for (const p of pairs.values()) railLen += segCurve(p.a, p.b).getLength() + trackR(p.a) + trackR(p.b);
+    const detail = Math.max(1, railLen / (big ? 25000 : 60000));
     {
       const byMat = { steel: null, red: null, vuln: null, fn: null };
       for (const k of Object.keys(byMat)) byMat[k] = { beams: [], edges: [], bars: [], pylons: [] };
@@ -701,7 +769,8 @@
       for (const [k, o] of Object.entries(byMat)) {
         if (o.beams.length) scene.add(new THREE.Mesh(mergeGeometries(o.beams), k === 'red' || k === 'vuln' ? railMats.beamRed : railMats.beam));
         if (o.edges.length) scene.add(new THREE.Mesh(mergeGeometries(o.edges), railMats[k]));
-        bars.push(...o.bars); pylons.push(...o.pylons);
+        for (const b of o.bars) bars.push(b);
+        for (const q of o.pylons) pylons.push(q);
       }
       if (bars.length) {
         const im = new THREE.InstancedMesh(new THREE.BoxGeometry(1.7, 0.04, 0.18), railMats.bar, bars.length);
@@ -717,9 +786,9 @@
       // turntables on top of every planet with relations (where the tracks cross)
       const tables = G.nodes.map((_, i) => i).filter(i => nb[i].size);
       if (tables.length) {
-        const disc = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 0.3, 40), railMats.table, tables.length);
-        const edge = new THREE.InstancedMesh(new THREE.TorusGeometry(1.0, 0.035, 6, 48), railMats.tableEdge, tables.length);
-        const inner = new THREE.InstancedMesh(new THREE.TorusGeometry(0.55, 0.025, 6, 40), railMats.tableEdge, tables.length);
+        const disc = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1, 0.3, big ? 20 : 40), railMats.table, tables.length);
+        const edge = new THREE.InstancedMesh(new THREE.TorusGeometry(1.0, 0.035, big ? 3 : 6, big ? 24 : 48), railMats.tableEdge, tables.length);
+        const inner = new THREE.InstancedMesh(new THREE.TorusGeometry(0.55, 0.025, big ? 3 : 6, big ? 20 : 40), railMats.tableEdge, tables.length);
         const flat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
         tables.forEach((i, k) => {
           const rad = Math.max(3.2, trackR(i) * 0.36);
@@ -1072,7 +1141,8 @@
     const trackSamples = [];
     for (const p of pairs.values()) {
       const c = segCurve(p.a, p.b), len = c.getLength();
-      for (let d = 0; d <= len; d += 4) trackSamples.push({ a: p.a, b: p.b, d, len, p: c.getPointAt(d / len) });
+      const step = Math.max(4, len / 300);
+      if (isFinite(len)) for (let d = 0; d <= len; d += step) trackSamples.push({ a: p.a, b: p.b, d, len, p: c.getPointAt(d / len) });
     }
     function startFly() {
       const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(T.loco.quaternion);
@@ -1543,6 +1613,7 @@
     }
 
     const me = {
+      renderer, scene,
       raf: 0,
       state: S,
       dispose: () => {
