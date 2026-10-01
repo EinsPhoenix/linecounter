@@ -89,6 +89,17 @@ async function collectFiles(root, config, presetName) {
   return { roots: [{ name, path: root, gitRepos: res.gitRepos }], files, base, preset: preset ? presetName || store.active : null };
 }
 
+/** full analysis of a folder (used by the CLI and the MCP server) */
+async function analyze(folder, opts = {}) {
+  const root = path.resolve(folder);
+  const overrides = opts.offline ? { 'vulnerabilities.enabled': false, 'licenses.fetchFromRegistry': false } : {};
+  const config = headlessConfig(root, overrides);
+  const log = msg => { if (!opts.quiet) process.stderr.write(`[linecounter] ${msg}\n`); };
+  const { roots, files, base } = await collectFiles(root, config, opts.preset);
+  const data = await runPipeline(config, roots, files, { base, workspaceName: path.basename(root) }, { report: m => m && m.message && log(m.message) });
+  return data;
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
   if (args.flags.help || !['gate', 'report'].includes(args.cmd)) {
@@ -118,4 +129,6 @@ async function main() {
   process.exitCode = res.passed ? 0 : 1;
 }
 
-main().catch(e => { console.error(`[linecounter] ${e.stack || e.message}`); process.exit(2); });
+if (require.main === module) main().catch(e => { console.error(`[linecounter] ${e.stack || e.message}`); process.exit(2); });
+
+module.exports = { analyze, headlessConfig, collectFiles };

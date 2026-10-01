@@ -43,6 +43,20 @@ function activate(context) {
   const provider = new SidebarProvider(context, config, createStatistics);
   config.watch(() => provider.scan());
 
+  // MCP server for LLM agents in VS Code (Copilot agent mode etc., VS Code 1.101+)
+  try {
+    const lm = /** @type {any} */ (vscode).lm;
+    const Def = /** @type {any} */ (vscode).McpStdioServerDefinition;
+    if (lm && lm.registerMcpServerDefinitionProvider && Def) {
+      context.subscriptions.push(lm.registerMcpServerDefinitionProvider('linecounter.mcp', {
+        provideMcpServerDefinitions: () => (vscode.workspace.workspaceFolders || []).map(f => new Def(
+          `Line Counter (${f.name})`, process.execPath,
+          [vscode.Uri.joinPath(context.extensionUri, 'bin', 'linecounter-mcp.js').fsPath, '--root', f.uri.fsPath],
+          { ELECTRON_RUN_AS_NODE: '1' }, context.extension.packageJSON.version)),
+      }));
+    }
+  } catch { /* older VS Code without MCP support */ }
+
   context.subscriptions.push(
     { dispose: () => config.dispose() },
     vscode.window.registerWebviewViewProvider('linecounter.explorer', provider, { webviewOptions: { retainContextWhenHidden: true } }),
@@ -53,6 +67,19 @@ function activate(context) {
       provider.requestStats();
     }),
     vscode.commands.registerCommand('linecounter.savePreset', () => provider.savePreset()),
+    vscode.commands.registerCommand('linecounter.copyMcpConfig', async () => {
+      const script = vscode.Uri.joinPath(context.extensionUri, 'bin', 'linecounter-mcp.js').fsPath;
+      const root = (vscode.workspace.workspaceFolders || [])[0] ? vscode.workspace.workspaceFolders[0].uri.fsPath : '.';
+      const json = JSON.stringify({ mcpServers: { linecounter: { command: 'node', args: [script, '--root', root] } } }, null, 2);
+      const cli = `claude mcp add linecounter -- node "${script}" --root "${root}"`;
+      const pick = await vscode.window.showQuickPick([
+        { label: 'Claude Code command', detail: cli, value: cli },
+        { label: 'JSON config (Claude Desktop, Cursor, …)', detail: 'mcpServers → linecounter', value: json },
+      ], { title: 'Copy the Line Counter MCP server configuration' });
+      if (!pick) return;
+      await vscode.env.clipboard.writeText(pick.value);
+      vscode.window.showInformationMessage('Line Counter MCP configuration copied to the clipboard.');
+    }),
     vscode.commands.registerCommand('linecounter.runGate', async () => {
       gateRequested = true;
       if (!provider.view) await vscode.commands.executeCommand('linecounter.explorer.focus');

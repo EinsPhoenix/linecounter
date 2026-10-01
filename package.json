@@ -2,7 +2,7 @@
   "name": "linecounter",
   "displayName": "Line Counter & Code Statistics",
   "description": "Browse your workspace as a filterable tree, exclude files and folders with a click and generate full-screen code statistics with charts, git insights, fun facts and a file ranking.",
-  "version": "1.13.0",
+  "version": "1.14.0",
   "publisher": "einsphoenix",
   "icon": "media/icon.png",
   "repository": {
@@ -87,6 +87,11 @@
       {
         "command": "linecounter.runGate",
         "title": "Run Quality Gate",
+        "category": "Line Counter"
+      },
+      {
+        "command": "linecounter.copyMcpConfig",
+        "title": "Copy MCP Server Configuration (for LLM agents)",
         "category": "Line Counter"
       }
     ],
@@ -639,6 +644,12 @@
         "fileMatch": "**/.linecounter/presets.json",
         "url": "./schemas/presets.schema.json"
       }
+    ],
+    "mcpServerDefinitionProviders": [
+      {
+        "id": "linecounter.mcp",
+        "label": "Line Counter"
+      }
     ]
   },
   "scripts": {
@@ -656,6 +667,7 @@
     "three": "^0.159.0"
   },
   "bin": {
-    "linecounter": "bin/linecounter.js"
+    "linecounter": "bin/linecounter.js",
+    "linecounter-mcp": "bin/linecounter-mcp.js"
   }
 }
