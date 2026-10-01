@@ -975,6 +975,16 @@
       "default": 365,
       "minimum": 30,
       "description": "Files without a commit for this many days count as stale (Ownership section)."
+    },
+    "todos.enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "TODO tracker: list every TODO / FIXME / HACK / XXX / BUG comment with author and age (git blame)."
+    },
+    "linecounter.todos.enabled": {
+      "type": "boolean",
+      "default": true,
+      "description": "TODO tracker: list every TODO / FIXME / HACK / XXX / BUG comment with author and age (git blame)."
     }
   }
 }

@@ -1104,6 +1104,7 @@
     if (window.LCHealth && D.health) out.push(...LCHealth.rants(UI(), D));
     if (window.LCArch) out.push(...LCArch.rants(UI(), D));
     if (window.LCOwnership) out.push(...LCOwnership.rants(UI(), D));
+    if (window.LCTodos) out.push(...LCTodos.rants(UI(), D));
     if (!out.length) out.push(['😇', 'We tried to roast this project and found nothing. Suspicious. Very suspicious.']);
     return `<ul class="roast-list">${out.map(([e, t2]) => `<li><span class="rant-emoji">${e}</span><span>${t2}</span></li>`).join('')}</ul>`;
   }
@@ -1271,7 +1272,7 @@
       </header>
       <nav class="toc">
         <a href="#s-overview">Overview</a>${D.history ? '<a href="#s-trends">Trends</a>' : ''}<a href="#s-lang">Languages</a><a href="#s-files">Files</a>
-        <a href="#s-fame">Hall of Fame</a>${D.dependencies ? '<a href="#s-deps">Dependencies</a>' : ''}${D.architecture ? '<a href="#s-arch">Architecture</a>' : ''}${D.health ? '<a href="#s-health">Code health</a>' : ''}${rantCfg().enabled ? '<a href="#s-rant">Code Rant</a>' : ''}<a href="#s-git">Git</a>${D.ownership ? '<a href="#s-own">Ownership</a>' : ''}<a href="#s-fun">Fun facts</a><a href="#s-ids">Words & connections</a><a href="#s-rank">Ranking</a><a href="#s-struct">Structure</a>
+        <a href="#s-fame">Hall of Fame</a>${D.dependencies ? '<a href="#s-deps">Dependencies</a>' : ''}${D.architecture ? '<a href="#s-arch">Architecture</a>' : ''}${D.health ? '<a href="#s-health">Code health</a>' : ''}${D.todos !== undefined ? '<a href="#s-todo">TODOs</a>' : ''}${rantCfg().enabled ? '<a href="#s-rant">Code Rant</a>' : ''}<a href="#s-git">Git</a>${D.ownership ? '<a href="#s-own">Ownership</a>' : ''}<a href="#s-fun">Fun facts</a><a href="#s-ids">Words & connections</a><a href="#s-rank">Ranking</a><a href="#s-struct">Structure</a>
       </nav>
       <main>
         <h2 id="s-overview">Overview</h2>${gateHtml()}${overview()}
@@ -1282,6 +1283,7 @@
         ${D.dependencies && window.LCDeps ? `<h2 id="s-deps">Dependencies, licenses & vulnerabilities</h2>${LCDeps.render(UI(), D)}` : ''}
         ${window.LCArch && D.architecture ? `<h2 id="s-arch">Architecture</h2>${LCArch.render(UI(), D)}` : ''}
         ${D.health && window.LCHealth ? `<h2 id="s-health">Code health</h2>${LCHealth.render(UI(), D)}` : ''}
+        ${window.LCTodos && D.todos !== undefined ? `<h2 id="s-todo">TODO tracker</h2>${LCTodos.render(UI(), D)}` : ''}
         ${rantSection()}
         <h2 id="s-git">Git</h2>${gitSection()}
         ${window.LCOwnership && D.ownership ? `<h2 id="s-own">Ownership</h2>${LCOwnership.render(UI(), D)}` : ''}
@@ -1325,6 +1327,7 @@
     if (window.LCDeps && D.dependencies && LCDeps.handleClick(UI(), D, t)) { ev.preventDefault(); return; }
     if (window.LCHealth && D.health && LCHealth.handleClick(UI(), D, t)) { ev.preventDefault(); return; }
     if (window.LCArch && LCArch.handleClick(UI(), D, t)) { ev.preventDefault(); return; }
+    if (window.LCTodos && LCTodos.handleClick(UI(), D, t)) { ev.preventDefault(); return; }
     if (t.closest('[data-trend-clear]')) { vscode.postMessage({ type: 'clearHistory', projectRoot: D.projectRoot || '' }); const s = document.getElementById('s-trends'); if (s && s.nextElementSibling) s.nextElementSibling.innerHTML = '<div class="card-body muted">History cleared.</div>'; return; }
     const gb = t.closest('[data-gact]');
     if (gb) {
@@ -1569,6 +1572,7 @@
     if (t.id === 'tfilter') { table.filter = t.value; table.limit = 100; renderTable(); }
     if (window.LCDeps && D.dependencies) LCDeps.handleInput(UI(), D, t);
     if (window.LCHealth && D.health) LCHealth.handleInput(UI(), D, t);
+    if (window.LCTodos) LCTodos.handleInput(UI(), D, t);
   });
   app.addEventListener('change', ev => {
     const t = /** @type {HTMLSelectElement} */ (ev.target);

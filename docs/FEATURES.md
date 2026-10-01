@@ -113,6 +113,16 @@ Alle Grenzwerte (z. B. ab wie vielen Zeilen eine Datei „zu lang“ ist) stehen
   - *Show in import graph* markiert die verletzenden Kanten pink-rot im Graphen.
   - Verstöße erzeugen einen Rant und können das Quality Gate scheitern lassen.
 
+## TODO tracker
+
+- **Was gefunden wird.** Jeder Kommentar mit `TODO`, `FIXME`, `HACK`, `XXX` oder `BUG`. Eine Zuweisung wie `TODO(alice):` wird als `@alice` angezeigt.
+- **Alter und Autor.** Kommen aus `git blame` der jeweiligen Zeile. Noch nicht committete Zeilen sind als „new“ markiert.
+- **Anzeige.**
+  - Kennzahlen: Anzahl, ältester TODO, Durchschnittsalter.
+  - Diagramme: Alter, Tag, Autor.
+  - Tabelle: älteste zuerst, filterbar nach Tag und Text; ein Klick springt zur Zeile.
+- **Abschalten:** `linecounter.todos.enabled`.
+
 ## Ownership (Git)
 
 - **Who owns the code.** Pro Datei zählt als Hauptautor, wer die meisten Commits auf ihr hat. Gleiche Namen in anderer Schreibweise werden zusammengefasst, Bots (dependabot, renovate …) ignoriert. Daraus entsteht pro Person die Summe der Zeilen.

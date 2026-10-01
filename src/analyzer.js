@@ -131,6 +131,15 @@ async function analyzeFile(absPath, relPath, root, maxBytes, scan = {}) {
 
   result.words = countMatches(text, /\S+/g);
   result.todo = countMatches(text, /\bTODO\b/g);
+  // individual TODO / FIXME / HACK / XXX comments (for the TODO tracker with git blame)
+  if (/\b(TODO|FIXME|HACK|XXX|BUG)\b/.test(text) && lang.comments && (lang.comments.line.length || lang.comments.block.length)) {
+    const items = [];
+    for (let i = 0; i < lines.length && items.length < 60; i++) {
+      const m = /(?:\/\/|#|--|\/\*|\*|<!--|;)\s*@?(TODO|FIXME|HACK|XXX|BUG)\b(?:\(([^)]{1,40})\))?[:\s-]*(.*)$/.exec(lines[i]);
+      if (m) items.push({ line: i + 1, tag: m[1], assignee: m[2] ? m[2].trim() : null, text: m[3].replace(/\*\/\s*$|-->\s*$/, '').trim().slice(0, 160) });
+    }
+    if (items.length) result.todoItems = items;
+  }
   result.fixme = countMatches(text, /\bFIXME\b/g);
   result.hack = countMatches(text, /\b(HACK|XXX)\b/g);
   result.wtf = countMatches(text, /\b(wtf|WTF|damn|Damn|ugly|Ugly|magic|Magic)\b/g);
